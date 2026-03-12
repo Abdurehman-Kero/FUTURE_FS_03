@@ -6,6 +6,8 @@ require("dotenv").config();
 const productRoutes = require("./routes/productRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const repairRoutes = require("./routes/repairRoutes");
+const saleRoutes = require("./routes/saleRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
@@ -18,8 +20,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/repairs", repairRoutes);
+app.use("/api/sales", saleRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
-// Test route
+// Test route with all endpoints
 app.get("/api/test", (req, res) => {
   res.json({
     success: true,
@@ -28,6 +32,8 @@ app.get("/api/test", (req, res) => {
       products: "/api/products",
       customers: "/api/customers",
       repairs: "/api/repairs",
+      sales: "/api/sales",
+      dashboard: "/api/dashboard",
     },
   });
 });
@@ -40,4 +46,6 @@ app.listen(PORT, () => {
   console.log(`📦 Products: http://localhost:${PORT}/api/products`);
   console.log(`👥 Customers: http://localhost:${PORT}/api/customers`);
   console.log(`🔧 Repairs: http://localhost:${PORT}/api/repairs`);
+  console.log(`💰 Sales: http://localhost:${PORT}/api/sales`);
+  console.log(`📊 Dashboard: http://localhost:${PORT}/api/dashboard/stats`);
 });
