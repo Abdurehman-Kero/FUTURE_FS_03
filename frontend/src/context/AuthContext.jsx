@@ -11,11 +11,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token"));
 
   useEffect(() => {
-    if (token) {
-      loadUser();
-    } else {
-      setLoading(false);
-    }
+    if (token) loadUser();
+    else setLoading(false);
   }, [token]);
 
   const loadUser = async () => {
@@ -23,7 +20,6 @@ export const AuthProvider = ({ children }) => {
       const response = await getProfile();
       setUser(response.data.data);
     } catch (error) {
-      console.error("Failed to load user:", error);
       logout();
     } finally {
       setLoading(false);
@@ -44,16 +40,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
   };
 
-  const value = {
-    user,
-    login,
-    logout,
-    loading,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
-    isTechnician: user?.role === "technician",
-    isSales: user?.role === "sales",
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{ user, login, logout, loading, isAuthenticated: !!user }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

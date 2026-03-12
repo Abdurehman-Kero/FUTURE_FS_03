@@ -43,29 +43,19 @@ import {
   Receipt as ReceiptIcon,
   Print as PrintIcon,
   Today as TodayIcon,
-  DateRange as DateRangeIcon,
   Clear as ClearIcon,
-  CheckCircle as CheckCircleIcon,
   Phone as PhoneIcon,
   Inventory as InventoryIcon,
-  PointOfSale as SaleIcon,
 } from "@mui/icons-material";
-import {
-  getSales,
-  createSale,
-  getTodaysSales,
-  getSalesByDate,
-} from "../services/api";
+import { getSales, createSale, getTodaysSales } from "../services/api";
 import { getProducts } from "../services/api";
 import { getCustomers, searchCustomers } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// Payment method configuration
 const paymentMethods = {
   cash: { label: "Cash", color: "#4caf50", icon: <MoneyIcon /> },
   mpesa: { label: "M-Pesa", color: "#2196f3", icon: <PhoneIcon /> },
   telebirr: { label: "Telebirr", color: "#9c27b0", icon: <PhoneIcon /> },
-  bank: { label: "Bank Transfer", color: "#ff9800", icon: <ReceiptIcon /> },
 };
 
 const Sales = () => {
@@ -73,18 +63,13 @@ const Sales = () => {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("today"); // today, week, month, custom
-  const [customDateRange, setCustomDateRange] = useState({
-    start: "",
-    end: "",
-  });
+  const [dateFilter, setDateFilter] = useState("today");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
   const [openReceiptDialog, setOpenReceiptDialog] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [products, setProducts] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
@@ -93,47 +78,27 @@ const Sales = () => {
     message: "",
     severity: "success",
   });
-
   const [formData, setFormData] = useState({
     customer_id: "",
     customer_name: "",
     customer_phone: "",
     payment_method: "cash",
-    notes: "",
   });
 
-  // Load data on mount
   useEffect(() => {
     loadSales();
     loadProducts();
   }, []);
-
-  // Load sales based on date filter
   useEffect(() => {
     loadSales();
-  }, [dateFilter, customDateRange]);
+  }, [dateFilter]);
 
   const loadSales = async () => {
     try {
       setLoading(true);
-      let response;
-
-      if (dateFilter === "today") {
-        response = await getTodaysSales();
-      } else if (
-        dateFilter === "custom" &&
-        customDateRange.start &&
-        customDateRange.end
-      ) {
-        response = await getSalesByDate(
-          customDateRange.start,
-          customDateRange.end,
-        );
-      } else {
-        response = await getSales();
-      }
-
-      setSales(response.data.data || []);
+      const res =
+        dateFilter === "today" ? await getTodaysSales() : await getSales();
+      setSales(res.data.data || []);
     } catch (error) {
       showSnackbar("Failed to load sales", "error");
     } finally {
@@ -143,92 +108,44 @@ const Sales = () => {
 
   const loadProducts = async () => {
     try {
-      const response = await getProducts();
-      setProducts(response.data.data.filter((p) => p.stock_quantity > 0));
-    } catch (error) {
-      console.error("Failed to load products:", error);
-    }
-  };
-
-  const handleCustomerSearch = async (query) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    try {
-      const response = await searchCustomers(query);
-      setSearchResults(response.data.data);
-    } catch (error) {
-      console.error("Customer search failed:", error);
-    }
+      const res = await getProducts();
+      setProducts(res.data.data.filter((p) => p.stock_quantity > 0));
+    } catch (error) {}
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (customerSearch) handleCustomerSearch(customerSearch);
+    const timer = setTimeout(async () => {
+      if (customerSearch) {
+        const res = await searchCustomers(customerSearch);
+        setSearchResults(res.data.data);
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [customerSearch]);
 
-  const selectCustomer = (customer) => {
-    setFormData((prev) => ({
-      ...prev,
-      customer_id: customer.id,
-      customer_name: customer.name,
-      customer_phone: customer.phone,
-    }));
-    setCustomerSearch("");
-    setSearchResults([]);
-  };
-
-  const showSnackbar = (message, severity = "success") => {
+  const showSnackbar = (message, severity = "success") =>
     setSnackbar({ open: true, message, severity });
-  };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
+  const filteredSales = sales.filter(
+    (s) =>
+      s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.product_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
-  const handleOpenDialog = () => {
-    setOpenDialog(true);
-    setCart([]);
-    setFormData({
-      customer_id: "",
-      customer_name: "",
-      customer_phone: "",
-      payment_method: "cash",
-      notes: "",
-    });
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setCart([]);
-    setCustomerSearch("");
-    setSearchResults([]);
-  };
-
-  const handleOpenReceipt = (sale) => {
-    setSelectedSale(sale);
-    setOpenReceiptDialog(true);
-  };
-
-  const handleCloseReceipt = () => {
-    setOpenReceiptDialog(false);
-    setSelectedSale(null);
-  };
+  const paginatedSales = filteredSales.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage,
+  );
 
   const addToCart = (product) => {
-    const existing = cart.find((item) => item.product_id === product.id);
-    if (existing) {
+    const existing = cart.find((i) => i.product_id === product.id);
+    if (existing)
       setCart(
-        cart.map((item) =>
-          item.product_id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+        cart.map((i) =>
+          i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
         ),
       );
-    } else {
+    else
       setCart([
         ...cart,
         {
@@ -239,41 +156,31 @@ const Sales = () => {
           stock: product.stock_quantity,
         },
       ]);
-    }
   };
 
-  const removeFromCart = (productId) => {
-    setCart(cart.filter((item) => item.product_id !== productId));
+  const removeFromCart = (productId) =>
+    setCart(cart.filter((i) => i.product_id !== productId));
+
+  const updateQuantity = (productId, newQty) => {
+    if (newQty < 1) removeFromCart(productId);
+    else
+      setCart(
+        cart.map((i) =>
+          i.product_id === productId ? { ...i, quantity: newQty } : i,
+        ),
+      );
   };
 
-  const updateQuantity = (productId, newQuantity) => {
-    if (newQuantity < 1) {
-      removeFromCart(productId);
-      return;
-    }
-    setCart(
-      cart.map((item) =>
-        item.product_id === productId
-          ? { ...item, quantity: newQuantity }
-          : item,
-      ),
-    );
-  };
-
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  };
+  const calculateTotal = () =>
+    cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (cart.length === 0) {
-      showSnackbar("Please add at least one item to cart", "error");
+      showSnackbar("Add items to cart", "error");
       return;
     }
-
     try {
-      // Create a sale for each item in cart
       for (const item of cart) {
         await createSale({
           product_id: item.product_id,
@@ -282,45 +189,17 @@ const Sales = () => {
           payment_method: formData.payment_method,
         });
       }
-
-      showSnackbar("Sale completed successfully", "success");
-      handleCloseDialog();
+      showSnackbar("Sale completed", "success");
+      setOpenDialog(false);
+      setCart([]);
       loadSales();
-      loadProducts(); // Refresh product stock
+      loadProducts();
     } catch (error) {
-      showSnackbar(
-        error.response?.data?.message || "Failed to process sale",
-        "error",
-      );
+      showSnackbar("Failed to process sale", "error");
     }
   };
 
-  const filteredSales = sales.filter((sale) => {
-    const matchesSearch =
-      sale.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.customer_phone?.includes(searchTerm) ||
-      sale.product_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  const paginatedSales = filteredSales.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage,
-  );
-
-  // Calculate totals
-  const totalSales = sales.reduce(
-    (sum, sale) => sum + (sale.total_amount || 0),
-    0,
-  );
-  const todayTotal = sales
-    .filter(
-      (s) =>
-        new Date(s.created_at).toDateString() === new Date().toDateString(),
-    )
-    .reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-
-  if (loading) {
+  if (loading)
     return (
       <Box
         sx={{
@@ -333,11 +212,9 @@ const Sales = () => {
         <CircularProgress />
       </Box>
     );
-  }
 
   return (
     <Box>
-      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -352,238 +229,157 @@ const Sales = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleOpenDialog}
-          sx={{ borderRadius: 2, textTransform: "none", px: 3 }}
+          onClick={() => {
+            setCart([]);
+            setFormData({
+              customer_id: "",
+              customer_name: "",
+              customer_phone: "",
+              payment_method: "cash",
+            });
+            setOpenDialog(true);
+          }}
         >
           New Sale
         </Button>
       </Box>
 
-      {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderRadius: 2 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Today's Sales
-                  </Typography>
-                  <Typography variant="h5" fontWeight="600">
-                    ETB {todayTotal.toLocaleString()}
-                  </Typography>
-                </Box>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <Avatar
                   sx={{
                     bgcolor: alpha("#4caf50", 0.1),
                     color: "#4caf50",
-                    width: 48,
-                    height: 48,
+                    mr: 2,
                   }}
                 >
                   <TodayIcon />
                 </Avatar>
+                <Box>
+                  <Typography color="text.secondary" variant="body2">
+                    Today's Sales
+                  </Typography>
+                  <Typography variant="h5" fontWeight="600">
+                    ETB{" "}
+                    {sales
+                      .filter(
+                        (s) =>
+                          new Date(s.created_at).toDateString() ===
+                          new Date().toDateString(),
+                      )
+                      .reduce((sum, s) => sum + (s.total_amount || 0), 0)
+                      .toLocaleString()}
+                  </Typography>
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderRadius: 2 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Total Sales
-                  </Typography>
-                  <Typography variant="h5" fontWeight="600">
-                    ETB {totalSales.toLocaleString()}
-                  </Typography>
-                </Box>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <Avatar
                   sx={{
                     bgcolor: alpha("#2196f3", 0.1),
                     color: "#2196f3",
-                    width: 48,
-                    height: 48,
+                    mr: 2,
                   }}
                 >
                   <MoneyIcon />
                 </Avatar>
+                <Box>
+                  <Typography color="text.secondary" variant="body2">
+                    Total Sales
+                  </Typography>
+                  <Typography variant="h5" fontWeight="600">
+                    ETB{" "}
+                    {sales
+                      .reduce((sum, s) => sum + (s.total_amount || 0), 0)
+                      .toLocaleString()}
+                  </Typography>
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderRadius: 2 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card>
             <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#ff9800", 0.1),
+                    color: "#ff9800",
+                    mr: 2,
+                  }}
+                >
+                  <ReceiptIcon />
+                </Avatar>
                 <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
+                  <Typography color="text.secondary" variant="body2">
                     Transactions
                   </Typography>
                   <Typography variant="h5" fontWeight="600">
                     {sales.length}
                   </Typography>
                 </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: alpha("#ff9800", 0.1),
-                    color: "#ff9800",
-                    width: 48,
-                    height: 48,
-                  }}
-                >
-                  <ReceiptIcon />
-                </Avatar>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderRadius: 2 }}>
-            <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="body2"
-                    gutterBottom
-                  >
-                    Avg. Sale Value
-                  </Typography>
-                  <Typography variant="h5" fontWeight="600">
-                    ETB{" "}
-                    {sales.length ? (totalSales / sales.length).toFixed(0) : 0}
-                  </Typography>
-                </Box>
-                <Avatar
-                  sx={{
-                    bgcolor: alpha("#9c27b0", 0.1),
-                    color: "#9c27b0",
-                    width: 48,
-                    height: 48,
-                  }}
-                >
-                  <SaleIcon />
-                </Avatar>
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 4 }}>
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              size="small"
-              placeholder="Search by customer or product..."
+              placeholder="Search sales..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm("")}>
-                      <ClearIcon />
-                    </IconButton>
+                    <SearchIcon />
                   </InputAdornment>
                 ),
               }}
-              sx={{ bgcolor: "#f8f9fa" }}
             />
           </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Chip
                 label="Today"
                 onClick={() => setDateFilter("today")}
                 color={dateFilter === "today" ? "primary" : "default"}
-                sx={{ borderRadius: 1 }}
               />
               <Chip
-                label="This Week"
-                onClick={() => setDateFilter("week")}
-                color={dateFilter === "week" ? "primary" : "default"}
-                sx={{ borderRadius: 1 }}
-              />
-              <Chip
-                label="This Month"
-                onClick={() => setDateFilter("month")}
-                color={dateFilter === "month" ? "primary" : "default"}
-                sx={{ borderRadius: 1 }}
-              />
-              <Chip
-                label="All Time"
+                label="All"
                 onClick={() => setDateFilter("all")}
                 color={dateFilter === "all" ? "primary" : "default"}
-                sx={{ borderRadius: 1 }}
               />
             </Box>
           </Grid>
           <Grid size={{ xs: 12, md: 2 }} sx={{ textAlign: "right" }}>
-            <Tooltip title="Refresh">
-              <IconButton onClick={loadSales} sx={{ bgcolor: "#f8f9fa" }}>
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
+            <IconButton onClick={loadSales}>
+              <RefreshIcon />
+            </IconButton>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* Sales List */}
       <Stack spacing={2}>
         {paginatedSales.map((sale) => (
-          <Card
-            key={sale.id}
-            sx={{ borderRadius: 2, "&:hover": { boxShadow: 3 } }}
-          >
+          <Card key={sale.id}>
             <CardContent>
               <Grid container spacing={2} alignItems="center">
                 <Grid size={{ xs: 12, md: 4 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
                     <Avatar
                       sx={{
                         bgcolor: alpha(
@@ -591,6 +387,7 @@ const Sales = () => {
                             "#757575",
                           0.1,
                         ),
+                        mr: 2,
                       }}
                     >
                       {paymentMethods[sale.payment_method]?.icon || (
@@ -601,62 +398,46 @@ const Sales = () => {
                       <Typography variant="subtitle2">
                         {sale.product_name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption">
                         {new Date(sale.created_at).toLocaleString()}
                       </Typography>
                     </Box>
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 12, md: 3 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <PersonIcon
-                      sx={{ color: "text.secondary", fontSize: 20 }}
-                    />
-                    <Box>
-                      <Typography variant="body2">
-                        {sale.customer_name || "Walk-in Customer"}
-                      </Typography>
-                      {sale.customer_phone && (
-                        <Typography variant="caption" color="text.secondary">
-                          {sale.customer_phone}
-                        </Typography>
-                      )}
-                    </Box>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <PersonIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    <Typography variant="body2">
+                      {sale.customer_name || "Walk-in"}
+                    </Typography>
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 12, md: 2 }}>
-                  <Chip
-                    label={`x${sale.quantity}`}
-                    size="small"
-                    sx={{ mr: 1 }}
-                  />
+                  <Chip label={`x${sale.quantity}`} size="small" />
                   <Chip
                     label={sale.payment_method}
                     size="small"
                     sx={{
+                      ml: 1,
                       bgcolor: alpha(
                         paymentMethods[sale.payment_method]?.color || "#757575",
                         0.1,
                       ),
-                      color:
-                        paymentMethods[sale.payment_method]?.color || "#757575",
+                      color: paymentMethods[sale.payment_method]?.color,
                     }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 2 }}>
-                  <Typography
-                    variant="h6"
-                    color="primary.main"
-                    fontWeight="600"
-                  >
+                  <Typography variant="h6" color="primary.main">
                     ETB {sale.total_amount?.toLocaleString()}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 12, md: 1 }}>
                   <IconButton
-                    size="small"
-                    onClick={() => handleOpenReceipt(sale)}
-                    sx={{ color: "text.secondary" }}
+                    onClick={() => {
+                      setSelectedSale(sale);
+                      setOpenReceiptDialog(true);
+                    }}
                   >
                     <ReceiptIcon />
                   </IconButton>
@@ -667,16 +448,15 @@ const Sales = () => {
         ))}
       </Stack>
 
-      {/* Pagination */}
       <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
         <TablePagination
           component="div"
           count={filteredSales.length}
           page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
+          onPageChange={(e, p) => setPage(p)}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
+            setRowsPerPage(e.target.value);
             setPage(0);
           }}
         />
@@ -685,7 +465,7 @@ const Sales = () => {
       {/* New Sale Dialog */}
       <Dialog
         open={openDialog}
-        onClose={handleCloseDialog}
+        onClose={() => setOpenDialog(false)}
         maxWidth="md"
         fullWidth
       >
@@ -693,82 +473,65 @@ const Sales = () => {
         <form onSubmit={handleSubmit}>
           <DialogContent>
             <Grid container spacing={2}>
-              {/* Customer Search */}
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
-                  label="Search Customer (Optional)"
+                  label="Search Customer"
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  placeholder="Type name or phone number..."
                 />
-                {searchResults.length > 0 && (
-                  <Paper sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
-                    {searchResults.map((customer) => (
-                      <ListItem
-                        key={customer.id}
-                        button
-                        onClick={() => selectCustomer(customer)}
-                      >
-                        <ListItemIcon>
-                          <PersonIcon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={customer.name}
-                          secondary={customer.phone}
-                        />
-                      </ListItem>
-                    ))}
-                  </Paper>
-                )}
               </Grid>
-
+              {searchResults.length > 0 && (
+                <Paper sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
+                  {searchResults.map((c) => (
+                    <ListItem
+                      key={c.id}
+                      button
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          customer_id: c.id,
+                          customer_name: c.name,
+                          customer_phone: c.phone,
+                        });
+                        setCustomerSearch("");
+                        setSearchResults([]);
+                      }}
+                    >
+                      <ListItemIcon>
+                        <PersonIcon />
+                      </ListItemIcon>
+                      <ListItemText primary={c.name} secondary={c.phone} />
+                    </ListItem>
+                  ))}
+                </Paper>
+              )}
               {formData.customer_id && (
                 <Grid size={{ xs: 12 }}>
-                  <Alert severity="info" sx={{ borderRadius: 1 }}>
-                    Customer: {formData.customer_name} (
-                    {formData.customer_phone})
+                  <Alert severity="info">
+                    Customer: {formData.customer_name}
                   </Alert>
                 </Grid>
               )}
-
-              {/* Product Selection */}
               <Grid size={{ xs: 12 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Add Products
-                </Typography>
+                <Typography variant="subtitle2">Products</Typography>
                 <Paper sx={{ maxHeight: 200, overflow: "auto", p: 1 }}>
-                  {products.map((product) => (
-                    <ListItem
-                      key={product.id}
-                      button
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock_quantity === 0}
-                    >
+                  {products.map((p) => (
+                    <ListItem key={p.id} button onClick={() => addToCart(p)}>
                       <ListItemIcon>
                         <InventoryIcon />
                       </ListItemIcon>
                       <ListItemText
-                        primary={product.name}
-                        secondary={`ETB ${product.price} - Stock: ${product.stock_quantity}`}
+                        primary={p.name}
+                        secondary={`ETB ${p.price}`}
                       />
-                      <Chip
-                        label="Add"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
+                      <Chip label="Add" size="small" color="primary" />
                     </ListItem>
                   ))}
                 </Paper>
               </Grid>
-
-              {/* Cart */}
               {cart.length > 0 && (
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Cart
-                  </Typography>
                   <Paper sx={{ p: 2 }}>
                     {cart.map((item) => (
                       <Box
@@ -780,19 +543,8 @@ const Sales = () => {
                           mb: 1,
                         }}
                       >
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-                        >
-                          <Typography variant="body2">{item.name}</Typography>
-                          <Chip
-                            label={`ETB ${item.price}`}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
+                        <Typography variant="body2">{item.name}</Typography>
+                        <Box>
                           <IconButton
                             size="small"
                             onClick={() =>
@@ -801,7 +553,9 @@ const Sales = () => {
                           >
                             -
                           </IconButton>
-                          <Typography>{item.quantity}</Typography>
+                          <Typography component="span" sx={{ mx: 1 }}>
+                            {item.quantity}
+                          </Typography>
                           <IconButton
                             size="small"
                             onClick={() =>
@@ -825,23 +579,19 @@ const Sales = () => {
                     <Box
                       sx={{ display: "flex", justifyContent: "space-between" }}
                     >
-                      <Typography variant="subtitle1">Total:</Typography>
-                      <Typography variant="h6" color="primary.main">
+                      <Typography>Total:</Typography>
+                      <Typography variant="h6">
                         ETB {calculateTotal().toLocaleString()}
                       </Typography>
                     </Box>
                   </Paper>
                 </Grid>
               )}
-
-              {/* Payment Method */}
               <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth>
-                  <InputLabel>Payment Method</InputLabel>
+                  <InputLabel>Payment</InputLabel>
                   <Select
-                    name="payment_method"
                     value={formData.payment_method}
-                    label="Payment Method"
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -849,33 +599,16 @@ const Sales = () => {
                       })
                     }
                   >
-                    {Object.entries(paymentMethods).map(([key, method]) => (
-                      <MenuItem key={key} value={key}>
-                        {method.label}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="cash">Cash</MenuItem>
+                    <MenuItem value="mpesa">M-Pesa</MenuItem>
+                    <MenuItem value="telebirr">Telebirr</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-
-              {/* Notes */}
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  name="notes"
-                  label="Notes (Optional)"
-                  multiline
-                  rows={2}
-                  fullWidth
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                />
               </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
             <Button
               type="submit"
               variant="contained"
@@ -890,31 +623,21 @@ const Sales = () => {
       {/* Receipt Dialog */}
       <Dialog
         open={openReceiptDialog}
-        onClose={handleCloseReceipt}
+        onClose={() => setOpenReceiptDialog(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Sale Receipt</DialogTitle>
+        <DialogTitle>Receipt</DialogTitle>
         <DialogContent>
           {selectedSale && (
-            <Box sx={{ p: 2 }}>
-              <Box sx={{ textAlign: "center", mb: 3 }}>
-                <Typography variant="h6">Chala Mobile</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Solutions Hub
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Receipt #{selectedSale.id}
-                </Typography>
-              </Box>
-
+            <Box>
+              <Typography variant="h6" align="center">
+                Chala Mobile
+              </Typography>
               <Divider sx={{ my: 2 }} />
-
-              <Grid container spacing={1} sx={{ mb: 2 }}>
+              <Grid container spacing={1}>
                 <Grid size={{ xs: 4 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Date:
-                  </Typography>
+                  <Typography variant="caption">Date:</Typography>
                 </Grid>
                 <Grid size={{ xs: 8 }}>
                   <Typography variant="body2">
@@ -922,106 +645,56 @@ const Sales = () => {
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 4 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Customer:
-                  </Typography>
+                  <Typography variant="caption">Customer:</Typography>
                 </Grid>
                 <Grid size={{ xs: 8 }}>
                   <Typography variant="body2">
-                    {selectedSale.customer_name || "Walk-in Customer"}
+                    {selectedSale.customer_name || "Walk-in"}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 4 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Payment:
-                  </Typography>
+                  <Typography variant="caption">Payment:</Typography>
                 </Grid>
                 <Grid size={{ xs: 8 }}>
-                  <Chip
-                    label={selectedSale.payment_method}
-                    size="small"
-                    sx={{
-                      bgcolor: alpha(
-                        paymentMethods[selectedSale.payment_method]?.color ||
-                          "#757575",
-                        0.1,
-                      ),
-                      color:
-                        paymentMethods[selectedSale.payment_method]?.color ||
-                        "#757575",
-                    }}
-                  />
+                  <Chip label={selectedSale.payment_method} size="small" />
                 </Grid>
               </Grid>
-
               <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  {selectedSale.product_name}
+              <Typography variant="subtitle2">
+                {selectedSale.product_name}
+              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2">
+                  Qty: {selectedSale.quantity} x ETB {selectedSale.unit_price}
                 </Typography>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Quantity: {selectedSale.quantity} x ETB{" "}
-                    {selectedSale.unit_price}
-                  </Typography>
-                  <Typography variant="body1" fontWeight="600">
-                    ETB {selectedSale.total_amount?.toLocaleString()}
-                  </Typography>
-                </Box>
+                <Typography variant="body1" fontWeight="600">
+                  ETB {selectedSale.total_amount}
+                </Typography>
               </Box>
-
               <Divider sx={{ my: 2 }} />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                 <Typography variant="h6">Total:</Typography>
-                <Typography variant="h5" color="primary.main" fontWeight="600">
-                  ETB {selectedSale.total_amount?.toLocaleString()}
-                </Typography>
-              </Box>
-
-              <Box sx={{ textAlign: "center", mt: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Thank you for your business!
+                <Typography variant="h5" color="primary.main">
+                  ETB {selectedSale.total_amount}
                 </Typography>
               </Box>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseReceipt}>Close</Button>
+          <Button onClick={() => setOpenReceiptDialog(false)}>Close</Button>
           <Button startIcon={<PrintIcon />} variant="contained">
-            Print Receipt
+            Print
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 1 }}
-        >
-          {snackbar.message}
-        </Alert>
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
       </Snackbar>
     </Box>
   );

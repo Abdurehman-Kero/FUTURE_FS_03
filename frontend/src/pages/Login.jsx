@@ -12,7 +12,6 @@ import {
   Alert,
   CircularProgress,
   Avatar,
-  useTheme,
 } from "@mui/material";
 import {
   PhoneAndroid as PhoneIcon,
@@ -20,32 +19,30 @@ import {
   Store as StoreIcon,
 } from "@mui/icons-material";
 
+// Your color scheme
+const colors = {
+  primary: "#BE3300",
+  gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+};
+
 const Login = () => {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
-  const theme = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const response = await login(phone, password);
-      const { staff, token } = response.data.data;
-
-      authLogin(staff, token);
+      const res = await login(phone, password);
+      authLogin(res.data.data.staff, res.data.data.token);
       navigate("/dashboard");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Login failed. Please check your credentials.",
-      );
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -57,51 +54,45 @@ const Login = () => {
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        py: 4,
+        background: colors.gradient,
+        py: { xs: 2, sm: 4 },
       }}
     >
       <Container maxWidth="sm">
         <Paper
-          elevation={24}
           sx={{
             p: { xs: 3, sm: 5 },
-            borderRadius: 4,
-            backdropFilter: "blur(10px)",
-            background: "rgba(255, 255, 255, 0.95)",
+            borderRadius: 2,
+            boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+            width: "100%",
           }}
         >
           <Box sx={{ textAlign: "center", mb: 4 }}>
             <Avatar
               sx={{
                 mx: "auto",
-                width: 80,
-                height: 80,
-                bgcolor: theme.palette.primary.main,
+                width: { xs: 60, sm: 80 },
+                height: { xs: 60, sm: 80 },
+                bgcolor: colors.primary,
                 mb: 2,
               }}
             >
-              <StoreIcon sx={{ fontSize: 40 }} />
+              <StoreIcon sx={{ fontSize: { xs: 30, sm: 40 } }} />
             </Avatar>
-
             <Typography
               variant="h4"
-              component="h1"
-              gutterBottom
-              fontWeight="bold"
+              fontWeight="600"
+              sx={{
+                fontSize: { xs: "1.5rem", sm: "2rem" },
+                color: "#344767",
+              }}
             >
               Chala Mobile
-            </Typography>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              Solutions Hub
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Sign in to manage your business
             </Typography>
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}>
               {error}
             </Alert>
           )}
@@ -110,14 +101,14 @@ const Login = () => {
             <TextField
               fullWidth
               label="Phone Number"
-              variant="outlined"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
               disabled={loading}
+              size="medium"
               InputProps={{
                 startAdornment: (
-                  <PhoneIcon sx={{ mr: 1, color: "text.secondary" }} />
+                  <PhoneIcon sx={{ mr: 1, color: colors.primary }} />
                 ),
               }}
               sx={{ mb: 3 }}
@@ -127,14 +118,14 @@ const Login = () => {
               fullWidth
               label="Password"
               type="password"
-              variant="outlined"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              size="medium"
               InputProps={{
                 startAdornment: (
-                  <LockIcon sx={{ mr: 1, color: "text.secondary" }} />
+                  <LockIcon sx={{ mr: 1, color: colors.primary }} />
                 ),
               }}
               sx={{ mb: 4 }}
@@ -148,12 +139,13 @@ const Login = () => {
               disabled={loading}
               sx={{
                 py: 1.5,
-                fontSize: "1.1rem",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                bgcolor: colors.primary,
                 "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                  bgcolor: "#A02B00",
                 },
+                textTransform: "none",
+                fontSize: { xs: "0.95rem", sm: "1rem" },
+                fontWeight: 500,
               }}
             >
               {loading ? (
@@ -163,42 +155,6 @@ const Login = () => {
               )}
             </Button>
           </form>
-
-          <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: "divider" }}>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              align="center"
-              gutterBottom
-            >
-              Demo Credentials
-            </Typography>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 1 }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                align="center"
-              >
-                Admin: 0912345678 / password123
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                align="center"
-              >
-                Technician: 0923456789 / password123
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                align="center"
-              >
-                Sales: 0934567890 / password123
-              </Typography>
-            </Box>
-          </Box>
         </Paper>
       </Container>
     </Box>

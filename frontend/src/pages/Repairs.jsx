@@ -50,10 +50,6 @@ import {
   Assignment as AssignmentIcon,
   Speed as SpeedIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon,
-  History as HistoryIcon,
-  FilterList as FilterIcon,
-  Clear as ClearIcon,
 } from "@mui/icons-material";
 import {
   getRepairs,
@@ -66,38 +62,20 @@ import { searchCustomers } from "../services/api";
 import { getProducts } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// Status configuration
 const statusConfig = {
-  received: {
-    label: "Received",
-    color: "#2196f3",
-    icon: <AssignmentIcon />,
-    bgColor: "#e3f2fd",
-  },
+  received: { label: "Received", color: "#2196f3", icon: <AssignmentIcon /> },
   diagnosing: {
     label: "Diagnosing",
     color: "#ff9800",
     icon: <BugReportIcon />,
-    bgColor: "#fff3e0",
   },
-  in_progress: {
-    label: "In Progress",
-    color: "#9c27b0",
-    icon: <BuildIcon />,
-    bgColor: "#f3e5f5",
-  },
+  in_progress: { label: "In Progress", color: "#9c27b0", icon: <BuildIcon /> },
   completed: {
     label: "Completed",
     color: "#4caf50",
     icon: <CheckCircleIcon />,
-    bgColor: "#e8f5e9",
   },
-  delivered: {
-    label: "Delivered",
-    color: "#607d8b",
-    icon: <ReceiptIcon />,
-    bgColor: "#eceff1",
-  },
+  delivered: { label: "Delivered", color: "#607d8b", icon: <ReceiptIcon /> },
 };
 
 const statusSteps = [
@@ -139,36 +117,26 @@ const Repairs = () => {
     issue_description: "",
     estimated_cost: "",
   });
-
   const [partData, setPartData] = useState({
     product_id: "",
     quantity: 1,
     price_at_time: "",
   });
-
-  const [statusData, setStatusData] = useState({
-    status: "",
-    final_cost: "",
-  });
+  const [statusData, setStatusData] = useState({ status: "", final_cost: "" });
 
   useEffect(() => {
     loadRepairs();
     loadProducts();
   }, []);
-
   useEffect(() => {
-    if (statusFilter !== "all") {
-      loadRepairsByStatus();
-    } else {
-      loadRepairs();
-    }
+    statusFilter !== "all" ? loadRepairsByStatus() : loadRepairs();
   }, [statusFilter]);
 
   const loadRepairs = async () => {
     try {
       setLoading(true);
-      const response = await getRepairs();
-      setRepairs(response.data.data);
+      const res = await getRepairs();
+      setRepairs(res.data.data);
     } catch (error) {
       showSnackbar("Failed to load repairs", "error");
     } finally {
@@ -179,8 +147,8 @@ const Repairs = () => {
   const loadRepairsByStatus = async () => {
     try {
       setLoading(true);
-      const response = await getRepairsByStatus(statusFilter);
-      setRepairs(response.data.data);
+      const res = await getRepairsByStatus(statusFilter);
+      setRepairs(res.data.data);
     } catch (error) {
       showSnackbar("Failed to load repairs", "error");
     } finally {
@@ -190,181 +158,81 @@ const Repairs = () => {
 
   const loadProducts = async () => {
     try {
-      const response = await getProducts();
-      setProducts(response.data.data);
-    } catch (error) {
-      console.error("Failed to load products:", error);
-    }
-  };
-
-  const handleCustomerSearch = async (query) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    try {
-      const response = await searchCustomers(query);
-      setSearchResults(response.data.data);
-    } catch (error) {
-      console.error("Customer search failed:", error);
-    }
+      const res = await getProducts();
+      setProducts(res.data.data);
+    } catch (error) {}
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (customerSearch) handleCustomerSearch(customerSearch);
+    const timer = setTimeout(async () => {
+      if (customerSearch) {
+        const res = await searchCustomers(customerSearch);
+        setSearchResults(res.data.data);
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [customerSearch]);
 
-  const selectCustomer = (customer) => {
-    setFormData((prev) => ({
-      ...prev,
-      customer_id: customer.id,
-      customer_name: customer.name,
-      customer_phone: customer.phone,
-    }));
-    setCustomerSearch("");
-    setSearchResults([]);
-  };
-
-  const showSnackbar = (message, severity = "success") => {
+  const showSnackbar = (message, severity = "success") =>
     setSnackbar({ open: true, message, severity });
-  };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
-
-  const handleOpenDialog = () => setOpenDialog(true);
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setFormData({
-      customer_id: "",
-      customer_name: "",
-      customer_phone: "",
-      device_type: "phone",
-      device_brand: "",
-      device_model: "",
-      issue_description: "",
-      estimated_cost: "",
-    });
-    setCustomerSearch("");
-    setSearchResults([]);
-  };
-
-  const handleOpenPartsDialog = (repair) => {
-    setSelectedRepair(repair);
-    setPartData({ product_id: "", quantity: 1, price_at_time: "" });
-    setOpenPartsDialog(true);
-  };
-
-  const handleClosePartsDialog = () => {
-    setOpenPartsDialog(false);
-    setSelectedRepair(null);
-  };
-
-  const handleOpenStatusDialog = (repair) => {
-    setSelectedRepair(repair);
-    setStatusData({
-      status: repair.status,
-      final_cost: repair.final_cost || "",
-    });
-    setOpenStatusDialog(true);
-  };
-
-  const handleCloseStatusDialog = () => {
-    setOpenStatusDialog(false);
-    setSelectedRepair(null);
-  };
-
- const handleInputChange = (e) => {
-   const { name, value } = e.target;
-   setFormData((prev) => ({ ...prev, [name]: value }));
- };
-
- const handlePartInputChange = (e) => {
-   const { name, value } = e.target;
-   setPartData((prev) => ({ ...prev, [name]: value }));
-   if (name === "product_id") {
-     const product = products.find((p) => p.id === parseInt(value));
-     if (product)
-       setPartData((prev) => ({ ...prev, price_at_time: product.price }));
-   }
- };
-
- const handleStatusChange = (e) => {
-   const { name, value } = e.target;
-   setStatusData((prev) => ({ ...prev, [name]: value }));
- };
-
- const handleSubmit = async (e) => {
-   e.preventDefault();
-   if (!formData.customer_id || !formData.issue_description) {
-     showSnackbar("Customer and issue description are required", "error");
-     return;
-   }
-   try {
-     await createRepair(formData);
-     showSnackbar("Repair ticket created successfully", "success");
-     handleCloseDialog();
-     loadRepairs();
-   } catch (error) {
-     showSnackbar(
-       error.response?.data?.message || "Failed to create repair",
-       "error",
-     );
-   }
- };
-
- const handleAddPart = async (e) => {
-   e.preventDefault();
-   if (!partData.product_id) {
-     showSnackbar("Please select a part", "error");
-     return;
-   }
-   try {
-     await addRepairPart(selectedRepair.id, partData);
-     showSnackbar("Part added successfully", "success");
-     handleClosePartsDialog();
-     loadRepairs();
-   } catch (error) {
-     showSnackbar("Failed to add part", "error");
-   }
- };
-
- const handleUpdateStatus = async (e) => {
-   e.preventDefault();
-   try {
-     await updateRepairStatus(selectedRepair.id, statusData);
-     showSnackbar("Status updated successfully", "success");
-     handleCloseStatusDialog();
-     loadRepairs();
-   } catch (error) {
-     showSnackbar("Failed to update status", "error");
-   }
- };
-  const getActiveStep = (status) => statusSteps.indexOf(status);
-
-  const filteredRepairs = repairs.filter((repair) => {
-    const matchesSearch =
-      repair.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.customer_phone?.includes(searchTerm) ||
-      repair.device_brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.device_model?.toLowerCase().includes(searchTerm.toLowerCase());
-    return (
-      matchesSearch &&
-      (statusFilter === "all" || repair.status === statusFilter)
-    );
-  });
+  const filteredRepairs = repairs.filter(
+    (r) =>
+      (r.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.customer_phone?.includes(searchTerm)) &&
+      (statusFilter === "all" || r.status === statusFilter),
+  );
 
   const paginatedRepairs = filteredRepairs.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage,
   );
 
-  if (loading) {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.customer_id || !formData.issue_description) {
+      showSnackbar("Customer and issue required", "error");
+      return;
+    }
+    try {
+      await createRepair(formData);
+      showSnackbar("Repair created", "success");
+      setOpenDialog(false);
+      loadRepairs();
+    } catch (error) {
+      showSnackbar("Failed to create repair", "error");
+    }
+  };
+
+  const handleAddPart = async (e) => {
+    e.preventDefault();
+    if (!partData.product_id) {
+      showSnackbar("Select a part", "error");
+      return;
+    }
+    try {
+      await addRepairPart(selectedRepair.id, partData);
+      showSnackbar("Part added", "success");
+      setOpenPartsDialog(false);
+      loadRepairs();
+    } catch (error) {
+      showSnackbar("Failed to add part", "error");
+    }
+  };
+
+  const handleUpdateStatus = async (e) => {
+    e.preventDefault();
+    try {
+      await updateRepairStatus(selectedRepair.id, statusData);
+      showSnackbar("Status updated", "success");
+      setOpenStatusDialog(false);
+      loadRepairs();
+    } catch (error) {
+      showSnackbar("Failed to update status", "error");
+    }
+  };
+
+  if (loading)
     return (
       <Box
         sx={{
@@ -377,11 +245,9 @@ const Repairs = () => {
         <CircularProgress />
       </Box>
     );
-  }
 
   return (
     <Box>
-      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -396,14 +262,12 @@ const Repairs = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleOpenDialog}
-          sx={{ borderRadius: 2, textTransform: "none", px: 3 }}
+          onClick={() => setOpenDialog(true)}
         >
-          New Repair Ticket
+          New Repair
         </Button>
       </Box>
 
-      {/* Status Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 6, sm: 2.4 }}>
           <Card
@@ -411,19 +275,12 @@ const Repairs = () => {
               cursor: "pointer",
               border: statusFilter === "all" ? 2 : 0,
               borderColor: "primary.main",
-              bgcolor: statusFilter === "all" ? alpha("#667eea", 0.1) : "white",
-              transition: "all 0.2s",
-              "&:hover": { transform: "translateY(-2px)", boxShadow: 3 },
             }}
             onClick={() => setStatusFilter("all")}
           >
             <CardContent>
-              <Typography color="text.secondary" variant="body2" gutterBottom>
-                All Repairs
-              </Typography>
-              <Typography variant="h4" fontWeight="500">
-                {repairs.length}
-              </Typography>
+              <Typography variant="body2">All Repairs</Typography>
+              <Typography variant="h4">{repairs.length}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -436,34 +293,18 @@ const Repairs = () => {
                 borderColor: config.color,
                 bgcolor:
                   statusFilter === key ? alpha(config.color, 0.1) : "white",
-                transition: "all 0.2s",
-                "&:hover": { transform: "translateY(-2px)", boxShadow: 3 },
               }}
               onClick={() => setStatusFilter(key)}
             >
               <CardContent>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                   <Box>
-                    <Typography
-                      color="text.secondary"
-                      variant="body2"
-                      gutterBottom
-                    >
-                      {config.label}
-                    </Typography>
-                    <Typography variant="h5" fontWeight="500">
+                    <Typography variant="body2">{config.label}</Typography>
+                    <Typography variant="h5">
                       {repairs.filter((r) => r.status === key).length}
                     </Typography>
                   </Box>
-                  <Avatar sx={{ bgcolor: config.color, width: 40, height: 40 }}>
-                    {config.icon}
-                  </Avatar>
+                  <Avatar sx={{ bgcolor: config.color }}>{config.icon}</Avatar>
                 </Box>
               </CardContent>
             </Card>
@@ -471,89 +312,62 @@ const Repairs = () => {
         ))}
       </Grid>
 
-      {/* Search Bar */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search by customer name, phone, or device..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchTerm("")}>
-                    <ClearIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ bgcolor: "#f8f9fa", borderRadius: 1 }}
-          />
-          <Tooltip title="Refresh">
-            <IconButton onClick={loadRepairs} sx={{ bgcolor: "#f8f9fa" }}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <TextField
+          fullWidth
+          placeholder="Search repairs..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <IconButton onClick={loadRepairs}>
+                <RefreshIcon />
+              </IconButton>
+            ),
+          }}
+        />
       </Paper>
 
-      {/* Repairs List */}
       <Stack spacing={2}>
         {paginatedRepairs.map((repair) => {
-          const currentStatus =
-            statusConfig[repair.status] || statusConfig.received;
-          const activeStep = getActiveStep(repair.status);
-
+          const currentStatus = statusConfig[repair.status];
           return (
-            <Card
-              key={repair.id}
-              sx={{ borderRadius: 2, "&:hover": { boxShadow: 3 } }}
-            >
+            <Card key={repair.id}>
               <CardContent>
-                {/* Header with Status */}
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "flex-start",
+                    alignItems: "center",
                     mb: 2,
                   }}
                 >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: currentStatus.color,
-                        width: 48,
-                        height: 48,
-                      }}
-                    >
+                    <Avatar sx={{ bgcolor: currentStatus.color }}>
                       {currentStatus.icon}
                     </Avatar>
                     <Box>
                       <Typography variant="h6">
                         {repair.device_brand} {repair.device_model}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Ticket #{repair.id} • Created{" "}
-                        {new Date(repair.created_at).toLocaleDateString()}
+                      <Typography variant="caption">
+                        Ticket #{repair.id}
                       </Typography>
                     </Box>
                   </Box>
-                  <Box sx={{ display: "flex", gap: 1 }}>
+                  <Box>
                     <Chip
                       label={currentStatus.label}
                       sx={{
-                        bgcolor: currentStatus.bgColor,
+                        bgcolor: alpha(currentStatus.color, 0.1),
                         color: currentStatus.color,
-                        fontWeight: 500,
+                        mr: 1,
                       }}
                     />
                     {(user?.role === "technician" ||
@@ -563,8 +377,14 @@ const Repairs = () => {
                           size="small"
                           variant="outlined"
                           startIcon={<SpeedIcon />}
-                          onClick={() => handleOpenStatusDialog(repair)}
-                          sx={{ textTransform: "none" }}
+                          onClick={() => {
+                            setSelectedRepair(repair);
+                            setStatusData({
+                              status: repair.status,
+                              final_cost: repair.final_cost || "",
+                            });
+                            setOpenStatusDialog(true);
+                          }}
                         >
                           Update
                         </Button>
@@ -572,8 +392,10 @@ const Repairs = () => {
                           size="small"
                           variant="outlined"
                           startIcon={<BuildIcon />}
-                          onClick={() => handleOpenPartsDialog(repair)}
-                          sx={{ textTransform: "none" }}
+                          onClick={() => {
+                            setSelectedRepair(repair);
+                            setOpenPartsDialog(true);
+                          }}
                         >
                           Add Part
                         </Button>
@@ -581,29 +403,23 @@ const Repairs = () => {
                     )}
                   </Box>
                 </Box>
-
-                {/* Customer & Device Info */}
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid size={{ xs: 12, md: 4 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <PersonIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <PersonIcon sx={{ mr: 1, color: "text.secondary" }} />
                       <Box>
                         <Typography variant="body2">
                           {repair.customer_name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption">
                           {repair.customer_phone}
                         </Typography>
                       </Box>
                     </Box>
                   </Grid>
                   <Grid size={{ xs: 12, md: 4 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <DevicesIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <DevicesIcon sx={{ mr: 1, color: "text.secondary" }} />
                       <Typography variant="body2">
                         {repair.device_type} • {repair.device_brand}{" "}
                         {repair.device_model}
@@ -611,46 +427,19 @@ const Repairs = () => {
                     </Box>
                   </Grid>
                   <Grid size={{ xs: 12, md: 4 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <BugReportIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                      <Typography variant="body2" noWrap>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <BugReportIcon sx={{ mr: 1, color: "text.secondary" }} />
+                      <Typography variant="body2">
                         {repair.issue_description}
                       </Typography>
                     </Box>
                   </Grid>
                 </Grid>
-
-                {/* Cost Info */}
-                <Box sx={{ display: "flex", gap: 3, mb: 2 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <MoneyIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-                    <Typography variant="body2">
-                      Est:{" "}
-                      <strong>
-                        ETB {repair.estimated_cost?.toLocaleString() || "TBD"}
-                      </strong>
-                    </Typography>
-                  </Box>
-                  {repair.final_cost && (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <CheckCircleIcon
-                        sx={{ color: "success.main", fontSize: 20 }}
-                      />
-                      <Typography variant="body2" color="success.main">
-                        Final:{" "}
-                        <strong>
-                          ETB {repair.final_cost?.toLocaleString()}
-                        </strong>
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                {/* Progress Stepper */}
-                <Stepper activeStep={activeStep} sx={{ mt: 2, mb: 2 }}>
-                  {statusSteps.map((step, index) => (
+                <Stepper
+                  activeStep={statusSteps.indexOf(repair.status)}
+                  sx={{ mt: 2 }}
+                >
+                  {statusSteps.map((step) => (
                     <Step key={step}>
                       <StepLabel
                         StepIconComponent={() => (
@@ -658,12 +447,7 @@ const Repairs = () => {
                             sx={{
                               width: 28,
                               height: 28,
-                              bgcolor:
-                                index <= activeStep
-                                  ? statusConfig[step].color
-                                  : "#e0e0e0",
-                              color: "white",
-                              fontSize: "0.9rem",
+                              bgcolor: statusConfig[step].color,
                             }}
                           >
                             {statusConfig[step].icon}
@@ -677,25 +461,16 @@ const Repairs = () => {
                     </Step>
                   ))}
                 </Stepper>
-
-                {/* Parts Used */}
                 {repair.parts_used?.length > 0 && (
                   <Box sx={{ mt: 2 }}>
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      gutterBottom
-                    >
-                      Parts Used:
-                    </Typography>
+                    <Typography variant="subtitle2">Parts Used:</Typography>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                      {repair.parts_used.map((part) => (
+                      {repair.parts_used.map((p) => (
                         <Chip
-                          key={part.id}
-                          label={`${part.part_name} x${part.quantity} - ETB ${part.price_at_time}`}
+                          key={p.id}
+                          label={`${p.part_name} x${p.quantity}`}
                           size="small"
                           variant="outlined"
-                          sx={{ borderRadius: 1 }}
                         />
                       ))}
                     </Box>
@@ -707,29 +482,28 @@ const Repairs = () => {
         })}
       </Stack>
 
-      {/* Pagination */}
       <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
         <TablePagination
           component="div"
           count={filteredRepairs.length}
           page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
+          onPageChange={(e, p) => setPage(p)}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
+            setRowsPerPage(e.target.value);
             setPage(0);
           }}
         />
       </Box>
 
-      {/* New Repair Dialog */}
+      {/* Dialogs - Add New Repair, Add Parts, Update Status */}
       <Dialog
         open={openDialog}
-        onClose={handleCloseDialog}
+        onClose={() => setOpenDialog(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Create New Repair Ticket</DialogTitle>
+        <DialogTitle>New Repair</DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
             <Grid container spacing={2}>
@@ -739,132 +513,129 @@ const Repairs = () => {
                   label="Search Customer"
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  placeholder="Type name or phone number..."
                 />
-                {searchResults.length > 0 && (
-                  <Paper sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
-                    {searchResults.map((customer) => (
-                      <ListItem
-                        key={customer.id}
-                        button
-                        onClick={() => selectCustomer(customer)}
-                      >
-                        <ListItemIcon>
-                          <PersonIcon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={customer.name}
-                          secondary={customer.phone}
-                        />
-                      </ListItem>
-                    ))}
-                  </Paper>
-                )}
               </Grid>
-
-              {formData.customer_id && (
-                <>
-                  <Grid size={{ xs: 12 }}>
-                    <Alert severity="success" sx={{ borderRadius: 1 }}>
-                      Selected: {formData.customer_name} (
-                      {formData.customer_phone})
-                    </Alert>
-                  </Grid>
-
-                  <Grid size={{ xs: 6 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Device Type</InputLabel>
-                      <Select
-                        name="device_type"
-                        value={formData.device_type}
-                        label="Device Type"
-                        onChange={handleInputChange}
-                        required
-                      >
-                        <MenuItem value="phone">Phone</MenuItem>
-                        <MenuItem value="laptop">Laptop</MenuItem>
-                        <MenuItem value="tablet">Tablet</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      name="device_brand"
-                      label="Brand"
-                      fullWidth
-                      value={formData.device_brand}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Samsung, iPhone"
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      name="device_model"
-                      label="Model"
-                      fullWidth
-                      value={formData.device_model}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Galaxy S22"
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 6 }}>
-                    <TextField
-                      name="estimated_cost"
-                      label="Estimated Cost (ETB)"
-                      type="number"
-                      fullWidth
-                      value={formData.estimated_cost}
-                      onChange={handleInputChange}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">ETB</InputAdornment>
-                        ),
+              {searchResults.length > 0 && (
+                <Paper sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
+                  {searchResults.map((c) => (
+                    <ListItem
+                      key={c.id}
+                      button
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          customer_id: c.id,
+                          customer_name: c.name,
+                          customer_phone: c.phone,
+                        });
+                        setCustomerSearch("");
+                        setSearchResults([]);
                       }}
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      name="issue_description"
-                      label="Issue Description"
-                      multiline
-                      rows={3}
-                      fullWidth
-                      value={formData.issue_description}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Describe the problem in detail..."
-                    />
-                  </Grid>
-                </>
+                    >
+                      <ListItemIcon>
+                        <PersonIcon />
+                      </ListItemIcon>
+                      <ListItemText primary={c.name} secondary={c.phone} />
+                    </ListItem>
+                  ))}
+                </Paper>
               )}
+              {formData.customer_id && (
+                <Grid size={{ xs: 12 }}>
+                  <Alert severity="success">
+                    Selected: {formData.customer_name}
+                  </Alert>
+                </Grid>
+              )}
+              <Grid size={{ xs: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Device Type</InputLabel>
+                  <Select
+                    name="device_type"
+                    value={formData.device_type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, device_type: e.target.value })
+                    }
+                  >
+                    <MenuItem value="phone">Phone</MenuItem>
+                    <MenuItem value="laptop">Laptop</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  name="device_brand"
+                  label="Brand"
+                  fullWidth
+                  value={formData.device_brand}
+                  onChange={(e) =>
+                    setFormData({ ...formData, device_brand: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  name="device_model"
+                  label="Model"
+                  fullWidth
+                  value={formData.device_model}
+                  onChange={(e) =>
+                    setFormData({ ...formData, device_model: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  name="estimated_cost"
+                  label="Est. Cost"
+                  type="number"
+                  fullWidth
+                  value={formData.estimated_cost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, estimated_cost: e.target.value })
+                  }
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">ETB</InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  name="issue_description"
+                  label="Issue"
+                  multiline
+                  rows={3}
+                  fullWidth
+                  value={formData.issue_description}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      issue_description: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={!formData.customer_id}
-            >
-              Create Ticket
+            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            <Button type="submit" variant="contained">
+              Create
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Add Parts Dialog */}
       <Dialog
         open={openPartsDialog}
-        onClose={handleClosePartsDialog}
+        onClose={() => setOpenPartsDialog(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Add Parts to Repair</DialogTitle>
+        <DialogTitle>Add Parts</DialogTitle>
         <form onSubmit={handleAddPart}>
           <DialogContent>
             <Grid container spacing={2}>
@@ -874,19 +645,22 @@ const Repairs = () => {
                   <Select
                     name="product_id"
                     value={partData.product_id}
-                    label="Select Part"
-                    onChange={handlePartInputChange}
-                    required
+                    onChange={(e) => {
+                      setPartData({ ...partData, product_id: e.target.value });
+                      const p = products.find((p) => p.id === e.target.value);
+                      if (p)
+                        setPartData((prev) => ({
+                          ...prev,
+                          price_at_time: p.price,
+                        }));
+                    }}
                   >
+                    <MenuItem value="">Select</MenuItem>
                     {products
-                      .filter(
-                        (p) =>
-                          p.category === "accessory" || p.stock_quantity > 0,
-                      )
-                      .map((product) => (
-                        <MenuItem key={product.id} value={product.id}>
-                          {product.name} - ETB {product.price} (
-                          {product.stock_quantity} in stock)
+                      .filter((p) => p.stock_quantity > 0)
+                      .map((p) => (
+                        <MenuItem key={p.id} value={p.id}>
+                          {p.name} - ETB {p.price}
                         </MenuItem>
                       ))}
                   </Select>
@@ -895,23 +669,26 @@ const Repairs = () => {
               <Grid size={{ xs: 6 }}>
                 <TextField
                   name="quantity"
-                  label="Quantity"
+                  label="Qty"
                   type="number"
                   fullWidth
                   value={partData.quantity}
-                  onChange={handlePartInputChange}
+                  onChange={(e) =>
+                    setPartData({ ...partData, quantity: e.target.value })
+                  }
                   required
-                  InputProps={{ inputProps: { min: 1 } }}
                 />
               </Grid>
               <Grid size={{ xs: 6 }}>
                 <TextField
                   name="price_at_time"
-                  label="Price (ETB)"
+                  label="Price"
                   type="number"
                   fullWidth
                   value={partData.price_at_time}
-                  onChange={handlePartInputChange}
+                  onChange={(e) =>
+                    setPartData({ ...partData, price_at_time: e.target.value })
+                  }
                   required
                   InputProps={{
                     startAdornment: (
@@ -923,22 +700,21 @@ const Repairs = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClosePartsDialog}>Cancel</Button>
+            <Button onClick={() => setOpenPartsDialog(false)}>Cancel</Button>
             <Button type="submit" variant="contained">
-              Add Part
+              Add
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Update Status Dialog */}
       <Dialog
         open={openStatusDialog}
-        onClose={handleCloseStatusDialog}
+        onClose={() => setOpenStatusDialog(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Update Repair Status</DialogTitle>
+        <DialogTitle>Update Status</DialogTitle>
         <form onSubmit={handleUpdateStatus}>
           <DialogContent>
             <Grid container spacing={2}>
@@ -948,13 +724,14 @@ const Repairs = () => {
                   <Select
                     name="status"
                     value={statusData.status}
-                    label="Status"
-                    onChange={handleStatusChange}
+                    onChange={(e) =>
+                      setStatusData({ ...statusData, status: e.target.value })
+                    }
                     required
                   >
-                    {Object.entries(statusConfig).map(([key, config]) => (
-                      <MenuItem key={key} value={key}>
-                        {config.label}
+                    {Object.entries(statusConfig).map(([k, v]) => (
+                      <MenuItem key={k} value={k}>
+                        {v.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -963,11 +740,13 @@ const Repairs = () => {
               <Grid size={{ xs: 12 }}>
                 <TextField
                   name="final_cost"
-                  label="Final Cost (ETB)"
+                  label="Final Cost"
                   type="number"
                   fullWidth
                   value={statusData.final_cost}
-                  onChange={handleStatusChange}
+                  onChange={(e) =>
+                    setStatusData({ ...statusData, final_cost: e.target.value })
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">ETB</InputAdornment>
@@ -975,40 +754,26 @@ const Repairs = () => {
                   }}
                 />
               </Grid>
-              {selectedRepair && (
-                <Grid size={{ xs: 12 }}>
-                  <Alert severity="info" sx={{ borderRadius: 1 }}>
-                    Current Status: {statusConfig[selectedRepair.status]?.label}
-                  </Alert>
-                </Grid>
-              )}
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseStatusDialog}>Cancel</Button>
+            <Button onClick={() => setOpenStatusDialog(false)}>Cancel</Button>
             <Button type="submit" variant="contained">
-              Update Status
+              Update
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 1 }}
-        >
-          {snackbar.message}
-        </Alert>
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
       </Snackbar>
     </Box>
   );
 };
+
 export default Repairs;

@@ -11,18 +11,15 @@ import {
   TextField,
   Typography,
   IconButton,
-  Chip,
   Avatar,
-  MenuItem,
   Grid,
   Paper,
   InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
   Alert,
   Snackbar,
   CircularProgress,
+  Chip,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -30,18 +27,23 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  FormControl,
+  InputLabel,
+  Select,
+  alpha,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
+  Refresh as RefreshIcon,
+  Warning as WarningIcon,
   PhoneIphone as PhoneIcon,
   Laptop as LaptopIcon,
   Tablet as TabletIcon,
   Headset as AccessoryIcon,
-  Refresh as RefreshIcon,
-  Warning as WarningIcon,
 } from "@mui/icons-material";
 import {
   getProducts,
@@ -51,7 +53,7 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// Category icons mapping
+// Category configuration
 const categoryIcons = {
   phone: <PhoneIcon />,
   laptop: <LaptopIcon />,
@@ -59,18 +61,11 @@ const categoryIcons = {
   accessory: <AccessoryIcon />,
 };
 
-// Category colors
 const categoryColors = {
   phone: "#2196f3",
   laptop: "#4caf50",
   tablet: "#ff9800",
   accessory: "#9c27b0",
-};
-
-// Condition colors
-const conditionColors = {
-  new: "success",
-  used: "warning",
 };
 
 const Products = () => {
@@ -87,6 +82,7 @@ const Products = () => {
     message: "",
     severity: "success",
   });
+
   const [formData, setFormData] = useState({
     name: "",
     category: "phone",
@@ -179,16 +175,14 @@ const Products = () => {
 
     try {
       if (editingProduct) {
-        // Update existing product
         await updateProduct(editingProduct.id, formData);
         showSnackbar("Product updated successfully", "success");
       } else {
-        // Create new product
         await createProduct(formData);
         showSnackbar("Product created successfully", "success");
       }
       handleCloseDialog();
-      loadProducts(); // Reload the list
+      loadProducts();
     } catch (error) {
       showSnackbar(
         error.response?.data?.message || "Operation failed",
@@ -237,11 +231,11 @@ const Products = () => {
     setPage(0);
   };
 
-  // Low stock products
-  const lowStockProducts = products.filter(
+  // Low stock alerts
+  const lowStockCount = products.filter(
     (p) => p.stock_quantity < 5 && p.stock_quantity > 0,
-  );
-  const outOfStockProducts = products.filter((p) => p.stock_quantity === 0);
+  ).length;
+  const outOfStockCount = products.filter((p) => p.stock_quantity === 0).length;
 
   if (loading) {
     return (
@@ -269,8 +263,8 @@ const Products = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" gutterBottom>
-          Products Inventory
+        <Typography variant="h4" fontWeight="500">
+          Products Management
         </Typography>
         {(user?.role === "admin" || user?.role === "sales") && (
           <Button
@@ -278,7 +272,11 @@ const Products = () => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
             sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              bgcolor: "#BE3300",
+              borderRadius: 2,
+              textTransform: "none",
+              px: 3,
+              "&:hover": { bgcolor: "#A02B00" },
             }}
           >
             Add Product
@@ -288,73 +286,118 @@ const Products = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
-          <Card>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card sx={{ borderRadius: 2 }}>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Total Products
-              </Typography>
-              <Typography variant="h3">{products.length}</Typography>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#2196f3", 0.1),
+                    color: "#2196f3",
+                    mr: 2,
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  <PhoneIcon />
+                </Avatar>
+                <Box>
+                  <Typography color="text.secondary" variant="body2">
+                    Total Products
+                  </Typography>
+                  <Typography variant="h4" fontWeight="600">
+                    {products.length}
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ bgcolor: "#fff3e0" }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card sx={{ borderRadius: 2, bgcolor: alpha("#ff9800", 0.05) }}>
             <CardContent>
-              <Typography color="warning.main" gutterBottom>
-                Low Stock ({lowStockProducts.length})
-              </Typography>
-              {lowStockProducts.slice(0, 3).map((p) => (
-                <Typography key={p.id} variant="body2">
-                  {p.name}: {p.stock_quantity} left
-                </Typography>
-              ))}
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#ff9800", 0.1),
+                    color: "#ff9800",
+                    mr: 2,
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  <WarningIcon />
+                </Avatar>
+                <Box>
+                  <Typography color="text.secondary" variant="body2">
+                    Low Stock
+                  </Typography>
+                  <Typography variant="h4" fontWeight="600" color="#ff9800">
+                    {lowStockCount}
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ bgcolor: "#ffebee" }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card sx={{ borderRadius: 2, bgcolor: alpha("#f44336", 0.05) }}>
             <CardContent>
-              <Typography color="error.main" gutterBottom>
-                Out of Stock ({outOfStockProducts.length})
-              </Typography>
-              {outOfStockProducts.slice(0, 3).map((p) => (
-                <Typography key={p.id} variant="body2">
-                  {p.name}
-                </Typography>
-              ))}
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#f44336", 0.1),
+                    color: "#f44336",
+                    mr: 2,
+                    width: 48,
+                    height: 48,
+                  }}
+                >
+                  <DeleteIcon />
+                </Avatar>
+                <Box>
+                  <Typography color="text.secondary" variant="body2">
+                    Out of Stock
+                  </Typography>
+                  <Typography variant="h4" fontWeight="600" color="#f44336">
+                    {outOfStockCount}
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
       {/* Search Bar */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search products by name, brand, model..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={loadProducts}>
-                  <RefreshIcon />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search products by name, brand, or model..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ bgcolor: "#f8f9fa", borderRadius: 1 }}
+          />
+          <Tooltip title="Refresh">
+            <IconButton onClick={loadProducts} sx={{ bgcolor: "#f8f9fa" }}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Paper>
 
       {/* Products Table */}
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: "#f5f5f5" }}>
@@ -363,7 +406,7 @@ const Products = () => {
               <TableCell>Condition</TableCell>
               <TableCell>Price (ETB)</TableCell>
               <TableCell>Stock</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -374,13 +417,15 @@ const Products = () => {
                     <Avatar
                       sx={{
                         bgcolor: categoryColors[product.category],
+                        width: 40,
+                        height: 40,
                         mr: 2,
                       }}
                     >
                       {categoryIcons[product.category]}
                     </Avatar>
                     <Box>
-                      <Typography variant="subtitle2">
+                      <Typography variant="subtitle2" fontWeight="600">
                         {product.name}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -396,6 +441,7 @@ const Products = () => {
                     sx={{
                       bgcolor: categoryColors[product.category],
                       color: "white",
+                      fontWeight: 500,
                     }}
                   />
                 </TableCell>
@@ -403,17 +449,19 @@ const Products = () => {
                   <Chip
                     label={product.type}
                     size="small"
-                    color={conditionColors[product.type]}
+                    color={product.type === "new" ? "success" : "warning"}
+                    variant="outlined"
                   />
                 </TableCell>
                 <TableCell>
-                  <Typography fontWeight="bold">
+                  <Typography variant="body1" fontWeight="600" color="#BE3300">
                     ETB {product.price?.toLocaleString()}
                   </Typography>
                 </TableCell>
                 <TableCell>
                   <Chip
                     label={product.stock_quantity}
+                    size="small"
                     color={
                       product.stock_quantity === 0
                         ? "error"
@@ -421,27 +469,31 @@ const Products = () => {
                           ? "warning"
                           : "success"
                     }
-                    size="small"
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell align="center">
                   {(user?.role === "admin" || user?.role === "sales") && (
                     <>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpenDialog(product)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      {user?.role === "admin" && (
+                      <Tooltip title="Edit">
                         <IconButton
                           size="small"
-                          color="error"
-                          onClick={() => handleDelete(product.id)}
+                          color="primary"
+                          onClick={() => handleOpenDialog(product)}
+                          sx={{ mr: 1 }}
                         >
-                          <DeleteIcon />
+                          <EditIcon />
                         </IconButton>
+                      </Tooltip>
+                      {user?.role === "admin" && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(product.id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </>
                   )}
@@ -460,7 +512,7 @@ const Products = () => {
           </TableBody>
         </Table>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           component="div"
           count={filteredProducts.length}
           rowsPerPage={rowsPerPage}
@@ -477,13 +529,15 @@ const Products = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{ bgcolor: "#f5f5f5", color: "#BE3300", fontWeight: 600 }}
+        >
           {editingProduct ? "Edit Product" : "Add New Product"}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent>
+          <DialogContent sx={{ pt: 3 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="name"
                   label="Product Name *"
@@ -491,9 +545,10 @@ const Products = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
+                  variant="outlined"
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Category *</InputLabel>
                   <Select
@@ -510,7 +565,7 @@ const Products = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Condition *</InputLabel>
                   <Select
@@ -525,25 +580,27 @@ const Products = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField
                   name="brand"
                   label="Brand"
                   fullWidth
                   value={formData.brand}
                   onChange={handleInputChange}
+                  placeholder="e.g., Samsung, iPhone"
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField
                   name="model"
                   label="Model"
                   fullWidth
                   value={formData.model}
                   onChange={handleInputChange}
+                  placeholder="e.g., Galaxy S22, iPhone 13"
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField
                   name="price"
                   label="Price (ETB) *"
@@ -559,7 +616,7 @@ const Products = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField
                   name="stock_quantity"
                   label="Stock Quantity *"
@@ -568,9 +625,10 @@ const Products = () => {
                   value={formData.stock_quantity}
                   onChange={handleInputChange}
                   required
+                  InputProps={{ inputProps: { min: 0 } }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="description"
                   label="Description"
@@ -579,9 +637,10 @@ const Products = () => {
                   fullWidth
                   value={formData.description}
                   onChange={handleInputChange}
+                  placeholder="Product description..."
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="image_url"
                   label="Image URL"
@@ -593,10 +652,19 @@ const Products = () => {
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              {editingProduct ? "Update" : "Create"}
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={handleCloseDialog} variant="outlined">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                bgcolor: "#BE3300",
+                "&:hover": { bgcolor: "#A02B00" },
+              }}
+            >
+              {editingProduct ? "Update Product" : "Create Product"}
             </Button>
           </DialogActions>
         </form>
@@ -609,7 +677,11 @@ const Products = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ borderRadius: 1 }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

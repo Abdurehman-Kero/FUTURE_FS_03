@@ -18,13 +18,6 @@ import {
   Alert,
   Snackbar,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Chip,
   Tab,
   Tabs,
@@ -33,9 +26,17 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Rating,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
   Tooltip,
   Badge,
+  Rating,
+  alpha,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -61,7 +62,7 @@ import {
   deleteCustomer,
   searchCustomers,
 } from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext"; // 👈 This was missing
 
 // Tab Panel Component
 const TabPanel = ({ children, value, index, ...other }) => (
@@ -71,7 +72,7 @@ const TabPanel = ({ children, value, index, ...other }) => (
 );
 
 const Customers = () => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // 👈 Now this will work
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -286,7 +287,7 @@ const Customers = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" fontWeight="500">
           Customer Management
         </Typography>
         {(user?.role === "admin" || user?.role === "sales") && (
@@ -296,6 +297,9 @@ const Customers = () => {
             onClick={() => handleOpenDialog()}
             sx={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              borderRadius: 2,
+              textTransform: "none",
+              px: 3,
             }}
           >
             Add Customer
@@ -305,35 +309,53 @@ const Customers = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
-          <Card>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card sx={{ borderRadius: 2 }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Avatar sx={{ bgcolor: "primary.main", mr: 2 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#2196f3", 0.1),
+                    color: "#2196f3",
+                    mr: 2,
+                    width: 48,
+                    height: 48,
+                  }}
+                >
                   <PersonIcon />
                 </Avatar>
                 <Box>
                   <Typography color="text.secondary" variant="body2">
                     Total Customers
                   </Typography>
-                  <Typography variant="h4">{customers.length}</Typography>
+                  <Typography variant="h4" fontWeight="600">
+                    {customers.length}
+                  </Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card sx={{ borderRadius: 2 }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Avatar sx={{ bgcolor: "success.main", mr: 2 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#4caf50", 0.1),
+                    color: "#4caf50",
+                    mr: 2,
+                    width: 48,
+                    height: 48,
+                  }}
+                >
                   <SalesIcon />
                 </Avatar>
                 <Box>
                   <Typography color="text.secondary" variant="body2">
                     With Purchases
                   </Typography>
-                  <Typography variant="h4">
+                  <Typography variant="h4" fontWeight="600">
                     {customers.filter((c) => c.purchases?.length > 0).length}
                   </Typography>
                 </Box>
@@ -341,18 +363,26 @@ const Customers = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Card sx={{ borderRadius: 2 }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Avatar sx={{ bgcolor: "warning.main", mr: 2 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#ff9800", 0.1),
+                    color: "#ff9800",
+                    mr: 2,
+                    width: 48,
+                    height: 48,
+                  }}
+                >
                   <RepairsIcon />
                 </Avatar>
                 <Box>
                   <Typography color="text.secondary" variant="body2">
                     With Repairs
                   </Typography>
-                  <Typography variant="h4">
+                  <Typography variant="h4" fontWeight="600">
                     {customers.filter((c) => c.repairs?.length > 0).length}
                   </Typography>
                 </Box>
@@ -363,28 +393,37 @@ const Customers = () => {
       </Grid>
 
       {/* Search Bar */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search customers by name or phone number..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={loadCustomers}>
-                  <RefreshIcon />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search customers by name or phone number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchTerm("")}>
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{ bgcolor: "#f8f9fa", borderRadius: 1 }}
+          />
+          <Tooltip title="Refresh">
+            <IconButton onClick={loadCustomers} sx={{ bgcolor: "#f8f9fa" }}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
         {isSearching && (
           <Box sx={{ mt: 1 }}>
             <Chip
@@ -403,8 +442,8 @@ const Customers = () => {
       {/* Main Content - Split View */}
       <Grid container spacing={3}>
         {/* Customers List */}
-        <Grid item xs={12} md={selectedCustomer ? 5 : 12}>
-          <TableContainer component={Paper}>
+        <Grid size={{ xs: 12, md: selectedCustomer ? 5 : 12 }}>
+          <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: "#f5f5f5" }}>
@@ -430,7 +469,7 @@ const Customers = () => {
                   >
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <Avatar sx={{ mr: 2, bgcolor: "primary.main" }}>
+                        <Avatar sx={{ mr: 2, bgcolor: "#667eea" }}>
                           {customer.name?.charAt(0)}
                         </Avatar>
                         <Box>
@@ -443,7 +482,7 @@ const Customers = () => {
                               icon={<RepairsIcon />}
                               label={`${customer.repairs.length} repairs`}
                               color="warning"
-                              sx={{ mt: 0.5 }}
+                              sx={{ mt: 0.5, height: 20 }}
                             />
                           )}
                         </Box>
@@ -467,41 +506,45 @@ const Customers = () => {
                       </Typography>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <IconButton
-                        size="small"
-                        color="success"
-                        onClick={() => handleWhatsApp(customer.phone)}
-                        title="WhatsApp"
-                      >
-                        <WhatsAppIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleCall(customer.phone)}
-                        title="Call"
-                      >
-                        <CallIcon />
-                      </IconButton>
+                      <Tooltip title="WhatsApp">
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => handleWhatsApp(customer.phone)}
+                        >
+                          <WhatsAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Call">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleCall(customer.phone)}
+                        >
+                          <CallIcon />
+                        </IconButton>
+                      </Tooltip>
                       {(user?.role === "admin" || user?.role === "sales") && (
                         <>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleOpenDialog(customer)}
-                            title="Edit"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          {user?.role === "admin" && (
+                          <Tooltip title="Edit">
                             <IconButton
                               size="small"
-                              color="error"
-                              onClick={() => handleDelete(customer.id)}
-                              title="Delete"
+                              color="primary"
+                              onClick={() => handleOpenDialog(customer)}
                             >
-                              <DeleteIcon />
+                              <EditIcon />
                             </IconButton>
+                          </Tooltip>
+                          {user?.role === "admin" && (
+                            <Tooltip title="Delete">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDelete(customer.id)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
                           )}
                         </>
                       )}
@@ -533,8 +576,8 @@ const Customers = () => {
 
         {/* Customer Details Panel */}
         {selectedCustomer && (
-          <Grid item xs={12} md={7}>
-            <Paper sx={{ p: 3 }}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
               <Box
                 sx={{
                   display: "flex",
@@ -543,7 +586,9 @@ const Customers = () => {
                   mb: 2,
                 }}
               >
-                <Typography variant="h5">Customer Details</Typography>
+                <Typography variant="h5" fontWeight="600">
+                  Customer Details
+                </Typography>
                 <IconButton onClick={handleCloseDetails}>
                   <DeleteIcon />
                 </IconButton>
@@ -555,7 +600,7 @@ const Customers = () => {
                   sx={{
                     width: 60,
                     height: 60,
-                    bgcolor: "primary.main",
+                    bgcolor: "#667eea",
                     fontSize: "2rem",
                     mr: 2,
                   }}
@@ -570,6 +615,7 @@ const Customers = () => {
                       label={selectedCustomer.phone}
                       size="small"
                       onClick={() => handleCall(selectedCustomer.phone)}
+                      sx={{ cursor: "pointer" }}
                     />
                     {selectedCustomer.email && (
                       <Chip
@@ -731,7 +777,7 @@ const Customers = () => {
         <form onSubmit={handleSubmit}>
           <DialogContent>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="name"
                   label="Full Name *"
@@ -748,7 +794,7 @@ const Customers = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="phone"
                   label="Phone Number *"
@@ -765,7 +811,7 @@ const Customers = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="email"
                   label="Email Address"
@@ -782,7 +828,7 @@ const Customers = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   name="address"
                   label="Physical Address"
@@ -818,7 +864,11 @@ const Customers = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ borderRadius: 1 }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

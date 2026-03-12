@@ -6,86 +6,101 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+
+// Public Pages (everyone can access)
+import Home from "./pages/Home";
 import Login from "./pages/Login";
+import PublicProducts from "./pages/PublicProducts"; // Public product browsing
+import PublicRepairRequest from "./pages/PublicRepairRequest";
+
+// Protected Pages (require login)
 import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
+import Products from "./pages/Products"; // Admin product management
 import Customers from "./pages/Customers";
 import Repairs from "./pages/Repairs";
 import Sales from "./pages/Sales";
 import Layout from "./layouts/Layout";
+
 import "./App.css";
 
-// Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
+  if (loading) return <div>Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
-
   return children;
 };
 
 function AppRoutes() {
   return (
     <Routes>
+      {/* 🌍 PUBLIC ROUTES - No login needed */}
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-
+      <Route path="/products" element={<PublicProducts />} />{" "}
+      {/* Public product browsing */}
+      <Route path="/repair-request" element={<PublicRepairRequest />} />
+      {/* 🔒 PROTECTED ROUTES - Admin area (login required) */}
+      {/* Dashboard */}
       <Route
-        path="/"
+        path="/dashboard"
         element={
           <ProtectedRoute>
-            <Layout />
+            <Layout>
+              <Dashboard />
+            </Layout>
           </ProtectedRoute>
         }
-      >
-        <Route index element={<Navigate to="/dashboard" />} />
-        <Route path="dashboard" element={<Dashboard />} />
-
-        <Route
-          path="products"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "technician", "sales"]}>
+      />
+      {/* Products Management - Admin only area */}
+      <Route
+        path="/admin/products"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "technician", "sales"]}>
+            <Layout>
               <Products />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="customers"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "technician", "sales"]}>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Customers Management */}
+      <Route
+        path="/admin/customers"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "technician", "sales"]}>
+            <Layout>
               <Customers />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="repairs"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "technician"]}>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Repairs Management */}
+      <Route
+        path="/admin/repairs"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "technician"]}>
+            <Layout>
               <Repairs />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="sales"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "sales"]}>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Sales Management */}
+      <Route
+        path="/admin/sales"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "sales"]}>
+            <Layout>
               <Sales />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Catch all - redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
