@@ -1,9 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-
-// Import routes
 const productRoutes = require("./routes/productRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+const repairRoutes = require("./routes/repairRoutes");
 
 const app = express();
 
@@ -14,6 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/products", productRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/repairs", repairRoutes);
 
 // Test route
 app.get("/", (req, res) => {
