@@ -1416,6 +1416,29 @@ export default function Home() {
         </Container>
       </Box>
 
+      {/* Floating WhatsApp */}
+      <IconButton
+        href="https://wa.me/251912345678"
+        target="_blank"
+        sx={{
+          position: "fixed",
+          bottom: { xs: 16, md: 24 },
+          right: { xs: 16, md: 24 },
+          bgcolor: "#25D366",
+          color: colors.white,
+          width: { xs: 50, md: 60 },
+          height: { xs: 50, md: 60 },
+          "&:hover": {
+            bgcolor: "#128C7E",
+            transform: "scale(1.1)",
+          },
+          boxShadow: "0 4px 20px rgba(37,211,102,0.3)",
+          zIndex: 1000,
+          transition: "all 0.3s ease",
+        }}
+      >
+        <WhatsAppIcon sx={{ fontSize: { xs: 24, md: 28 } }} />
+      </IconButton>
     </Box>
   );
 }
