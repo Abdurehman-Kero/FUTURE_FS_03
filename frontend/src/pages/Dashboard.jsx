@@ -146,7 +146,8 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    logout();
+    logout(); // Clear auth state
+    // Force a full page reload to home
     window.location.href = "/";
   };
 
@@ -209,7 +210,13 @@ const Dashboard = () => {
         ))}
         <Divider sx={{ my: 1 }} />
         <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout} sx={{ color: "#f44336" }}>
+          <ListItemButton
+            onClick={() => {
+              handleLogout(); // Use the same logout function
+              setMobileOpen(false);
+            }}
+            sx={{ color: "#f44336" }}
+          >
             <ListItemIcon sx={{ color: "#f44336" }}>
               <LogoutIcon />
             </ListItemIcon>
