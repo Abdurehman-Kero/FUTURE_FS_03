@@ -122,6 +122,7 @@ const whatWeSell = [
     desc: "New & used iPhones, Samsung, Tecno, Infinix",
     brands: "Apple, Samsung, Huawei, Xiaomi",
     price: "From $150",
+    slug: "smartphones",
   },
   {
     icon: <LaptopIcon sx={{ fontSize: 40 }} />,
@@ -129,6 +130,7 @@ const whatWeSell = [
     desc: "HP, Dell, Lenovo, MacBooks for work & gaming",
     brands: "HP, Dell, Lenovo, Apple, Acer",
     price: "From $350",
+    slug: "laptops",
   },
   {
     icon: <TabletIcon sx={{ fontSize: 40 }} />,
@@ -136,6 +138,7 @@ const whatWeSell = [
     desc: "iPads, Samsung tablets for entertainment & work",
     brands: "Apple, Samsung, Huawei",
     price: "From $200",
+    slug: "tablets",
   },
   {
     icon: <HeadsetIcon sx={{ fontSize: 40 }} />,
@@ -143,6 +146,7 @@ const whatWeSell = [
     desc: "Headphones, earphones, speakers, earbuds",
     brands: "JBL, Sony, Bose, Anker",
     price: "From $15",
+    slug: "audio",
   },
   {
     icon: <WatchIcon sx={{ fontSize: 40 }} />,
@@ -150,6 +154,7 @@ const whatWeSell = [
     desc: "Smartwatches, fitness trackers, smart bands",
     brands: "Apple Watch, Samsung, Fitbit",
     price: "From $50",
+    slug: "wearables",
   },
   {
     icon: <CameraIcon sx={{ fontSize: 40 }} />,
@@ -157,6 +162,7 @@ const whatWeSell = [
     desc: "Digital cameras, webcams, security cameras",
     brands: "Canon, Nikon, Sony, Logitech",
     price: "From $80",
+    slug: "cameras",
   },
   {
     icon: <SpeakerIcon sx={{ fontSize: 40 }} />,
@@ -164,6 +170,7 @@ const whatWeSell = [
     desc: "Bluetooth speakers, soundbars, home audio",
     brands: "JBL, Bose, Sony, Anker",
     price: "From $25",
+    slug: "speakers",
   },
   {
     icon: <GamepadIcon sx={{ fontSize: 40 }} />,
@@ -171,6 +178,7 @@ const whatWeSell = [
     desc: "Consoles, controllers, gaming accessories",
     brands: "PlayStation, Xbox, Nintendo",
     price: "From $40",
+    slug: "gaming",
   },
 ];
 
@@ -247,7 +255,6 @@ export default function Home() {
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
-    // Create mailto link
     const subject = `Contact from ${formData.name}`;
     const body = `Name: ${formData.name}%0AEmail: ${formData.email}%0APhone: ${formData.phone}%0A%0AMessage:%0A${formData.message}`;
     window.location.href = `mailto:keroabdurehman@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`;
@@ -256,7 +263,6 @@ export default function Home() {
 
   const handleNewsletterSubmit = (e) => {
     e.preventDefault();
-    // Send newsletter subscription via email
     const subject = "Newsletter Subscription";
     const body = `Email: ${newsletterEmail} wants to subscribe to newsletter.`;
     window.location.href = `mailto:keroabdurehman@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -302,12 +308,12 @@ export default function Home() {
   };
 
   const handleCategoryClick = (category) => {
-    navigate(`/products?category=${category.slug}`);
+    navigate(`/products?category=${category.slug}`); // Public products with filter
     setMobileMenuOpen(false);
   };
 
   const handleProductClick = (product) => {
-    navigate(`/product/${product.slug}`);
+    navigate(`/products?product=${product.slug}`); // Public products with product highlight
   };
 
   const handleServiceClick = (service) => {
@@ -315,7 +321,7 @@ export default function Home() {
   };
 
   const handleShopNow = () => {
-    navigate("/products");
+    navigate("/products"); // Public products page
   };
 
   const handleAdminLogin = () => {
@@ -323,7 +329,11 @@ export default function Home() {
   };
 
   const handleViewAllProducts = () => {
-    navigate("/products");
+    navigate("/products"); // Public products page
+  };
+
+  const handleSellItemClick = (item) => {
+    navigate(`/products?category=${item.slug}`); // Public products with category filter
   };
 
   return (
@@ -393,7 +403,7 @@ export default function Home() {
               </Box>
             </Stack>
 
-            {/* Desktop Navigation - Centered */}
+            {/* Desktop Navigation */}
             <Stack
               direction="row"
               spacing={3}
@@ -1126,6 +1136,7 @@ export default function Home() {
                 <Grid item xs={12} sm={6} md={3} key={index}>
                   <Paper
                     elevation={0}
+                    onClick={() => handleSellItemClick(item)}
                     sx={{
                       p: { xs: 3, md: 3 },
                       borderRadius: "20px",
@@ -1134,6 +1145,7 @@ export default function Home() {
                       transition: "all 0.3s ease",
                       border: `1px solid ${colors.lightGray}`,
                       textAlign: "center",
+                      cursor: "pointer",
                       "&:hover": {
                         transform: "translateY(-8px)",
                         boxShadow: `0 20px 40px ${colors.primary}20`,
@@ -1324,7 +1336,7 @@ export default function Home() {
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/product/${product.slug}`);
+                          handleProductClick(product);
                         }}
                       >
                         <CartIcon sx={{ fontSize: { xs: 18, md: 20 } }} />
@@ -1550,7 +1562,7 @@ export default function Home() {
                           Contact Info
                         </Typography>
                         <Typography color={colors.gray}>
-                          +251 982310974
+                          +251 98 231 0974
                         </Typography>
                         <Typography color={colors.gray}>
                           keroabdurehman@gmail.com
@@ -1801,7 +1813,7 @@ export default function Home() {
                   cursor: "pointer",
                   "&:hover": { color: colors.primary },
                 }}
-                onClick={() => scrollToSection(productsRef)}
+                onClick={handleShopNow}
               >
                 Shop
               </Typography>
