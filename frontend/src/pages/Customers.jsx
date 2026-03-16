@@ -54,6 +54,7 @@ import {
   Star as StarIcon,
   WhatsApp as WhatsAppIcon,
   Call as CallIcon,
+  Clear as ClearIcon,
 } from "@mui/icons-material";
 import {
   getCustomers,
@@ -62,7 +63,20 @@ import {
   deleteCustomer,
   searchCustomers,
 } from "../services/api";
-import { useAuth } from "../context/AuthContext"; // 👈 This was missing
+import { useAuth } from "../context/AuthContext";
+
+// Color scheme matching homepage
+const colors = {
+  primary: "#FF8500",
+  secondary: "#FFA33C",
+  gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
+  dark: "#1E1A3A",
+  light: "#F8F9FF",
+  white: "#FFFFFF",
+  gray: "#6B7280",
+  lightGray: "#E5E7EB",
+  success: "#10B981",
+};
 
 // Tab Panel Component
 const TabPanel = ({ children, value, index, ...other }) => (
@@ -72,7 +86,7 @@ const TabPanel = ({ children, value, index, ...other }) => (
 );
 
 const Customers = () => {
-  const { user } = useAuth(); // 👈 Now this will work
+  const { user } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -271,7 +285,7 @@ const Customers = () => {
           height: "50vh",
         }}
       >
-        <CircularProgress />
+        <CircularProgress sx={{ color: colors.primary }} />
       </Box>
     );
   }
@@ -287,7 +301,7 @@ const Customers = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" fontWeight="500">
+        <Typography variant="h5" fontWeight="600" color={colors.dark}>
           Customer Management
         </Typography>
         {(user?.role === "admin" || user?.role === "sales") && (
@@ -296,10 +310,13 @@ const Customers = () => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
             sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: colors.gradient,
               borderRadius: 2,
               textTransform: "none",
               px: 3,
+              "&:hover": {
+                background: colors.secondary,
+              },
             }}
           >
             Add Customer
@@ -308,15 +325,17 @@ const Customers = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <Card sx={{ borderRadius: 2 }}>
+          <Card
+            sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+          >
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <Avatar
                   sx={{
-                    bgcolor: alpha("#2196f3", 0.1),
-                    color: "#2196f3",
+                    bgcolor: alpha(colors.primary, 0.1),
+                    color: colors.primary,
                     mr: 2,
                     width: 48,
                     height: 48,
@@ -325,10 +344,10 @@ const Customers = () => {
                   <PersonIcon />
                 </Avatar>
                 <Box>
-                  <Typography color="text.secondary" variant="body2">
+                  <Typography color="text.secondary" variant="caption">
                     Total Customers
                   </Typography>
-                  <Typography variant="h4" fontWeight="600">
+                  <Typography variant="h5" fontWeight="600">
                     {customers.length}
                   </Typography>
                 </Box>
@@ -337,7 +356,9 @@ const Customers = () => {
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <Card sx={{ borderRadius: 2 }}>
+          <Card
+            sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+          >
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <Avatar
@@ -352,10 +373,10 @@ const Customers = () => {
                   <SalesIcon />
                 </Avatar>
                 <Box>
-                  <Typography color="text.secondary" variant="body2">
+                  <Typography color="text.secondary" variant="caption">
                     With Purchases
                   </Typography>
-                  <Typography variant="h4" fontWeight="600">
+                  <Typography variant="h5" fontWeight="600">
                     {customers.filter((c) => c.purchases?.length > 0).length}
                   </Typography>
                 </Box>
@@ -364,7 +385,9 @@ const Customers = () => {
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <Card sx={{ borderRadius: 2 }}>
+          <Card
+            sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+          >
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <Avatar
@@ -379,10 +402,10 @@ const Customers = () => {
                   <RepairsIcon />
                 </Avatar>
                 <Box>
-                  <Typography color="text.secondary" variant="body2">
+                  <Typography color="text.secondary" variant="caption">
                     With Repairs
                   </Typography>
-                  <Typography variant="h4" fontWeight="600">
+                  <Typography variant="h5" fontWeight="600">
                     {customers.filter((c) => c.repairs?.length > 0).length}
                   </Typography>
                 </Box>
@@ -398,14 +421,14 @@ const Customers = () => {
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Search customers by name or phone number..."
+            placeholder="Search customers by name or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="small"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="action" />
+                  <SearchIcon sx={{ color: colors.primary }} />
                 </InputAdornment>
               ),
               endAdornment: searchTerm && (
@@ -427,30 +450,34 @@ const Customers = () => {
         {isSearching && (
           <Box sx={{ mt: 1 }}>
             <Chip
-              label={`Found ${searchResults.length} results`}
+              label={`${searchResults.length} results found`}
               color="primary"
               size="small"
               onDelete={() => {
                 setSearchTerm("");
                 setIsSearching(false);
               }}
+              sx={{
+                bgcolor: alpha(colors.primary, 0.1),
+                color: colors.primary,
+              }}
             />
           </Box>
         )}
       </Paper>
 
-      {/* Main Content - Split View */}
+      {/* Main Content */}
       <Grid container spacing={3}>
         {/* Customers List */}
         <Grid size={{ xs: 12, md: selectedCustomer ? 5 : 12 }}>
           <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                <TableRow sx={{ bgcolor: colors.light }}>
                   <TableCell>Customer</TableCell>
                   <TableCell>Contact</TableCell>
                   <TableCell>Address</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -463,13 +490,13 @@ const Customers = () => {
                       cursor: "pointer",
                       bgcolor:
                         selectedCustomer?.id === customer.id
-                          ? "#f0f7ff"
+                          ? alpha(colors.primary, 0.05)
                           : "inherit",
                     }}
                   >
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <Avatar sx={{ mr: 2, bgcolor: "#667eea" }}>
+                        <Avatar sx={{ mr: 2, bgcolor: colors.primary }}>
                           {customer.name?.charAt(0)}
                         </Avatar>
                         <Box>
@@ -481,47 +508,50 @@ const Customers = () => {
                               size="small"
                               icon={<RepairsIcon />}
                               label={`${customer.repairs.length} repairs`}
-                              color="warning"
-                              sx={{ mt: 0.5, height: 20 }}
+                              sx={{
+                                bgcolor: alpha(colors.primary, 0.1),
+                                color: colors.primary,
+                                height: 20,
+                                fontSize: "0.7rem",
+                              }}
                             />
                           )}
                         </Box>
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box>
-                        <Typography variant="body2">
-                          📞 {customer.phone}
+                      <Typography variant="body2">{customer.phone}</Typography>
+                      {customer.email && (
+                        <Typography variant="caption" color="text.secondary">
+                          {customer.email}
                         </Typography>
-                        {customer.email && (
-                          <Typography variant="caption" color="text.secondary">
-                            ✉️ {customer.email}
-                          </Typography>
-                        )}
-                      </Box>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {customer.address || "No address"}
+                        {customer.address || "—"}
                       </Typography>
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell
+                      align="center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Tooltip title="WhatsApp">
                         <IconButton
                           size="small"
-                          color="success"
                           onClick={() => handleWhatsApp(customer.phone)}
+                          sx={{ color: "#25D366" }}
                         >
-                          <WhatsAppIcon />
+                          <WhatsAppIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Call">
                         <IconButton
                           size="small"
-                          color="primary"
                           onClick={() => handleCall(customer.phone)}
+                          sx={{ color: colors.primary }}
                         >
-                          <CallIcon />
+                          <PhoneIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       {(user?.role === "admin" || user?.role === "sales") && (
@@ -529,20 +559,20 @@ const Customers = () => {
                           <Tooltip title="Edit">
                             <IconButton
                               size="small"
-                              color="primary"
                               onClick={() => handleOpenDialog(customer)}
+                              sx={{ color: colors.primary }}
                             >
-                              <EditIcon />
+                              <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           {user?.role === "admin" && (
                             <Tooltip title="Delete">
                               <IconButton
                                 size="small"
-                                color="error"
                                 onClick={() => handleDelete(customer.id)}
+                                color="error"
                               >
-                                <DeleteIcon />
+                                <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
@@ -586,11 +616,11 @@ const Customers = () => {
                   mb: 2,
                 }}
               >
-                <Typography variant="h5" fontWeight="600">
+                <Typography variant="h6" fontWeight="600">
                   Customer Details
                 </Typography>
-                <IconButton onClick={handleCloseDetails}>
-                  <DeleteIcon />
+                <IconButton onClick={handleCloseDetails} size="small">
+                  <ClearIcon />
                 </IconButton>
               </Box>
 
@@ -600,8 +630,8 @@ const Customers = () => {
                   sx={{
                     width: 60,
                     height: 60,
-                    bgcolor: "#667eea",
-                    fontSize: "2rem",
+                    bgcolor: colors.primary,
+                    fontSize: "1.8rem",
                     mr: 2,
                   }}
                 >
@@ -609,7 +639,7 @@ const Customers = () => {
                 </Avatar>
                 <Box>
                   <Typography variant="h6">{selectedCustomer.name}</Typography>
-                  <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                  <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
                     <Chip
                       icon={<PhoneIcon />}
                       label={selectedCustomer.phone}
@@ -628,22 +658,36 @@ const Customers = () => {
                 </Box>
               </Box>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider />
 
-              {/* Tabs for History */}
-              <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-                <Tab label="Repair History" icon={<RepairsIcon />} />
-                <Tab label="Purchase History" icon={<SalesIcon />} />
+              {/* Tabs */}
+              <Tabs
+                value={tabValue}
+                onChange={(e, v) => setTabValue(v)}
+                sx={{ mt: 2 }}
+              >
+                <Tab
+                  label="Repairs"
+                  icon={<RepairsIcon />}
+                  iconPosition="start"
+                  sx={{ minHeight: 48 }}
+                />
+                <Tab
+                  label="Purchases"
+                  icon={<SalesIcon />}
+                  iconPosition="start"
+                  sx={{ minHeight: 48 }}
+                />
               </Tabs>
 
-              {/* Repair History Tab */}
+              {/* Repair History */}
               <TabPanel value={tabValue} index={0}>
                 {selectedCustomer.repairs?.length > 0 ? (
                   <List>
                     {selectedCustomer.repairs.map((repair) => (
                       <ListItem key={repair.id} divider>
                         <ListItemIcon>
-                          <RepairsIcon color="warning" />
+                          <RepairsIcon sx={{ color: colors.primary }} />
                         </ListItemIcon>
                         <ListItemText
                           primary={
@@ -660,31 +704,34 @@ const Customers = () => {
                               <Chip
                                 label={repair.status}
                                 size="small"
-                                color={
-                                  repair.status === "completed"
-                                    ? "success"
-                                    : repair.status === "in_progress"
-                                      ? "warning"
-                                      : "default"
-                                }
+                                sx={{
+                                  bgcolor:
+                                    repair.status === "completed"
+                                      ? alpha("#4caf50", 0.1)
+                                      : alpha(colors.primary, 0.1),
+                                  color:
+                                    repair.status === "completed"
+                                      ? "#4caf50"
+                                      : colors.primary,
+                                  height: 20,
+                                }}
                               />
                             </Box>
                           }
                           secondary={
                             <>
                               <Typography variant="body2">
-                                Issue: {repair.issue_description}
+                                {repair.issue_description}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                Date:{" "}
                                 {new Date(
                                   repair.created_at,
                                 ).toLocaleDateString()}
                                 {repair.final_cost &&
-                                  ` • Cost: ETB ${repair.final_cost}`}
+                                  ` • ETB ${repair.final_cost}`}
                               </Typography>
                             </>
                           }
@@ -694,24 +741,21 @@ const Customers = () => {
                   </List>
                 ) : (
                   <Box sx={{ textAlign: "center", py: 3 }}>
-                    <RepairsIcon
-                      sx={{ fontSize: 40, color: "text.disabled", mb: 1 }}
-                    />
                     <Typography color="text.secondary">
-                      No repair history
+                      No repairs yet
                     </Typography>
                   </Box>
                 )}
               </TabPanel>
 
-              {/* Purchase History Tab */}
+              {/* Purchase History */}
               <TabPanel value={tabValue} index={1}>
                 {selectedCustomer.purchases?.length > 0 ? (
                   <List>
                     {selectedCustomer.purchases.map((sale) => (
                       <ListItem key={sale.id} divider>
                         <ListItemIcon>
-                          <SalesIcon color="primary" />
+                          <SalesIcon sx={{ color: "#4caf50" }} />
                         </ListItemIcon>
                         <ListItemText
                           primary={
@@ -731,16 +775,15 @@ const Customers = () => {
                           secondary={
                             <>
                               <Typography variant="body2">
-                                Total: ETB {sale.total_amount?.toLocaleString()}
+                                ETB {sale.total_amount?.toLocaleString()}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                Date:{" "}
                                 {new Date(sale.created_at).toLocaleDateString()}
                                 {sale.payment_method &&
-                                  ` • Paid via ${sale.payment_method}`}
+                                  ` • ${sale.payment_method}`}
                               </Typography>
                             </>
                           }
@@ -750,11 +793,8 @@ const Customers = () => {
                   </List>
                 ) : (
                   <Box sx={{ textAlign: "center", py: 3 }}>
-                    <SalesIcon
-                      sx={{ fontSize: 40, color: "text.disabled", mb: 1 }}
-                    />
                     <Typography color="text.secondary">
-                      No purchase history
+                      No purchases yet
                     </Typography>
                   </Box>
                 )}
@@ -771,11 +811,11 @@ const Customers = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle sx={{ bgcolor: colors.primary, color: "white" }}>
           {editingCustomer ? "Edit Customer" : "Add New Customer"}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent>
+          <DialogContent sx={{ pt: 3 }}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
                 <TextField
@@ -785,10 +825,11 @@ const Customers = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
+                  size="small"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <PersonIcon />
+                        <PersonIcon sx={{ color: colors.primary }} />
                       </InputAdornment>
                     ),
                   }}
@@ -802,10 +843,11 @@ const Customers = () => {
                   value={formData.phone}
                   onChange={handleInputChange}
                   required
+                  size="small"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <PhoneIcon />
+                        <PhoneIcon sx={{ color: colors.primary }} />
                       </InputAdornment>
                     ),
                   }}
@@ -819,10 +861,11 @@ const Customers = () => {
                   fullWidth
                   value={formData.email}
                   onChange={handleInputChange}
+                  size="small"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <EmailIcon />
+                        <EmailIcon sx={{ color: colors.primary }} />
                       </InputAdornment>
                     ),
                   }}
@@ -837,10 +880,11 @@ const Customers = () => {
                   fullWidth
                   value={formData.address}
                   onChange={handleInputChange}
+                  size="small"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <LocationIcon />
+                        <LocationIcon sx={{ color: colors.primary }} />
                       </InputAdornment>
                     ),
                   }}
@@ -848,16 +892,23 @@ const Customers = () => {
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button type="submit" variant="contained">
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                bgcolor: colors.primary,
+                "&:hover": { bgcolor: colors.secondary },
+              }}
+            >
               {editingCustomer ? "Update" : "Create"}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Snackbar for notifications */}
+      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
