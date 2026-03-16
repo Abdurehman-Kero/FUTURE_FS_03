@@ -20,11 +20,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Public routes
+// Public routes - NO authentication needed
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes); // 👈 REMOVED verifyToken - now public!
 
 // Protected routes (require authentication)
-app.use("/api/products", verifyToken, productRoutes);
 app.use("/api/customers", verifyToken, customerRoutes);
 app.use("/api/repairs", verifyToken, repairRoutes);
 app.use("/api/sales", verifyToken, saleRoutes);
@@ -37,7 +37,7 @@ app.get("/api/test", (req, res) => {
     message: "Chala Mobile API is running!",
     endpoints: {
       auth: "/api/auth",
-      products: "/api/products (protected)",
+      products: "/api/products (public)", // 👈 Updated to show it's public
       customers: "/api/customers (protected)",
       repairs: "/api/repairs (protected)",
       sales: "/api/sales (protected)",
@@ -52,4 +52,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Chala Mobile API running on port ${PORT}`);
   console.log(`📝 Test: http://localhost:${PORT}/api/test`);
   console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
+  console.log(`📦 Products: http://localhost:${PORT}/api/products (PUBLIC)`);
 });

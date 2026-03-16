@@ -75,6 +75,8 @@ const categoryConfig = {
 const PublicProducts = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -86,10 +88,32 @@ const PublicProducts = () => {
 
   const loadProducts = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      console.log("Fetching products...");
       const res = await getProducts();
-      setProducts(res.data.data);
+      console.log("API Response:", res);
+      console.log("Products data:", res.data);
+
+      if (res.data && res.data.data) {
+        setProducts(res.data.data);
+        console.log("Products set:", res.data.data.length);
+      } else {
+        console.log("No products data in response");
+        setProducts([]);
+      }
     } catch (error) {
-      console.error("Failed to load products");
+      console.error("Failed to load products:", error);
+      setError(error.message);
+      if (error.response) {
+        console.log(
+          "Error response:",
+          error.response.status,
+          error.response.data,
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,6 +140,37 @@ const PublicProducts = () => {
   const handleBackToHome = () => {
     navigate("/");
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ bgcolor: colors.light, minHeight: "100vh", py: 4 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <Typography>Loading products...</Typography>
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ bgcolor: colors.light, minHeight: "100vh", py: 4 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <Typography color="error">Error: {error}</Typography>
+            <Button
+              variant="contained"
+              onClick={loadProducts}
+              sx={{ mt: 2, bgcolor: colors.primary }}
+            >
+              Retry
+            </Button>
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ bgcolor: colors.light, minHeight: "100vh", py: 4 }}>

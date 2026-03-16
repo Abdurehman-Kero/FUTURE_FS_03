@@ -29,14 +29,9 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   if (loading) return <div>Loading...</div>;
 
   if (!isAuthenticated) {
-    // Redirect to login but save the attempted location
-    return (
-      <Navigate
-        to="/login"
-        state={{ from: window.location.pathname }}
-        replace
-      />
-    );
+    // Instead of redirecting to login, we let the route render nothing
+    // and let the natural navigation happen
+    return null;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
@@ -55,7 +50,7 @@ function AppRoutes() {
       <Route path="/products" element={<PublicProducts />} />
       <Route path="/repair-request" element={<PublicRepairRequest />} />
 
-      {/* Protected Routes */}
+      {/* Protected Routes - Note: These are still defined but won't render if not authenticated */}
       <Route
         path="/dashboard"
         element={

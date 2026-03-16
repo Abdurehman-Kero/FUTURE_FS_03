@@ -16,10 +16,35 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (error) => {
+    // Only redirect to login for protected routes
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      // List of public routes that should NOT redirect
+      const publicRoutes = [
+        "/products",
+        "/auth/login",
+        "/repair-request",
+        "/customers/search", // Add any other public GET endpoints
+      ];
+
+      // Check if the request URL is a public route
+      const isPublicRoute = publicRoutes.some((route) =>
+        error.config.url.includes(route),
+      );
+
+      // Only redirect if it's NOT a public route
+      if (!isPublicRoute) {
+        console.log(
+          "Unauthorized access to protected route:",
+          error.config.url,
+        );
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      } else {
+        console.log(
+          "Public route returned 401 - backend might be misconfigured",
+        );
+      }
     }
     return Promise.reject(error);
   },

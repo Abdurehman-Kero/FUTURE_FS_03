@@ -307,7 +307,7 @@ const Sales = () => {
                 >
                   <TodayIcon />
                 </Avatar>
-                <Box>
+                {/* <Box>
                   <Typography color="text.secondary" variant="caption">
                     Today's Sales
                   </Typography>
@@ -322,7 +322,7 @@ const Sales = () => {
                       .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                       .toLocaleString()}
                   </Typography>
-                </Box>
+                </Box> */}
               </Box>
             </CardContent>
           </Card>
@@ -344,7 +344,7 @@ const Sales = () => {
                 >
                   <MoneyIcon />
                 </Avatar>
-                <Box>
+                {/* <Box>
                   <Typography color="text.secondary" variant="caption">
                     Total Sales
                   </Typography>
@@ -354,7 +354,7 @@ const Sales = () => {
                       .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                       .toLocaleString()}
                   </Typography>
-                </Box>
+                </Box> */}
               </Box>
             </CardContent>
           </Card>
