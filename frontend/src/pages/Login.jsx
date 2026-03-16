@@ -19,6 +19,7 @@ import {
   Lock as LockIcon,
   Store as StoreIcon,
   VerifiedUser as VerifiedIcon,
+  Home as HomeIcon,
 } from "@mui/icons-material";
 
 // Vibrant color scheme matching homepage
@@ -59,6 +60,10 @@ const Login = () => {
     }
   };
 
+  const handleBackToHome = () => {
+    navigate("/");
+  };
+
   return (
     <Box
       sx={{
@@ -82,6 +87,33 @@ const Login = () => {
         py: { xs: 2, sm: 4 },
       }}
     >
+      {/* Back to Home Button - Top Left */}
+      <Button
+        variant="outlined"
+        startIcon={<HomeIcon />}
+        onClick={handleBackToHome}
+        sx={{
+          position: "absolute",
+          top: 20,
+          left: 20,
+          zIndex: 2,
+          bgcolor: "rgba(255,255,255,0.9)",
+          color: colors.primary,
+          borderColor: colors.primary,
+          borderRadius: "50px",
+          px: 3,
+          py: 1,
+          fontWeight: 500,
+          "&:hover": {
+            bgcolor: colors.primary,
+            color: "white",
+            borderColor: colors.primary,
+          },
+        }}
+      >
+        Back to Home
+      </Button>
+
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
         <Paper
           elevation={24}
@@ -307,6 +339,29 @@ const Login = () => {
               </Button>
             </form>
 
+            {/* Mobile Back to Home Button - visible only on mobile */}
+            <Box sx={{ display: { xs: "block", sm: "none" }, mt: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<HomeIcon />}
+                onClick={handleBackToHome}
+                sx={{
+                  borderColor: colors.primary,
+                  color: colors.primary,
+                  borderRadius: "50px",
+                  py: 1.2,
+                  "&:hover": {
+                    borderColor: colors.secondary,
+                    color: colors.secondary,
+                    bgcolor: alpha(colors.primary, 0.05),
+                  },
+                }}
+              >
+                Back to Home
+              </Button>
+            </Box>
+
             {/* Trust Indicators */}
             <Box
               sx={{
@@ -342,9 +397,7 @@ const Login = () => {
                 color: alpha(colors.gray, 0.5),
                 fontSize: "0.7rem",
               }}
-            >
-           
-            </Typography>
+            ></Typography>
           </Box>
         </Paper>
       </Container>
