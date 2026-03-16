@@ -32,6 +32,13 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
+// Primary color from homepage
+const colors = {
+  primary: "#FF8500",
+  secondary: "#FFA33C",
+  gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
+};
+
 // Quick action cards configuration
 const actions = [
   {
@@ -146,14 +153,23 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    logout();
-    navigate("/"); // Redirect to home page instead of login
+    logout(); // Clear auth state and localStorage
+    // Use window.location for a full page refresh to clear all state
+    window.location.href = "/";
   };
 
   if (loading) {
     return (
       <Box sx={{ width: "100%", mt: 4 }}>
-        <LinearProgress sx={{ borderRadius: 1 }} />
+        <LinearProgress
+          sx={{
+            borderRadius: 1,
+            bgcolor: alpha(colors.primary, 0.2),
+            "& .MuiLinearProgress-bar": {
+              bgcolor: colors.primary,
+            },
+          }}
+        />
         <Typography
           variant="body2"
           color="text.secondary"
@@ -168,14 +184,14 @@ const Dashboard = () => {
 
   return (
     <Box>
-      {/* Welcome Header with Logout Button */}
+      {/* Welcome Header with Logout Button - Using Primary Color */}
       <Paper
         elevation={0}
         sx={{
           p: 4,
           mb: 4,
           borderRadius: 3,
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: colors.gradient,
           color: "white",
           position: "relative",
           overflow: "hidden",
@@ -214,7 +230,7 @@ const Dashboard = () => {
                 py: 1,
                 "&:hover": {
                   borderColor: "white",
-                  bgcolor: "rgba(255,255,255,0.1)",
+                  bgcolor: "rgba(255,255,255,0.2)",
                 },
               }}
             >
@@ -465,7 +481,11 @@ const Dashboard = () => {
                   >
                     Today's Sales
                   </Typography>
-                  <Typography variant="h4" fontWeight="600" color="#BE3300">
+                  <Typography
+                    variant="h4"
+                    fontWeight="600"
+                    color={colors.primary}
+                  >
                     ETB {stats.sales.toLocaleString()}
                   </Typography>
                   <Typography
@@ -574,7 +594,7 @@ const Dashboard = () => {
                 <Typography variant="h6" fontWeight="600">
                   Recent Activity
                 </Typography>
-                <Button size="small" sx={{ color: "#BE3300" }}>
+                <Button size="small" sx={{ color: colors.primary }}>
                   View All
                 </Button>
               </Box>
@@ -722,7 +742,11 @@ const Dashboard = () => {
               <Button
                 fullWidth
                 variant="outlined"
-                sx={{ mt: 3, borderColor: "#BE3300", color: "#BE3300" }}
+                sx={{
+                  mt: 3,
+                  borderColor: colors.primary,
+                  color: colors.primary,
+                }}
                 onClick={() => navigate("/admin/products")}
               >
                 Manage Inventory

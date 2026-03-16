@@ -7,15 +7,15 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-// Public Pages (everyone can access)
+// Public Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import PublicProducts from "./pages/PublicProducts"; // Public product browsing
+import PublicProducts from "./pages/PublicProducts";
 import PublicRepairRequest from "./pages/PublicRepairRequest";
 
-// Protected Pages (require login)
+// Protected Pages
 import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products"; // Admin product management
+import Products from "./pages/Products";
 import Customers from "./pages/Customers";
 import Repairs from "./pages/Repairs";
 import Sales from "./pages/Sales";
@@ -27,24 +27,35 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (!isAuthenticated) {
+    // Redirect to login but save the attempted location
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: window.location.pathname }}
+        replace
+      />
+    );
+  }
+
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
+
   return children;
 };
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* 🌍 PUBLIC ROUTES - No login needed */}
+      {/* Public Routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/products" element={<PublicProducts />} />{" "}
-      {/* Public product browsing */}
+      <Route path="/products" element={<PublicProducts />} />
       <Route path="/repair-request" element={<PublicRepairRequest />} />
-      {/* 🔒 PROTECTED ROUTES - Admin area (login required) */}
-      {/* Dashboard */}
+
+      {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
@@ -55,7 +66,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/* Products Management - Admin only area */}
       <Route
         path="/admin/products"
         element={
@@ -66,7 +76,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/* Customers Management */}
       <Route
         path="/admin/customers"
         element={
@@ -77,7 +86,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/* Repairs Management */}
       <Route
         path="/admin/repairs"
         element={
@@ -88,7 +96,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/* Sales Management */}
       <Route
         path="/admin/sales"
         element={
@@ -99,7 +106,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/* Catch all - redirect to home */}
+
+      {/* Redirect any unknown routes to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

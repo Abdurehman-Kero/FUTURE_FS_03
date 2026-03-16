@@ -1550,7 +1550,7 @@ export default function Home() {
                           Contact Info
                         </Typography>
                         <Typography color={colors.gray}>
-                          +251 91 234 5678
+                          +251 982310974
                         </Typography>
                         <Typography color={colors.gray}>
                           keroabdurehman@gmail.com
