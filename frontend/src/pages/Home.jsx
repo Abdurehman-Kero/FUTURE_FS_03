@@ -977,6 +977,444 @@ export default function Home() {
         </Container>
       </Box>
 
+      {/* Contact Section */}
+      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={5}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: colors.primary,
+                  fontWeight: 600,
+                  letterSpacing: 2,
+                  mb: 2,
+                  display: "block",
+                }}
+              >
+                Get in Touch
+              </Typography>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  color: colors.dark,
+                  fontSize: { xs: "1.8rem", md: "2.5rem" },
+                  mb: 3,
+                }}
+              >
+                Visit Our Store
+              </Typography>
+
+              <Stack spacing={2}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: { xs: 2, md: 3 },
+                    borderRadius: "16px",
+                    background: colors.white,
+                    border: `1px solid ${colors.lightGray}`,
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar
+                      sx={{
+                        bgcolor: colors.primary,
+                        width: { xs: 40, md: 48 },
+                        height: { xs: 40, md: 48 },
+                      }}
+                    >
+                      <LocationIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography fontWeight={600} gutterBottom>
+                        Store Location
+                      </Typography>
+                      <Typography color={colors.gray}>
+                        Abosto, Shashemene, Ethiopia
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Paper>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: { xs: 2, md: 3 },
+                    borderRadius: "16px",
+                    background: colors.white,
+                    border: `1px solid ${colors.lightGray}`,
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar
+                      sx={{
+                        bgcolor: colors.primary,
+                        width: { xs: 40, md: 48 },
+                        height: { xs: 40, md: 48 },
+                      }}
+                    >
+                      <TimeIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography fontWeight={600} gutterBottom>
+                        Business Hours
+                      </Typography>
+                      <Typography color={colors.gray}>
+                        Mon-Sat: 9:00 AM - 8:00 PM
+                      </Typography>
+                      <Typography color={colors.gray}>
+                        Sunday: 10:00 AM - 5:00 PM
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Paper>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: { xs: 2, md: 3 },
+                    borderRadius: "16px",
+                    background: colors.white,
+                    border: `1px solid ${colors.lightGray}`,
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar
+                      sx={{
+                        bgcolor: colors.primary,
+                        width: { xs: 40, md: 48 },
+                        height: { xs: 40, md: 48 },
+                      }}
+                    >
+                      <PhoneIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography fontWeight={600} gutterBottom>
+                        Contact Info
+                      </Typography>
+                      <Typography color={colors.gray}>
+                        +251 91 234 5678
+                      </Typography>
+                      <Typography color={colors.gray}>
+                        info@chalamobile.com
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Paper>
+              </Stack>
+            </Grid>
+
+            <Grid item xs={12} md={7}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: { xs: 3, md: 5 },
+                  borderRadius: "24px",
+                  background: colors.white,
+                  border: `1px solid ${colors.lightGray}`,
+                  height: "100%",
+                }}
+              >
+                <Typography variant="h5" fontWeight={700} gutterBottom>
+                  Send us a Message
+                </Typography>
+                <Typography color={colors.gray} sx={{ mb: 4 }}>
+                  We'll get back to you within 24 hours
+                </Typography>
+
+                <form onSubmit={handleWhatsAppSubmit}>
+                  <Stack spacing={3}>
+                    <TextField
+                      label="Your Name"
+                      fullWidth
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      required
+                      variant="outlined"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: "12px",
+                          "&:hover fieldset": {
+                            borderColor: colors.primary,
+                          },
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Phone Number"
+                      fullWidth
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      required
+                      variant="outlined"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: "12px",
+                          "&:hover fieldset": {
+                            borderColor: colors.primary,
+                          },
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Message"
+                      multiline
+                      rows={4}
+                      fullWidth
+                      value={formData.message}
+                      onChange={(e) =>
+                        setFormData({ ...formData, message: e.target.value })
+                      }
+                      required
+                      variant="outlined"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: "12px",
+                          "&:hover fieldset": {
+                            borderColor: colors.primary,
+                          },
+                        },
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      startIcon={<WhatsAppIcon />}
+                      sx={{
+                        background: "#25D366",
+                        py: { xs: 1.5, md: 1.8 },
+                        borderRadius: "12px",
+                        fontSize: { xs: "0.9rem", md: "1rem" },
+                        fontWeight: 600,
+                        textTransform: "none",
+                        "&:hover": {
+                          background: "#128C7E",
+                        },
+                      }}
+                    >
+                      Send via WhatsApp
+                    </Button>
+                  </Stack>
+                </form>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Footer */}
+      <Box sx={{ bgcolor: colors.dark, color: colors.white, py: 6 }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={4}>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                sx={{ mb: 3 }}
+              >
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "12px",
+                    background: colors.gradient,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: colors.white,
+                      fontWeight: 700,
+                      fontSize: "1.2rem",
+                    }}
+                  >
+                    CM
+                  </Typography>
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Chala<span style={{ color: colors.primary }}>Mobile</span>
+                </Typography>
+              </Stack>
+              <Typography
+                sx={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.8, mb: 3 }}
+              >
+                Your trusted partner for quality electronics and professional
+                maintenance services in Shashemene.
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <IconButton
+                  onClick={() => window.open("https://facebook.com", "_blank")}
+                  sx={{
+                    bgcolor: "rgba(255,255,255,0.1)",
+                    color: colors.white,
+                    "&:hover": { bgcolor: colors.primary },
+                  }}
+                >
+                  <FacebookIcon />
+                </IconButton>
+                <IconButton
+                  onClick={() => window.open("https://twitter.com", "_blank")}
+                  sx={{
+                    bgcolor: "rgba(255,255,255,0.1)",
+                    color: colors.white,
+                    "&:hover": { bgcolor: colors.primary },
+                  }}
+                >
+                  <TwitterIcon />
+                </IconButton>
+                <IconButton
+                  onClick={() => window.open("https://linkedin.com", "_blank")}
+                  sx={{
+                    bgcolor: "rgba(255,255,255,0.1)",
+                    color: colors.white,
+                    "&:hover": { bgcolor: colors.primary },
+                  }}
+                >
+                  <LinkedInIcon />
+                </IconButton>
+              </Stack>
+            </Grid>
+
+            <Grid item xs={6} md={2}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                Quick Links
+              </Typography>
+              {quickLinks.slice(0, 4).map((link) => (
+                <Typography
+                  key={link.name}
+                  sx={{
+                    color: "rgba(255,255,255,0.7)",
+                    mb: 1.5,
+                    cursor: "pointer",
+                    "&:hover": { color: colors.primary },
+                  }}
+                  onClick={() => handleNavigation(link.path)}
+                >
+                  {link.name}
+                </Typography>
+              ))}
+            </Grid>
+
+            <Grid item xs={6} md={2}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                More
+              </Typography>
+              {quickLinks.slice(4).map((link) => (
+                <Typography
+                  key={link.name}
+                  sx={{
+                    color: "rgba(255,255,255,0.7)",
+                    mb: 1.5,
+                    cursor: "pointer",
+                    "&:hover": { color: colors.primary },
+                  }}
+                  onClick={() => handleNavigation(link.path)}
+                >
+                  {link.name}
+                </Typography>
+              ))}
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                Newsletter
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 2,
+                  fontSize: "0.9rem",
+                }}
+              >
+                Subscribe to get updates about new products and special offers
+              </Typography>
+              <form onSubmit={handleNewsletterSubmit}>
+                <Stack direction="row" spacing={1}>
+                  <TextField
+                    placeholder="Your email"
+                    size="small"
+                    fullWidth
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    required
+                    type="email"
+                    sx={{
+                      bgcolor: "rgba(255,255,255,0.1)",
+                      borderRadius: "8px",
+                      "& .MuiInputBase-input": { color: colors.white },
+                      "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                    }}
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    sx={{
+                      bgcolor: colors.primary,
+                      whiteSpace: "nowrap",
+                      borderRadius: "8px",
+                      "&:hover": { bgcolor: colors.secondary },
+                    }}
+                  >
+                    Subscribe
+                  </Button>
+                </Stack>
+              </form>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 4, borderColor: "rgba(255,255,255,0.1)" }} />
+
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={2}
+          >
+            <Typography
+              sx={{
+                color: "rgba(255,255,255,0.5)",
+                fontSize: "0.9rem",
+                textAlign: "center",
+              }}
+            >
+              © {new Date().getFullYear()} Chala Mobile. All rights reserved.
+            </Typography>
+            <Stack direction="row" spacing={3}>
+              <Typography
+                onClick={() => handleNavigation("/privacy")}
+                sx={{
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+              >
+                Privacy Policy
+              </Typography>
+              <Typography
+                onClick={() => handleNavigation("/terms")}
+                sx={{
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+              >
+                Terms of Service
+              </Typography>
+            </Stack>
+          </Stack>
+        </Container>
+      </Box>
 
     </Box>
   );
