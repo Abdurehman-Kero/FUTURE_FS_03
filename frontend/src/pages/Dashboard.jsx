@@ -18,7 +18,7 @@ import {
 import {
   Inventory as ProductsIcon,
   People as CustomersIcon,
-  Build as BuildIcon, // 👈 This was missing
+  Build as BuildIcon,
   PointOfSale as SalesIcon,
   TrendingUp as TrendingUpIcon,
   ShoppingCart as CartIcon,
@@ -28,6 +28,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
@@ -54,7 +55,7 @@ const actions = [
   {
     title: "Repairs",
     description: "Track repair orders",
-    icon: <BuildIcon sx={{ fontSize: 40 }} />, // 👈 Now using BuildIcon
+    icon: <BuildIcon sx={{ fontSize: 40 }} />,
     path: "/admin/repairs",
     color: "#f44336",
     roles: ["admin", "technician"],
@@ -116,7 +117,7 @@ const lowStockItems = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     products: 156,
@@ -144,6 +145,11 @@ const Dashboard = () => {
     return "Good Evening";
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/"); // Redirect to home page instead of login
+  };
+
   if (loading) {
     return (
       <Box sx={{ width: "100%", mt: 4 }}>
@@ -162,7 +168,7 @@ const Dashboard = () => {
 
   return (
     <Box>
-      {/* Welcome Header */}
+      {/* Welcome Header with Logout Button */}
       <Paper
         elevation={0}
         sx={{
@@ -176,13 +182,45 @@ const Dashboard = () => {
         }}
       >
         <Box sx={{ position: "relative", zIndex: 1 }}>
-          <Typography variant="h4" fontWeight="600" gutterBottom>
-            {getGreeting()}, {user?.name}! 👋
-          </Typography>
-          <Typography variant="body1" sx={{ opacity: 0.9, mb: 3 }}>
-            Welcome back to your dashboard. Here's what's happening with your
-            business today.
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography variant="h4" fontWeight="600" gutterBottom>
+                {getGreeting()}, {user?.name}! 👋
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9, mb: 3 }}>
+                Welcome back to your dashboard. Here's what's happening with
+                your business today.
+              </Typography>
+            </Box>
+
+            {/* Logout Button */}
+            <Button
+              variant="outlined"
+              startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+              sx={{
+                borderColor: "white",
+                color: "white",
+                borderRadius: "50px",
+                px: 3,
+                py: 1,
+                "&:hover": {
+                  borderColor: "white",
+                  bgcolor: "rgba(255,255,255,0.1)",
+                },
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
 
           <Grid container spacing={3} sx={{ mt: 2 }}>
             <Grid item xs={6} sm={3}>
@@ -400,7 +438,7 @@ const Dashboard = () => {
                     height: 56,
                   }}
                 >
-                  <BuildIcon /> {/* 👈 Fixed: Now using BuildIcon */}
+                  <BuildIcon />
                 </Avatar>
               </Box>
             </CardContent>
@@ -572,8 +610,7 @@ const Dashboard = () => {
                             <BuildIcon />
                           ) : (
                             <SalesIcon />
-                          )}{" "}
-                          {/* 👈 Fixed: Now using BuildIcon */}
+                          )}
                         </Avatar>
                         <Box>
                           <Typography variant="subtitle2" fontWeight="600">
