@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Button,
@@ -16,6 +16,7 @@ import {
   useMediaQuery,
   Fade,
   Chip,
+  alpha, 
 } from "@mui/material";
 import {
   Phone as PhoneIcon,
@@ -35,6 +36,7 @@ import {
   Facebook as FacebookIcon,
   Twitter as TwitterIcon,
   LinkedIn as LinkedInIcon,
+  AdminPanelSettings as AdminIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
@@ -138,12 +140,12 @@ const services = [
 
 // Quick links for footer
 const quickLinks = [
-  { name: "Home", path: "/" },
-  { name: "Products", path: "/products" },
-  { name: "Services", path: "/services" },
-  { name: "Contact", path: "/contact" },
-  { name: "Repair Request", path: "/repair-request" },
-  { name: "About Us", path: "/about" },
+  { name: "Home", path: "/", section: "home" },
+  { name: "Products", path: "/products", section: "products" },
+  { name: "Services", path: "/services", section: "services" },
+  { name: "Contact", path: "/contact", section: "contact" },
+  { name: "Repair Request", path: "/repair-request", section: "repair" },
+  { name: "About Us", path: "/about", section: "about" },
 ];
 
 export default function Home() {
@@ -158,6 +160,12 @@ export default function Home() {
     message: "",
   });
   const [newsletterEmail, setNewsletterEmail] = useState("");
+
+  // Refs for sections
+  const homeRef = useRef(null);
+  const productsRef = useRef(null);
+  const servicesRef = useRef(null);
+  const contactRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -176,9 +184,44 @@ export default function Home() {
 
   const handleNewsletterSubmit = (e) => {
     e.preventDefault();
-    // In a real app, you'd send this to your backend
     alert(`Thank you for subscribing with: ${newsletterEmail}`);
     setNewsletterEmail("");
+  };
+
+  const scrollToSection = (sectionRef) => {
+    if (sectionRef && sectionRef.current) {
+      window.scrollTo({
+        top: sectionRef.current.offsetTop - 100,
+        behavior: "smooth",
+      });
+    }
+    setMobileMenuOpen(false);
+  };
+
+  const handleNavigation = (path, section = null) => {
+    if (path === "/" && section) {
+      // If on home page, scroll to section
+      switch (section) {
+        case "home":
+          scrollToSection(homeRef);
+          break;
+        case "products":
+          scrollToSection(productsRef);
+          break;
+        case "services":
+          scrollToSection(servicesRef);
+          break;
+        case "contact":
+          scrollToSection(contactRef);
+          break;
+        default:
+          navigate(path);
+      }
+    } else {
+      // Navigate to different page
+      navigate(path);
+    }
+    setMobileMenuOpen(false);
   };
 
   const handleCategoryClick = (category) => {
@@ -194,17 +237,12 @@ export default function Home() {
     navigate(`/services/${service.slug}`);
   };
 
-  const handleNavigation = (path) => {
-    navigate(path);
-    setMobileMenuOpen(false);
-  };
-
   const handleShopNow = () => {
     navigate("/products");
   };
 
-  const handleContactUs = () => {
-    navigate("/contact");
+  const handleAdminLogin = () => {
+    navigate("/login");
   };
 
   const handleViewAllProducts = () => {
@@ -238,7 +276,7 @@ export default function Home() {
               direction="row"
               spacing={1.5}
               alignItems="center"
-              onClick={() => navigate("/")}
+              onClick={() => scrollToSection(homeRef)}
               sx={{ cursor: "pointer" }}
             >
               <Box
@@ -281,44 +319,136 @@ export default function Home() {
             {/* Desktop Navigation */}
             <Stack
               direction="row"
-              spacing={4}
+              spacing={3}
               alignItems="center"
               sx={{ display: { xs: "none", md: "flex" } }}
             >
-              {["Home", "Products", "Services", "Contact"].map((item) => (
-                <Button
-                  key={item}
-                  onClick={() =>
-                    handleNavigation(
-                      item === "Home" ? "/" : `/${item.toLowerCase()}`,
-                    )
-                  }
-                  sx={{
-                    color: colors.gray,
-                    fontWeight: 500,
-                    position: "relative",
+              <Button
+                onClick={() => scrollToSection(homeRef)}
+                sx={{
+                  color: colors.gray,
+                  fontWeight: 500,
+                  position: "relative",
+                  "&:after": {
+                    content: '""',
+                    position: "absolute",
+                    bottom: 0,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "0%",
+                    height: "2px",
+                    bgcolor: colors.primary,
+                    transition: "width 0.3s ease",
+                  },
+                  "&:hover": {
+                    color: colors.primary,
                     "&:after": {
-                      content: '""',
-                      position: "absolute",
-                      bottom: 0,
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      width: "0%",
-                      height: "2px",
-                      bgcolor: colors.primary,
-                      transition: "width 0.3s ease",
+                      width: "80%",
                     },
-                    "&:hover": {
-                      color: colors.primary,
-                      "&:after": {
-                        width: "80%",
-                      },
+                  },
+                }}
+              >
+                Home
+              </Button>
+              <Button
+                onClick={() => scrollToSection(productsRef)}
+                sx={{
+                  color: colors.gray,
+                  fontWeight: 500,
+                  position: "relative",
+                  "&:after": {
+                    content: '""',
+                    position: "absolute",
+                    bottom: 0,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "0%",
+                    height: "2px",
+                    bgcolor: colors.primary,
+                    transition: "width 0.3s ease",
+                  },
+                  "&:hover": {
+                    color: colors.primary,
+                    "&:after": {
+                      width: "80%",
                     },
-                  }}
-                >
-                  {item}
-                </Button>
-              ))}
+                  },
+                }}
+              >
+                Products
+              </Button>
+              <Button
+                onClick={() => scrollToSection(servicesRef)}
+                sx={{
+                  color: colors.gray,
+                  fontWeight: 500,
+                  position: "relative",
+                  "&:after": {
+                    content: '""',
+                    position: "absolute",
+                    bottom: 0,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "0%",
+                    height: "2px",
+                    bgcolor: colors.primary,
+                    transition: "width 0.3s ease",
+                  },
+                  "&:hover": {
+                    color: colors.primary,
+                    "&:after": {
+                      width: "80%",
+                    },
+                  },
+                }}
+              >
+                Services
+              </Button>
+              <Button
+                onClick={() => scrollToSection(contactRef)}
+                sx={{
+                  color: colors.gray,
+                  fontWeight: 500,
+                  position: "relative",
+                  "&:after": {
+                    content: '""',
+                    position: "absolute",
+                    bottom: 0,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "0%",
+                    height: "2px",
+                    bgcolor: colors.primary,
+                    transition: "width 0.3s ease",
+                  },
+                  "&:hover": {
+                    color: colors.primary,
+                    "&:after": {
+                      width: "80%",
+                    },
+                  },
+                }}
+              >
+                Contact
+              </Button>
+
+              {/* Admin Button */}
+              <IconButton
+                onClick={handleAdminLogin}
+                sx={{
+                  bgcolor: alpha(colors.primary, 0.1),
+                  color: colors.primary,
+                  ml: 1,
+                  "&:hover": {
+                    bgcolor: colors.primary,
+                    color: colors.white,
+                  },
+                }}
+                title="Admin Login"
+              >
+                <AdminIcon />
+              </IconButton>
+
               <Button
                 variant="contained"
                 onClick={handleShopNow}
@@ -341,17 +471,35 @@ export default function Home() {
             </Stack>
 
             {/* Mobile Menu Button */}
-            <IconButton
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              sx={{
-                display: { xs: "flex", md: "none" },
-                color: colors.primary,
-                border: `1px solid ${colors.lightGray}`,
-                borderRadius: "10px",
-              }}
-            >
-              {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
-            </IconButton>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {/* Mobile Admin Button */}
+              <IconButton
+                onClick={handleAdminLogin}
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  bgcolor: alpha(colors.primary, 0.1),
+                  color: colors.primary,
+                  "&:hover": {
+                    bgcolor: colors.primary,
+                    color: colors.white,
+                  },
+                }}
+              >
+                <AdminIcon />
+              </IconButton>
+
+              <IconButton
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  color: colors.primary,
+                  border: `1px solid ${colors.lightGray}`,
+                  borderRadius: "10px",
+                }}
+              >
+                {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+              </IconButton>
+            </Stack>
           </Stack>
 
           {/* Mobile Menu */}
@@ -368,40 +516,73 @@ export default function Home() {
                 }}
               >
                 <Stack spacing={1}>
-                  {[
-                    "Home",
-                    "Products",
-                    "Services",
-                    "Contact",
-                    "Repair Request",
-                  ].map((item) => (
-                    <Button
-                      key={item}
-                      fullWidth
-                      onClick={() =>
-                        handleNavigation(
-                          item === "Home"
-                            ? "/"
-                            : `/${item.toLowerCase().replace(" ", "-")}`,
-                        )
-                      }
-                      sx={{
-                        justifyContent: "flex-start",
-                        px: 3,
-                        py: 1.5,
-                        color: colors.dark,
-                        "&:hover": {
-                          bgcolor: colors.light,
-                          color: colors.primary,
-                        },
-                      }}
-                    >
-                      {item}
-                    </Button>
-                  ))}
                   <Button
-                    variant="contained"
                     fullWidth
+                    onClick={() => scrollToSection(homeRef)}
+                    sx={{
+                      justifyContent: "flex-start",
+                      px: 3,
+                      py: 1.5,
+                      color: colors.dark,
+                      "&:hover": {
+                        bgcolor: colors.light,
+                        color: colors.primary,
+                      },
+                    }}
+                  >
+                    Home
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={() => scrollToSection(productsRef)}
+                    sx={{
+                      justifyContent: "flex-start",
+                      px: 3,
+                      py: 1.5,
+                      color: colors.dark,
+                      "&:hover": {
+                        bgcolor: colors.light,
+                        color: colors.primary,
+                      },
+                    }}
+                  >
+                    Products
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={() => scrollToSection(servicesRef)}
+                    sx={{
+                      justifyContent: "flex-start",
+                      px: 3,
+                      py: 1.5,
+                      color: colors.dark,
+                      "&:hover": {
+                        bgcolor: colors.light,
+                        color: colors.primary,
+                      },
+                    }}
+                  >
+                    Services
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={() => scrollToSection(contactRef)}
+                    sx={{
+                      justifyContent: "flex-start",
+                      px: 3,
+                      py: 1.5,
+                      color: colors.dark,
+                      "&:hover": {
+                        bgcolor: colors.light,
+                        color: colors.primary,
+                      },
+                    }}
+                  >
+                    Contact
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="contained"
                     onClick={handleShopNow}
                     sx={{
                       background: colors.gradient,
@@ -423,321 +604,336 @@ export default function Home() {
         </Container>
       </Box>
 
-      {/* Hero Section */}
-      <Box
-        sx={{
-          py: { xs: 6, md: 10 },
-          background: `linear-gradient(135deg, ${colors.white} 0%, ${colors.light} 100%)`,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Decorative Elements */}
+      {/* Home Section */}
+      <div ref={homeRef}>
+        {/* Hero Section */}
         <Box
           sx={{
-            position: "absolute",
-            top: -100,
-            right: -100,
-            width: 300,
-            height: 300,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${colors.primary}10 0%, ${colors.primary}20 100%)`,
-            zIndex: 0,
+            py: { xs: 6, md: 10 },
+            background: `linear-gradient(135deg, ${colors.white} 0%, ${colors.light} 100%)`,
+            position: "relative",
+            overflow: "hidden",
           }}
-        />
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: -50,
-            left: -50,
-            width: 200,
-            height: 200,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${colors.primary}20 0%, ${colors.primary}10 100%)`,
-            zIndex: 0,
-          }}
-        />
+        >
+          {/* Decorative Elements */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: -100,
+              right: -100,
+              width: 300,
+              height: 300,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg, ${colors.primary}10 0%, ${colors.primary}20 100%)`,
+              zIndex: 0,
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: -50,
+              left: -50,
+              width: 200,
+              height: 200,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg, ${colors.primary}20 0%, ${colors.primary}10 100%)`,
+              zIndex: 0,
+            }}
+          />
 
-        <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Chip
-                label="Welcome to ChalaMobile"
-                sx={{
-                  bgcolor: colors.primary,
-                  color: colors.white,
-                  mb: 3,
-                  borderRadius: "50px",
-                  fontWeight: 500,
-                }}
-              />
+          <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
+            <Grid container spacing={6} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <Chip
+                  label="Welcome to ChalaMobile"
+                  sx={{
+                    bgcolor: colors.primary,
+                    color: colors.white,
+                    mb: 3,
+                    borderRadius: "50px",
+                    fontWeight: 500,
+                  }}
+                />
 
+                <Typography
+                  variant="h1"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: "2rem", md: "3.5rem" },
+                    color: colors.dark,
+                    mb: 2,
+                    lineHeight: 1.2,
+                    letterSpacing: "-1px",
+                  }}
+                >
+                  Your Trusted Tech Partner in{" "}
+                  <span style={{ color: colors.primary }}>Shashemene</span>
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color: colors.gray,
+                    fontSize: { xs: "1rem", md: "1.2rem" },
+                    mb: 4,
+                    lineHeight: 1.8,
+                    maxWidth: "90%",
+                  }}
+                >
+                  Quality phones, laptops, and professional repair services.
+                  We're here to help with all your tech needs.
+                </Typography>
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={2}
+                  sx={{ width: "100%" }}
+                >
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleShopNow}
+                    sx={{
+                      background: colors.gradient,
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: "50px",
+                      fontSize: { xs: "0.9rem", md: "1rem" },
+                      fontWeight: 600,
+                      textTransform: "none",
+                      boxShadow: `0 4px 15px ${colors.primary}40`,
+                      "&:hover": {
+                        boxShadow: `0 6px 20px ${colors.primary}60`,
+                      },
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    Browse Products
+                    <ChevronRightIcon sx={{ ml: 1 }} />
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={() => scrollToSection(contactRef)}
+                    sx={{
+                      borderColor: colors.primary,
+                      color: colors.primary,
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: "50px",
+                      fontSize: { xs: "0.9rem", md: "1rem" },
+                      fontWeight: 600,
+                      textTransform: "none",
+                      borderWidth: 2,
+                      "&:hover": {
+                        borderColor: colors.secondary,
+                        color: colors.secondary,
+                        borderWidth: 2,
+                      },
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    Contact Us
+                  </Button>
+                </Stack>
+
+                {/* Trust Indicators */}
+                <Stack
+                  direction="row"
+                  spacing={3}
+                  sx={{ mt: 4, flexWrap: "wrap", gap: 2 }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <VerifiedIcon
+                      sx={{ color: colors.success, fontSize: 20 }}
+                    />
+                    <Typography variant="body2" color={colors.gray}>
+                      100% Genuine
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <VerifiedIcon
+                      sx={{ color: colors.success, fontSize: 20 }}
+                    />
+                    <Typography variant="body2" color={colors.gray}>
+                      1 Year Warranty
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <VerifiedIcon
+                      sx={{ color: colors.success, fontSize: 20 }}
+                    />
+                    <Typography variant="body2" color={colors.gray}>
+                      Free Diagnosis
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: { xs: 1.5, md: 2 },
+                  }}
+                >
+                  {featuredProducts.slice(0, 4).map((product, index) => (
+                    <Paper
+                      key={index}
+                      elevation={0}
+                      onClick={() => handleProductClick(product)}
+                      sx={{
+                        p: { xs: 1.5, md: 2 },
+                        borderRadius: "20px",
+                        background: colors.white,
+                        border: `1px solid ${colors.lightGray}`,
+                        transition: "all 0.3s ease",
+                        cursor: "pointer",
+                        "&:hover": {
+                          transform: "translateY(-5px)",
+                          boxShadow: `0 10px 30px ${colors.primary}20`,
+                          borderColor: colors.primary,
+                        },
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={product.image}
+                        alt={product.name}
+                        sx={{
+                          width: "100%",
+                          height: "auto",
+                          mb: 1,
+                        }}
+                      />
+                      <Typography variant="caption" color={colors.gray}>
+                        {product.category}
+                      </Typography>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        noWrap
+                        sx={{ fontSize: { xs: "0.8rem", md: "0.9rem" } }}
+                      >
+                        {product.name}
+                      </Typography>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ mt: 0.5 }}
+                      >
+                        <Typography
+                          color={colors.primary}
+                          fontWeight={700}
+                          sx={{ fontSize: { xs: "0.9rem", md: "1rem" } }}
+                        >
+                          {product.price}
+                        </Typography>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.5}
+                        >
+                          <StarIcon sx={{ color: "#FFB800", fontSize: 14 }} />
+                          <Typography variant="caption">
+                            {product.rating}
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Box>
+              </Grid>
+            </Grid>
+          </Container>
+        </Box>
+      </div>
+
+      {/* Products Section */}
+      <div ref={productsRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
+          <Container maxWidth="lg">
+            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
               <Typography
-                variant="h1"
+                variant="overline"
                 sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: "2rem", md: "3.5rem" },
-                  color: colors.dark,
-                  mb: 2,
-                  lineHeight: 1.2,
-                  letterSpacing: "-1px",
+                  color: colors.primary,
+                  fontWeight: 600,
+                  letterSpacing: 2,
                 }}
               >
-                Your Trusted Tech Partner in{" "}
-                <span style={{ color: colors.primary }}>Shashemene</span>
+                Shop by Category
               </Typography>
-
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  color: colors.dark,
+                  fontSize: { xs: "1.8rem", md: "2.5rem" },
+                }}
+              >
+                Browse Our Collections
+              </Typography>
               <Typography
                 sx={{
                   color: colors.gray,
-                  fontSize: { xs: "1rem", md: "1.2rem" },
-                  mb: 4,
-                  lineHeight: 1.8,
-                  maxWidth: "90%",
+                  maxWidth: 600,
+                  mx: "auto",
+                  px: 2,
                 }}
               >
-                Quality phones, laptops, and professional repair services. We're
-                here to help with all your tech needs.
+                Find exactly what you're looking for in our wide range of
+                categories
               </Typography>
+            </Stack>
 
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                sx={{ width: "100%" }}
-              >
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleShopNow}
-                  sx={{
-                    background: colors.gradient,
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: "50px",
-                    fontSize: { xs: "0.9rem", md: "1rem" },
-                    fontWeight: 600,
-                    textTransform: "none",
-                    boxShadow: `0 4px 15px ${colors.primary}40`,
-                    "&:hover": {
-                      boxShadow: `0 6px 20px ${colors.primary}60`,
-                    },
-                    width: { xs: "100%", sm: "auto" },
-                  }}
-                >
-                  Browse Products
-                  <ChevronRightIcon sx={{ ml: 1 }} />
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={handleContactUs}
-                  sx={{
-                    borderColor: colors.primary,
-                    color: colors.primary,
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: "50px",
-                    fontSize: { xs: "0.9rem", md: "1rem" },
-                    fontWeight: 600,
-                    textTransform: "none",
-                    borderWidth: 2,
-                    "&:hover": {
-                      borderColor: colors.secondary,
-                      color: colors.secondary,
-                      borderWidth: 2,
-                    },
-                    width: { xs: "100%", sm: "auto" },
-                  }}
-                >
-                  Contact Us
-                </Button>
-              </Stack>
-
-              {/* Trust Indicators */}
-              <Stack
-                direction="row"
-                spacing={3}
-                sx={{ mt: 4, flexWrap: "wrap", gap: 2 }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <VerifiedIcon sx={{ color: colors.success, fontSize: 20 }} />
-                  <Typography variant="body2" color={colors.gray}>
-                    100% Genuine
-                  </Typography>
-                </Stack>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <VerifiedIcon sx={{ color: colors.success, fontSize: 20 }} />
-                  <Typography variant="body2" color={colors.gray}>
-                    1 Year Warranty
-                  </Typography>
-                </Stack>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <VerifiedIcon sx={{ color: colors.success, fontSize: 20 }} />
-                  <Typography variant="body2" color={colors.gray}>
-                    Free Diagnosis
-                  </Typography>
-                </Stack>
-              </Stack>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: { xs: 1.5, md: 2 },
-                }}
-              >
-                {featuredProducts.slice(0, 4).map((product, index) => (
+            <Grid container spacing={3}>
+              {categories.map((category) => (
+                <Grid item xs={6} md={3} key={category.id}>
                   <Paper
-                    key={index}
                     elevation={0}
-                    onClick={() => handleProductClick(product)}
+                    onClick={() => handleCategoryClick(category)}
                     sx={{
-                      p: { xs: 1.5, md: 2 },
+                      p: { xs: 3, md: 4 },
+                      textAlign: "center",
                       borderRadius: "20px",
-                      background: colors.white,
-                      border: `1px solid ${colors.lightGray}`,
-                      transition: "all 0.3s ease",
+                      background: colors.light,
                       cursor: "pointer",
+                      transition: "all 0.3s ease",
+                      border: `1px solid ${colors.lightGray}`,
+                      height: "100%",
                       "&:hover": {
-                        transform: "translateY(-5px)",
-                        boxShadow: `0 10px 30px ${colors.primary}20`,
+                        transform: "translateY(-8px)",
                         borderColor: colors.primary,
+                        boxShadow: `0 15px 30px -10px ${colors.primary}`,
+                        bgcolor: colors.white,
                       },
                     }}
                   >
-                    <Box
-                      component="img"
-                      src={product.image}
-                      alt={product.name}
-                      sx={{
-                        width: "100%",
-                        height: "auto",
-                        mb: 1,
-                      }}
-                    />
-                    <Typography variant="caption" color={colors.gray}>
-                      {product.category}
+                    <Typography
+                      sx={{ fontSize: { xs: "2.5rem", md: "3rem" }, mb: 2 }}
+                    >
+                      {category.icon}
                     </Typography>
                     <Typography
-                      variant="subtitle2"
+                      variant="h6"
                       fontWeight={600}
-                      noWrap
-                      sx={{ fontSize: { xs: "0.8rem", md: "0.9rem" } }}
+                      gutterBottom
+                      sx={{ fontSize: { xs: "1rem", md: "1.25rem" } }}
                     >
-                      {product.name}
+                      {category.name}
                     </Typography>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      sx={{ mt: 0.5 }}
-                    >
-                      <Typography
-                        color={colors.primary}
-                        fontWeight={700}
-                        sx={{ fontSize: { xs: "0.9rem", md: "1rem" } }}
-                      >
-                        {product.price}
-                      </Typography>
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <StarIcon sx={{ color: "#FFB800", fontSize: 14 }} />
-                        <Typography variant="caption">
-                          {product.rating}
-                        </Typography>
-                      </Stack>
-                    </Stack>
+                    <Typography variant="body2" color={colors.gray}>
+                      {category.count} Items
+                    </Typography>
                   </Paper>
-                ))}
-              </Box>
+                </Grid>
+              ))}
             </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Categories Section */}
-      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
-        <Container maxWidth="lg">
-          <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
-            <Typography
-              variant="overline"
-              sx={{
-                color: colors.primary,
-                fontWeight: 600,
-                letterSpacing: 2,
-              }}
-            >
-              Shop by Category
-            </Typography>
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 700,
-                color: colors.dark,
-                fontSize: { xs: "1.8rem", md: "2.5rem" },
-              }}
-            >
-              Browse Our Collections
-            </Typography>
-            <Typography
-              sx={{
-                color: colors.gray,
-                maxWidth: 600,
-                mx: "auto",
-                px: 2,
-              }}
-            >
-              Find exactly what you're looking for in our wide range of
-              categories
-            </Typography>
-          </Stack>
-
-          <Grid container spacing={3}>
-            {categories.map((category) => (
-              <Grid item xs={6} md={3} key={category.id}>
-                <Paper
-                  elevation={0}
-                  onClick={() => handleCategoryClick(category)}
-                  sx={{
-                    p: { xs: 3, md: 4 },
-                    textAlign: "center",
-                    borderRadius: "20px",
-                    background: colors.light,
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    border: `1px solid ${colors.lightGray}`,
-                    height: "100%",
-                    "&:hover": {
-                      transform: "translateY(-8px)",
-                      borderColor: colors.primary,
-                      boxShadow: `0 15px 30px -10px ${colors.primary}`,
-                      bgcolor: colors.white,
-                    },
-                  }}
-                >
-                  <Typography
-                    sx={{ fontSize: { xs: "2.5rem", md: "3rem" }, mb: 2 }}
-                  >
-                    {category.icon}
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    fontWeight={600}
-                    gutterBottom
-                    sx={{ fontSize: { xs: "1rem", md: "1.25rem" } }}
-                  >
-                    {category.name}
-                  </Typography>
-                  <Typography variant="body2" color={colors.gray}>
-                    {category.count} Items
-                  </Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
+          </Container>
+        </Box>
+      </div>
 
       {/* Featured Products */}
       <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
@@ -903,96 +1099,19 @@ export default function Home() {
       </Box>
 
       {/* Services Section */}
-      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
-        <Container maxWidth="lg">
-          <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
-            <Typography
-              variant="overline"
-              sx={{
-                color: colors.primary,
-                fontWeight: 600,
-                letterSpacing: 2,
-              }}
-            >
-              Our Services
-            </Typography>
-            <Typography
-              variant="h3"
-              sx={{
-                fontWeight: 700,
-                color: colors.dark,
-                fontSize: { xs: "1.8rem", md: "2.5rem" },
-              }}
-            >
-              Professional Tech Support
-            </Typography>
-          </Stack>
-
-          <Grid container spacing={3}>
-            {services.map((service, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <Paper
-                  elevation={0}
-                  onClick={() => handleServiceClick(service)}
-                  sx={{
-                    p: { xs: 3, md: 4 },
-                    borderRadius: "20px",
-                    background: colors.light,
-                    height: "100%",
-                    transition: "all 0.3s ease",
-                    border: `1px solid ${colors.lightGray}`,
-                    cursor: "pointer",
-                    "&:hover": {
-                      transform: "translateY(-8px)",
-                      boxShadow: `0 20px 40px ${colors.primary}20`,
-                      borderColor: colors.primary,
-                      bgcolor: colors.white,
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      color: colors.primary,
-                      mb: 2,
-                    }}
-                  >
-                    {service.icon}
-                  </Box>
-                  <Typography variant="h6" fontWeight={600} gutterBottom>
-                    {service.title}
-                  </Typography>
-                  <Typography
-                    color={colors.gray}
-                    sx={{ mb: 2, fontSize: "0.9rem" }}
-                  >
-                    {service.desc}
-                  </Typography>
-                  <Typography color={colors.primary} fontWeight={600}>
-                    {service.price}
-                  </Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Contact Section */}
-      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={5}>
+      <div ref={servicesRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
+          <Container maxWidth="lg">
+            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
               <Typography
                 variant="overline"
                 sx={{
                   color: colors.primary,
                   fontWeight: 600,
                   letterSpacing: 2,
-                  mb: 2,
-                  display: "block",
                 }}
               >
-                Get in Touch
+                Our Services
               </Typography>
               <Typography
                 variant="h3"
@@ -1000,213 +1119,294 @@ export default function Home() {
                   fontWeight: 700,
                   color: colors.dark,
                   fontSize: { xs: "1.8rem", md: "2.5rem" },
-                  mb: 3,
                 }}
               >
-                Visit Our Store
+                Professional Tech Support
               </Typography>
+            </Stack>
 
-              <Stack spacing={2}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: { xs: 2, md: 3 },
-                    borderRadius: "16px",
-                    background: colors.white,
-                    border: `1px solid ${colors.lightGray}`,
-                  }}
-                >
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar
+            <Grid container spacing={3}>
+              {services.map((service, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <Paper
+                    elevation={0}
+                    onClick={() => handleServiceClick(service)}
+                    sx={{
+                      p: { xs: 3, md: 4 },
+                      borderRadius: "20px",
+                      background: colors.light,
+                      height: "100%",
+                      transition: "all 0.3s ease",
+                      border: `1px solid ${colors.lightGray}`,
+                      cursor: "pointer",
+                      "&:hover": {
+                        transform: "translateY(-8px)",
+                        boxShadow: `0 20px 40px ${colors.primary}20`,
+                        borderColor: colors.primary,
+                        bgcolor: colors.white,
+                      },
+                    }}
+                  >
+                    <Box
                       sx={{
-                        bgcolor: colors.primary,
-                        width: { xs: 40, md: 48 },
-                        height: { xs: 40, md: 48 },
+                        color: colors.primary,
+                        mb: 2,
                       }}
                     >
-                      <LocationIcon />
-                    </Avatar>
-                    <Box>
-                      <Typography fontWeight={600} gutterBottom>
-                        Store Location
-                      </Typography>
-                      <Typography color={colors.gray}>
-                        Abosto, Shashemene, Ethiopia
-                      </Typography>
+                      {service.icon}
                     </Box>
-                  </Stack>
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: { xs: 2, md: 3 },
-                    borderRadius: "16px",
-                    background: colors.white,
-                    border: `1px solid ${colors.lightGray}`,
-                  }}
-                >
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar
-                      sx={{
-                        bgcolor: colors.primary,
-                        width: { xs: 40, md: 48 },
-                        height: { xs: 40, md: 48 },
-                      }}
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      {service.title}
+                    </Typography>
+                    <Typography
+                      color={colors.gray}
+                      sx={{ mb: 2, fontSize: "0.9rem" }}
                     >
-                      <TimeIcon />
-                    </Avatar>
-                    <Box>
-                      <Typography fontWeight={600} gutterBottom>
-                        Business Hours
-                      </Typography>
-                      <Typography color={colors.gray}>
-                        Mon-Sat: 9:00 AM - 8:00 PM
-                      </Typography>
-                      <Typography color={colors.gray}>
-                        Sunday: 10:00 AM - 5:00 PM
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: { xs: 2, md: 3 },
-                    borderRadius: "16px",
-                    background: colors.white,
-                    border: `1px solid ${colors.lightGray}`,
-                  }}
-                >
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar
-                      sx={{
-                        bgcolor: colors.primary,
-                        width: { xs: 40, md: 48 },
-                        height: { xs: 40, md: 48 },
-                      }}
-                    >
-                      <PhoneIcon />
-                    </Avatar>
-                    <Box>
-                      <Typography fontWeight={600} gutterBottom>
-                        Contact Info
-                      </Typography>
-                      <Typography color={colors.gray}>
-                        +251 91 234 5678
-                      </Typography>
-                      <Typography color={colors.gray}>
-                        info@chalamobile.com
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Paper>
-              </Stack>
+                      {service.desc}
+                    </Typography>
+                    <Typography color={colors.primary} fontWeight={600}>
+                      {service.price}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
             </Grid>
+          </Container>
+        </Box>
+      </div>
 
-            <Grid item xs={12} md={7}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: { xs: 3, md: 5 },
-                  borderRadius: "24px",
-                  background: colors.white,
-                  border: `1px solid ${colors.lightGray}`,
-                  height: "100%",
-                }}
-              >
-                <Typography variant="h5" fontWeight={700} gutterBottom>
-                  Send us a Message
+      {/* Contact Section */}
+      <div ref={contactRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+          <Container maxWidth="lg">
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={5}>
+                <Typography
+                  variant="overline"
+                  sx={{
+                    color: colors.primary,
+                    fontWeight: 600,
+                    letterSpacing: 2,
+                    mb: 2,
+                    display: "block",
+                  }}
+                >
+                  Get in Touch
                 </Typography>
-                <Typography color={colors.gray} sx={{ mb: 4 }}>
-                  We'll get back to you within 24 hours
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    color: colors.dark,
+                    fontSize: { xs: "1.8rem", md: "2.5rem" },
+                    mb: 3,
+                  }}
+                >
+                  Visit Our Store
                 </Typography>
 
-                <form onSubmit={handleWhatsAppSubmit}>
-                  <Stack spacing={3}>
-                    <TextField
-                      label="Your Name"
-                      fullWidth
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      required
-                      variant="outlined"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: "12px",
-                          "&:hover fieldset": {
-                            borderColor: colors.primary,
+                <Stack spacing={2}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: { xs: 2, md: 3 },
+                      borderRadius: "16px",
+                      background: colors.white,
+                      border: `1px solid ${colors.lightGray}`,
+                    }}
+                  >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        sx={{
+                          bgcolor: colors.primary,
+                          width: { xs: 40, md: 48 },
+                          height: { xs: 40, md: 48 },
+                        }}
+                      >
+                        <LocationIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography fontWeight={600} gutterBottom>
+                          Store Location
+                        </Typography>
+                        <Typography color={colors.gray}>
+                          Abosto, Shashemene, Ethiopia
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: { xs: 2, md: 3 },
+                      borderRadius: "16px",
+                      background: colors.white,
+                      border: `1px solid ${colors.lightGray}`,
+                    }}
+                  >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        sx={{
+                          bgcolor: colors.primary,
+                          width: { xs: 40, md: 48 },
+                          height: { xs: 40, md: 48 },
+                        }}
+                      >
+                        <TimeIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography fontWeight={600} gutterBottom>
+                          Business Hours
+                        </Typography>
+                        <Typography color={colors.gray}>
+                          Mon-Sat: 9:00 AM - 8:00 PM
+                        </Typography>
+                        <Typography color={colors.gray}>
+                          Sunday: 10:00 AM - 5:00 PM
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: { xs: 2, md: 3 },
+                      borderRadius: "16px",
+                      background: colors.white,
+                      border: `1px solid ${colors.lightGray}`,
+                    }}
+                  >
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        sx={{
+                          bgcolor: colors.primary,
+                          width: { xs: 40, md: 48 },
+                          height: { xs: 40, md: 48 },
+                        }}
+                      >
+                        <PhoneIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography fontWeight={600} gutterBottom>
+                          Contact Info
+                        </Typography>
+                        <Typography color={colors.gray}>
+                          +251 91 234 5678
+                        </Typography>
+                        <Typography color={colors.gray}>
+                          info@chalamobile.com
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={7}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: { xs: 3, md: 5 },
+                    borderRadius: "24px",
+                    background: colors.white,
+                    border: `1px solid ${colors.lightGray}`,
+                    height: "100%",
+                  }}
+                >
+                  <Typography variant="h5" fontWeight={700} gutterBottom>
+                    Send us a Message
+                  </Typography>
+                  <Typography color={colors.gray} sx={{ mb: 4 }}>
+                    We'll get back to you within 24 hours
+                  </Typography>
+
+                  <form onSubmit={handleWhatsAppSubmit}>
+                    <Stack spacing={3}>
+                      <TextField
+                        label="Your Name"
+                        fullWidth
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        required
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: "12px",
+                            "&:hover fieldset": {
+                              borderColor: colors.primary,
+                            },
                           },
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Phone Number"
-                      fullWidth
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      required
-                      variant="outlined"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: "12px",
-                          "&:hover fieldset": {
-                            borderColor: colors.primary,
+                        }}
+                      />
+                      <TextField
+                        label="Phone Number"
+                        fullWidth
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        required
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: "12px",
+                            "&:hover fieldset": {
+                              borderColor: colors.primary,
+                            },
                           },
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Message"
-                      multiline
-                      rows={4}
-                      fullWidth
-                      value={formData.message}
-                      onChange={(e) =>
-                        setFormData({ ...formData, message: e.target.value })
-                      }
-                      required
-                      variant="outlined"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: "12px",
-                          "&:hover fieldset": {
-                            borderColor: colors.primary,
+                        }}
+                      />
+                      <TextField
+                        label="Message"
+                        multiline
+                        rows={4}
+                        fullWidth
+                        value={formData.message}
+                        onChange={(e) =>
+                          setFormData({ ...formData, message: e.target.value })
+                        }
+                        required
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: "12px",
+                            "&:hover fieldset": {
+                              borderColor: colors.primary,
+                            },
                           },
-                        },
-                      }}
-                    />
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      size="large"
-                      startIcon={<WhatsAppIcon />}
-                      sx={{
-                        background: "#25D366",
-                        py: { xs: 1.5, md: 1.8 },
-                        borderRadius: "12px",
-                        fontSize: { xs: "0.9rem", md: "1rem" },
-                        fontWeight: 600,
-                        textTransform: "none",
-                        "&:hover": {
-                          background: "#128C7E",
-                        },
-                      }}
-                    >
-                      Send via WhatsApp
-                    </Button>
-                  </Stack>
-                </form>
-              </Paper>
+                        }}
+                      />
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        size="large"
+                        startIcon={<WhatsAppIcon />}
+                        sx={{
+                          background: "#25D366",
+                          py: { xs: 1.5, md: 1.8 },
+                          borderRadius: "12px",
+                          fontSize: { xs: "0.9rem", md: "1rem" },
+                          fontWeight: 600,
+                          textTransform: "none",
+                          "&:hover": {
+                            background: "#128C7E",
+                          },
+                        }}
+                      >
+                        Send via WhatsApp
+                      </Button>
+                    </Stack>
+                  </form>
+                </Paper>
+              </Grid>
             </Grid>
-          </Grid>
-        </Container>
-      </Box>
+          </Container>
+        </Box>
+      </div>
 
       {/* Footer */}
       <Box sx={{ bgcolor: colors.dark, color: colors.white, py: 6 }}>
@@ -1288,40 +1488,89 @@ export default function Home() {
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 Quick Links
               </Typography>
-              {quickLinks.slice(0, 4).map((link) => (
-                <Typography
-                  key={link.name}
-                  sx={{
-                    color: "rgba(255,255,255,0.7)",
-                    mb: 1.5,
-                    cursor: "pointer",
-                    "&:hover": { color: colors.primary },
-                  }}
-                  onClick={() => handleNavigation(link.path)}
-                >
-                  {link.name}
-                </Typography>
-              ))}
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => scrollToSection(homeRef)}
+              >
+                Home
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => scrollToSection(productsRef)}
+              >
+                Products
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => scrollToSection(servicesRef)}
+              >
+                Services
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => scrollToSection(contactRef)}
+              >
+                Contact
+              </Typography>
             </Grid>
 
             <Grid item xs={6} md={2}>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 More
               </Typography>
-              {quickLinks.slice(4).map((link) => (
-                <Typography
-                  key={link.name}
-                  sx={{
-                    color: "rgba(255,255,255,0.7)",
-                    mb: 1.5,
-                    cursor: "pointer",
-                    "&:hover": { color: colors.primary },
-                  }}
-                  onClick={() => handleNavigation(link.path)}
-                >
-                  {link.name}
-                </Typography>
-              ))}
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => navigate("/repair-request")}
+              >
+                Repair Request
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => navigate("/about")}
+              >
+                About Us
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={handleAdminLogin}
+              >
+                Admin Login
+              </Typography>
             </Grid>
 
             <Grid item xs={12} md={4}>
@@ -1390,7 +1639,7 @@ export default function Home() {
             </Typography>
             <Stack direction="row" spacing={3}>
               <Typography
-                onClick={() => handleNavigation("/privacy")}
+                onClick={() => navigate("/privacy")}
                 sx={{
                   color: "rgba(255,255,255,0.5)",
                   fontSize: "0.9rem",
@@ -1401,7 +1650,7 @@ export default function Home() {
                 Privacy Policy
               </Typography>
               <Typography
-                onClick={() => handleNavigation("/terms")}
+                onClick={() => navigate("/terms")}
                 sx={{
                   color: "rgba(255,255,255,0.5)",
                   fontSize: "0.9rem",
