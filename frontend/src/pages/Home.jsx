@@ -16,7 +16,7 @@ import {
   useMediaQuery,
   Fade,
   Chip,
-  alpha, 
+  alpha,
 } from "@mui/material";
 import {
   Phone as PhoneIcon,
@@ -37,20 +37,28 @@ import {
   Twitter as TwitterIcon,
   LinkedIn as LinkedInIcon,
   AdminPanelSettings as AdminIcon,
+  Email as EmailIcon,
+  Computer as ComputerIcon,
+  Tablet as TabletIcon,
+  Headset as HeadsetIcon,
+  Watch as WatchIcon,
+  Camera as CameraIcon,
+  Speaker as SpeakerIcon,
+  Gamepad as GamepadIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
 // Color palette with #FF8500 as primary
 const colors = {
-  primary: "#FF8500", // New primary orange
-  secondary: "#FFA33C", // Lighter orange
-  accent: "#4A90E2", // Blue accent
-  dark: "#1E1A3A", // Dark purple-gray for text
-  light: "#F8F9FF", // Light lavender background
+  primary: "#FF8500",
+  secondary: "#FFA33C",
+  accent: "#4A90E2",
+  dark: "#1E1A3A",
+  light: "#F8F9FF",
   white: "#FFFFFF",
-  gray: "#6B7280", // Gray text
-  lightGray: "#E5E7EB", // Border color
-  success: "#10B981", // Green for success states
+  gray: "#6B7280",
+  lightGray: "#E5E7EB",
+  success: "#10B981",
   gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
 };
 
@@ -106,26 +114,86 @@ const categories = [
   { id: 4, name: "Accessories", icon: "🎧", count: 67, slug: "accessories" },
 ];
 
+// What We Sell - Expanded
+const whatWeSell = [
+  {
+    icon: <PhoneIcon sx={{ fontSize: 40 }} />,
+    title: "Smartphones",
+    desc: "New & used iPhones, Samsung, Tecno, Infinix",
+    brands: "Apple, Samsung, Huawei, Xiaomi",
+    price: "From $150",
+  },
+  {
+    icon: <LaptopIcon sx={{ fontSize: 40 }} />,
+    title: "Laptops",
+    desc: "HP, Dell, Lenovo, MacBooks for work & gaming",
+    brands: "HP, Dell, Lenovo, Apple, Acer",
+    price: "From $350",
+  },
+  {
+    icon: <TabletIcon sx={{ fontSize: 40 }} />,
+    title: "Tablets",
+    desc: "iPads, Samsung tablets for entertainment & work",
+    brands: "Apple, Samsung, Huawei",
+    price: "From $200",
+  },
+  {
+    icon: <HeadsetIcon sx={{ fontSize: 40 }} />,
+    title: "Audio",
+    desc: "Headphones, earphones, speakers, earbuds",
+    brands: "JBL, Sony, Bose, Anker",
+    price: "From $15",
+  },
+  {
+    icon: <WatchIcon sx={{ fontSize: 40 }} />,
+    title: "Wearables",
+    desc: "Smartwatches, fitness trackers, smart bands",
+    brands: "Apple Watch, Samsung, Fitbit",
+    price: "From $50",
+  },
+  {
+    icon: <CameraIcon sx={{ fontSize: 40 }} />,
+    title: "Cameras",
+    desc: "Digital cameras, webcams, security cameras",
+    brands: "Canon, Nikon, Sony, Logitech",
+    price: "From $80",
+  },
+  {
+    icon: <SpeakerIcon sx={{ fontSize: 40 }} />,
+    title: "Speakers",
+    desc: "Bluetooth speakers, soundbars, home audio",
+    brands: "JBL, Bose, Sony, Anker",
+    price: "From $25",
+  },
+  {
+    icon: <GamepadIcon sx={{ fontSize: 40 }} />,
+    title: "Gaming",
+    desc: "Consoles, controllers, gaming accessories",
+    brands: "PlayStation, Xbox, Nintendo",
+    price: "From $40",
+  },
+];
+
 // Services
 const services = [
   {
     icon: <BuildIcon sx={{ fontSize: 40 }} />,
     title: "Expert Repairs",
-    desc: "Screen replacement, battery service, and water damage repair",
+    desc: "Screen replacement, battery service, water damage repair",
     price: "From $49",
     slug: "repairs",
   },
   {
     icon: <LaptopIcon sx={{ fontSize: 40 }} />,
     title: "Maintenance",
-    desc: "Computer cleaning, virus removal, and performance optimization",
+    desc: "Computer cleaning, virus removal, performance optimization",
     price: "From $39",
     slug: "maintenance",
   },
   {
     icon: <SupportIcon sx={{ fontSize: 40 }} />,
     title: "24/7 Support",
-    desc: "Technical support and consultation, remote assistance available",
+    desc: "Technical support and consultation, remote assistance",
     price: "From $19",
     slug: "support",
   },
@@ -158,12 +226,14 @@ export default function Home() {
     name: "",
     phone: "",
     message: "",
+    email: "",
   });
   const [newsletterEmail, setNewsletterEmail] = useState("");
 
   // Refs for sections
   const homeRef = useRef(null);
   const productsRef = useRef(null);
+  const sellRef = useRef(null);
   const servicesRef = useRef(null);
   const contactRef = useRef(null);
 
@@ -175,16 +245,22 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleWhatsAppSubmit = (e) => {
+  const handleEmailSubmit = (e) => {
     e.preventDefault();
-    const message = `Hello Chala Mobile,%0A%0A*Name:* ${formData.name}%0A*Phone:* ${formData.phone}%0A*Message:* ${formData.message}`;
-    window.open(`https://wa.me/251912345678?text=${message}`, "_blank");
-    setFormData({ name: "", phone: "", message: "" });
+    // Create mailto link
+    const subject = `Contact from ${formData.name}`;
+    const body = `Name: ${formData.name}%0AEmail: ${formData.email}%0APhone: ${formData.phone}%0A%0AMessage:%0A${formData.message}`;
+    window.location.href = `mailto:keroabdurehman@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`;
+    setFormData({ name: "", phone: "", message: "", email: "" });
   };
 
   const handleNewsletterSubmit = (e) => {
     e.preventDefault();
-    alert(`Thank you for subscribing with: ${newsletterEmail}`);
+    // Send newsletter subscription via email
+    const subject = "Newsletter Subscription";
+    const body = `Email: ${newsletterEmail} wants to subscribe to newsletter.`;
+    window.location.href = `mailto:keroabdurehman@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    alert("Thank you for subscribing! We'll send you an email confirmation.");
     setNewsletterEmail("");
   };
 
@@ -200,13 +276,15 @@ export default function Home() {
 
   const handleNavigation = (path, section = null) => {
     if (path === "/" && section) {
-      // If on home page, scroll to section
       switch (section) {
         case "home":
           scrollToSection(homeRef);
           break;
         case "products":
           scrollToSection(productsRef);
+          break;
+        case "sell":
+          scrollToSection(sellRef);
           break;
         case "services":
           scrollToSection(servicesRef);
@@ -218,7 +296,6 @@ export default function Home() {
           navigate(path);
       }
     } else {
-      // Navigate to different page
       navigate(path);
     }
     setMobileMenuOpen(false);
@@ -316,12 +393,17 @@ export default function Home() {
               </Box>
             </Stack>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation - Centered */}
             <Stack
               direction="row"
               spacing={3}
               alignItems="center"
-              sx={{ display: { xs: "none", md: "flex" } }}
+              justifyContent="center"
+              sx={{
+                display: { xs: "none", md: "flex" },
+                flex: 1,
+                mx: 4,
+              }}
             >
               <Button
                 onClick={() => scrollToSection(homeRef)}
@@ -375,7 +457,34 @@ export default function Home() {
                   },
                 }}
               >
-                Products
+                Shop
+              </Button>
+              <Button
+                onClick={() => scrollToSection(sellRef)}
+                sx={{
+                  color: colors.gray,
+                  fontWeight: 500,
+                  position: "relative",
+                  "&:after": {
+                    content: '""',
+                    position: "absolute",
+                    bottom: 0,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "0%",
+                    height: "2px",
+                    bgcolor: colors.primary,
+                    transition: "width 0.3s ease",
+                  },
+                  "&:hover": {
+                    color: colors.primary,
+                    "&:after": {
+                      width: "80%",
+                    },
+                  },
+                }}
+              >
+                What We Sell
               </Button>
               <Button
                 onClick={() => scrollToSection(servicesRef)}
@@ -431,14 +540,21 @@ export default function Home() {
               >
                 Contact
               </Button>
+            </Stack>
 
+            {/* Desktop Right Side */}
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
+              sx={{ display: { xs: "none", md: "flex" } }}
+            >
               {/* Admin Button */}
               <IconButton
                 onClick={handleAdminLogin}
                 sx={{
                   bgcolor: alpha(colors.primary, 0.1),
                   color: colors.primary,
-                  ml: 1,
                   "&:hover": {
                     bgcolor: colors.primary,
                     color: colors.white,
@@ -546,7 +662,23 @@ export default function Home() {
                       },
                     }}
                   >
-                    Products
+                    Shop
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={() => scrollToSection(sellRef)}
+                    sx={{
+                      justifyContent: "flex-start",
+                      px: 3,
+                      py: 1.5,
+                      color: colors.dark,
+                      "&:hover": {
+                        bgcolor: colors.light,
+                        color: colors.primary,
+                      },
+                    }}
+                  >
+                    What We Sell
                   </Button>
                   <Button
                     fullWidth
@@ -642,8 +774,18 @@ export default function Home() {
           />
 
           <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
-            <Grid container spacing={6} alignItems="center">
-              <Grid item xs={12} md={6}>
+            <Grid
+              container
+              spacing={6}
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Grid
+                item
+                xs={12}
+                md={6}
+                sx={{ textAlign: { xs: "left", md: "center" } }}
+              >
                 <Chip
                   label="Welcome to ChalaMobile"
                   sx={{
@@ -652,6 +794,7 @@ export default function Home() {
                     mb: 3,
                     borderRadius: "50px",
                     fontWeight: 500,
+                    mx: { md: "auto" },
                   }}
                 />
 
@@ -677,6 +820,7 @@ export default function Home() {
                     mb: 4,
                     lineHeight: 1.8,
                     maxWidth: "90%",
+                    mx: { md: "auto" },
                   }}
                 >
                   Quality phones, laptops, and professional repair services.
@@ -686,7 +830,7 @@ export default function Home() {
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   spacing={2}
-                  sx={{ width: "100%" }}
+                  sx={{ width: "100%", justifyContent: { md: "center" } }}
                 >
                   <Button
                     variant="contained"
@@ -740,7 +884,12 @@ export default function Home() {
                 <Stack
                   direction="row"
                   spacing={3}
-                  sx={{ mt: 4, flexWrap: "wrap", gap: 2 }}
+                  sx={{
+                    mt: 4,
+                    flexWrap: "wrap",
+                    gap: 2,
+                    justifyContent: { md: "center" },
+                  }}
                 >
                   <Stack direction="row" spacing={1} alignItems="center">
                     <VerifiedIcon
@@ -888,7 +1037,7 @@ export default function Home() {
               </Typography>
             </Stack>
 
-            <Grid container spacing={3}>
+            <Grid container spacing={3} justifyContent="center">
               {categories.map((category) => (
                 <Grid item xs={6} md={3} key={category.id}>
                   <Paper
@@ -935,8 +1084,99 @@ export default function Home() {
         </Box>
       </div>
 
+      {/* What We Sell Section */}
+      <div ref={sellRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+          <Container maxWidth="lg">
+            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: colors.primary,
+                  fontWeight: 600,
+                  letterSpacing: 2,
+                }}
+              >
+                What We Sell
+              </Typography>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  color: colors.dark,
+                  fontSize: { xs: "1.8rem", md: "2.5rem" },
+                }}
+              >
+                Quality Products at Fair Prices
+              </Typography>
+              <Typography
+                sx={{
+                  color: colors.gray,
+                  maxWidth: 600,
+                  mx: "auto",
+                  px: 2,
+                }}
+              >
+                From smartphones to accessories, we have everything you need
+              </Typography>
+            </Stack>
+
+            <Grid container spacing={3} justifyContent="center">
+              {whatWeSell.map((item, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: { xs: 3, md: 3 },
+                      borderRadius: "20px",
+                      background: colors.white,
+                      height: "100%",
+                      transition: "all 0.3s ease",
+                      border: `1px solid ${colors.lightGray}`,
+                      textAlign: "center",
+                      "&:hover": {
+                        transform: "translateY(-8px)",
+                        boxShadow: `0 20px 40px ${colors.primary}20`,
+                        borderColor: colors.primary,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        color: colors.primary,
+                        mb: 2,
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      {item.title}
+                    </Typography>
+                    <Typography
+                      color={colors.gray}
+                      sx={{ mb: 1, fontSize: "0.9rem" }}
+                    >
+                      {item.desc}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: colors.gray, display: "block", mb: 1 }}
+                    >
+                      {item.brands}
+                    </Typography>
+                    <Typography color={colors.primary} fontWeight={600}>
+                      {item.price}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Container>
+        </Box>
+      </div>
+
       {/* Featured Products */}
-      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
         <Container maxWidth="lg">
           <Stack
             direction={{ xs: "column", sm: "row" }}
@@ -979,7 +1219,7 @@ export default function Home() {
             </Button>
           </Stack>
 
-          <Grid container spacing={3}>
+          <Grid container spacing={3} justifyContent="center">
             {featuredProducts.map((product) => (
               <Grid item xs={12} sm={6} md={3} key={product.id}>
                 <Card
@@ -1100,7 +1340,7 @@ export default function Home() {
 
       {/* Services Section */}
       <div ref={servicesRef}>
-        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
           <Container maxWidth="lg">
             <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
               <Typography
@@ -1125,7 +1365,7 @@ export default function Home() {
               </Typography>
             </Stack>
 
-            <Grid container spacing={3}>
+            <Grid container spacing={3} justifyContent="center">
               {services.map((service, index) => (
                 <Grid item xs={12} sm={6} md={3} key={index}>
                   <Paper
@@ -1134,16 +1374,16 @@ export default function Home() {
                     sx={{
                       p: { xs: 3, md: 4 },
                       borderRadius: "20px",
-                      background: colors.light,
+                      background: colors.white,
                       height: "100%",
                       transition: "all 0.3s ease",
                       border: `1px solid ${colors.lightGray}`,
                       cursor: "pointer",
+                      textAlign: "center",
                       "&:hover": {
                         transform: "translateY(-8px)",
                         boxShadow: `0 20px 40px ${colors.primary}20`,
                         borderColor: colors.primary,
-                        bgcolor: colors.white,
                       },
                     }}
                   >
@@ -1177,45 +1417,50 @@ export default function Home() {
 
       {/* Contact Section */}
       <div ref={contactRef}>
-        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
           <Container maxWidth="lg">
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={5}>
-                <Typography
-                  variant="overline"
-                  sx={{
-                    color: colors.primary,
-                    fontWeight: 600,
-                    letterSpacing: 2,
-                    mb: 2,
-                    display: "block",
-                  }}
-                >
-                  Get in Touch
-                </Typography>
-                <Typography
-                  variant="h3"
-                  sx={{
-                    fontWeight: 700,
-                    color: colors.dark,
-                    fontSize: { xs: "1.8rem", md: "2.5rem" },
-                    mb: 3,
-                  }}
-                >
-                  Visit Our Store
-                </Typography>
+            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: colors.primary,
+                  fontWeight: 600,
+                  letterSpacing: 2,
+                }}
+              >
+                Get in Touch
+              </Typography>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  color: colors.dark,
+                  fontSize: { xs: "1.8rem", md: "2.5rem" },
+                }}
+              >
+                Visit Our Store
+              </Typography>
+            </Stack>
 
+            <Grid container spacing={4} justifyContent="center">
+              <Grid item xs={12} md={5}>
                 <Stack spacing={2}>
                   <Paper
                     elevation={0}
                     sx={{
                       p: { xs: 2, md: 3 },
                       borderRadius: "16px",
-                      background: colors.white,
+                      background: colors.light,
                       border: `1px solid ${colors.lightGray}`,
+                      textAlign: "center",
                     }}
                   >
-                    <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
                       <Avatar
                         sx={{
                           bgcolor: colors.primary,
@@ -1225,7 +1470,7 @@ export default function Home() {
                       >
                         <LocationIcon />
                       </Avatar>
-                      <Box>
+                      <Box sx={{ textAlign: "left" }}>
                         <Typography fontWeight={600} gutterBottom>
                           Store Location
                         </Typography>
@@ -1241,11 +1486,17 @@ export default function Home() {
                     sx={{
                       p: { xs: 2, md: 3 },
                       borderRadius: "16px",
-                      background: colors.white,
+                      background: colors.light,
                       border: `1px solid ${colors.lightGray}`,
+                      textAlign: "center",
                     }}
                   >
-                    <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
                       <Avatar
                         sx={{
                           bgcolor: colors.primary,
@@ -1255,7 +1506,7 @@ export default function Home() {
                       >
                         <TimeIcon />
                       </Avatar>
-                      <Box>
+                      <Box sx={{ textAlign: "left" }}>
                         <Typography fontWeight={600} gutterBottom>
                           Business Hours
                         </Typography>
@@ -1274,11 +1525,17 @@ export default function Home() {
                     sx={{
                       p: { xs: 2, md: 3 },
                       borderRadius: "16px",
-                      background: colors.white,
+                      background: colors.light,
                       border: `1px solid ${colors.lightGray}`,
+                      textAlign: "center",
                     }}
                   >
-                    <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
                       <Avatar
                         sx={{
                           bgcolor: colors.primary,
@@ -1288,7 +1545,7 @@ export default function Home() {
                       >
                         <PhoneIcon />
                       </Avatar>
-                      <Box>
+                      <Box sx={{ textAlign: "left" }}>
                         <Typography fontWeight={600} gutterBottom>
                           Contact Info
                         </Typography>
@@ -1296,7 +1553,7 @@ export default function Home() {
                           +251 91 234 5678
                         </Typography>
                         <Typography color={colors.gray}>
-                          info@chalamobile.com
+                          keroabdurehman@gmail.com
                         </Typography>
                       </Box>
                     </Stack>
@@ -1310,19 +1567,24 @@ export default function Home() {
                   sx={{
                     p: { xs: 3, md: 5 },
                     borderRadius: "24px",
-                    background: colors.white,
+                    background: colors.light,
                     border: `1px solid ${colors.lightGray}`,
                     height: "100%",
                   }}
                 >
-                  <Typography variant="h5" fontWeight={700} gutterBottom>
+                  <Typography
+                    variant="h5"
+                    fontWeight={700}
+                    gutterBottom
+                    align="center"
+                  >
                     Send us a Message
                   </Typography>
-                  <Typography color={colors.gray} sx={{ mb: 4 }}>
+                  <Typography color={colors.gray} sx={{ mb: 4 }} align="center">
                     We'll get back to you within 24 hours
                   </Typography>
 
-                  <form onSubmit={handleWhatsAppSubmit}>
+                  <form onSubmit={handleEmailSubmit}>
                     <Stack spacing={3}>
                       <TextField
                         label="Your Name"
@@ -1343,13 +1605,31 @@ export default function Home() {
                         }}
                       />
                       <TextField
-                        label="Phone Number"
+                        label="Email Address"
+                        type="email"
+                        fullWidth
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        required
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: "12px",
+                            "&:hover fieldset": {
+                              borderColor: colors.primary,
+                            },
+                          },
+                        }}
+                      />
+                      <TextField
+                        label="Phone Number (Optional)"
                         fullWidth
                         value={formData.phone}
                         onChange={(e) =>
                           setFormData({ ...formData, phone: e.target.value })
                         }
-                        required
                         variant="outlined"
                         sx={{
                           "& .MuiOutlinedInput-root": {
@@ -1384,20 +1664,20 @@ export default function Home() {
                         type="submit"
                         variant="contained"
                         size="large"
-                        startIcon={<WhatsAppIcon />}
+                        startIcon={<EmailIcon />}
                         sx={{
-                          background: "#25D366",
+                          background: colors.gradient,
                           py: { xs: 1.5, md: 1.8 },
                           borderRadius: "12px",
                           fontSize: { xs: "0.9rem", md: "1rem" },
                           fontWeight: 600,
                           textTransform: "none",
                           "&:hover": {
-                            background: "#128C7E",
+                            background: colors.secondary,
                           },
                         }}
                       >
-                        Send via WhatsApp
+                        Send via Email
                       </Button>
                     </Stack>
                   </form>
@@ -1411,12 +1691,18 @@ export default function Home() {
       {/* Footer */}
       <Box sx={{ bgcolor: colors.dark, color: colors.white, py: 6 }}>
         <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
+          <Grid container spacing={4} justifyContent="center">
+            <Grid
+              item
+              xs={12}
+              md={4}
+              sx={{ textAlign: { xs: "center", md: "left" } }}
+            >
               <Stack
                 direction="row"
                 spacing={1.5}
                 alignItems="center"
+                justifyContent={{ xs: "center", md: "flex-start" }}
                 sx={{ mb: 3 }}
               >
                 <Box
@@ -1450,7 +1736,11 @@ export default function Home() {
                 Your trusted partner for quality electronics and professional
                 maintenance services in Shashemene.
               </Typography>
-              <Stack direction="row" spacing={2}>
+              <Stack
+                direction="row"
+                spacing={2}
+                justifyContent={{ xs: "center", md: "flex-start" }}
+              >
                 <IconButton
                   onClick={() => window.open("https://facebook.com", "_blank")}
                   sx={{
@@ -1484,7 +1774,12 @@ export default function Home() {
               </Stack>
             </Grid>
 
-            <Grid item xs={6} md={2}>
+            <Grid
+              item
+              xs={6}
+              md={2}
+              sx={{ textAlign: { xs: "center", md: "left" } }}
+            >
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 Quick Links
               </Typography>
@@ -1508,7 +1803,18 @@ export default function Home() {
                 }}
                 onClick={() => scrollToSection(productsRef)}
               >
-                Products
+                Shop
+              </Typography>
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.7)",
+                  mb: 1.5,
+                  cursor: "pointer",
+                  "&:hover": { color: colors.primary },
+                }}
+                onClick={() => scrollToSection(sellRef)}
+              >
+                What We Sell
               </Typography>
               <Typography
                 sx={{
@@ -1534,7 +1840,12 @@ export default function Home() {
               </Typography>
             </Grid>
 
-            <Grid item xs={6} md={2}>
+            <Grid
+              item
+              xs={6}
+              md={2}
+              sx={{ textAlign: { xs: "center", md: "left" } }}
+            >
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 More
               </Typography>
@@ -1573,7 +1884,12 @@ export default function Home() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid
+              item
+              xs={12}
+              md={4}
+              sx={{ textAlign: { xs: "center", md: "left" } }}
+            >
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 Newsletter
               </Typography>
@@ -1587,7 +1903,11 @@ export default function Home() {
                 Subscribe to get updates about new products and special offers
               </Typography>
               <form onSubmit={handleNewsletterSubmit}>
-                <Stack direction="row" spacing={1}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  justifyContent={{ xs: "center", md: "flex-start" }}
+                >
                   <TextField
                     placeholder="Your email"
                     size="small"
@@ -1599,6 +1919,7 @@ export default function Home() {
                     sx={{
                       bgcolor: "rgba(255,255,255,0.1)",
                       borderRadius: "8px",
+                      maxWidth: "250px",
                       "& .MuiInputBase-input": { color: colors.white },
                       "& .MuiOutlinedInput-notchedOutline": { border: "none" },
                     }}
