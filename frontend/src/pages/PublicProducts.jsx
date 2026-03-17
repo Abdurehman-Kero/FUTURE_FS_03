@@ -72,6 +72,10 @@ const categoryConfig = {
   },
 };
 
+// Default image for products without image
+const DEFAULT_PRODUCT_IMAGE =
+  "https://via.placeholder.com/300x200/FF8500/FFFFFF?text=Product";
+
 const PublicProducts = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -115,6 +119,11 @@ const PublicProducts = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to get product image
+  const getProductImage = (product) => {
+    return product.image_url || DEFAULT_PRODUCT_IMAGE;
   };
 
   const filteredProducts = products.filter(
@@ -345,6 +354,7 @@ const PublicProducts = () => {
                     }}
                   >
                     <Box sx={{ p: 2 }}>
+                      {/* Product Image */}
                       <Box
                         sx={{
                           height: 160,
@@ -360,8 +370,11 @@ const PublicProducts = () => {
                       >
                         <Box
                           component="img"
-                          src={`https://via.placeholder.com/300x160/${category.color.slice(1)}/ffffff?text=${p.category}`}
+                          src={getProductImage(p)}
                           alt={p.name}
+                          onError={(e) => {
+                            e.target.src = DEFAULT_PRODUCT_IMAGE;
+                          }}
                           sx={{
                             maxWidth: "80%",
                             maxHeight: "80%",
@@ -387,6 +400,7 @@ const PublicProducts = () => {
                         />
                       </Box>
 
+                      {/* Product Details */}
                       <Box
                         sx={{
                           display: "flex",
