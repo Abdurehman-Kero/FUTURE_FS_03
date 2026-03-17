@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 // Import routes
@@ -9,6 +10,7 @@ const customerRoutes = require("./routes/customerRoutes");
 const repairRoutes = require("./routes/repairRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const uploadRoutes = require("./routes/uploadRoutes"); // 👈 Add this
 
 // Import middleware
 const { verifyToken } = require("./middleware/auth");
@@ -20,9 +22,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Public routes - NO authentication needed
+// Serve static files from uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Public routes
 app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes); // 👈 REMOVED verifyToken - now public!
+app.use("/api/products", productRoutes);
+app.use("/api/upload", uploadRoutes); // 👈 Add this - public upload endpoint
 
 // Protected routes (require authentication)
 app.use("/api/customers", verifyToken, customerRoutes);
@@ -37,7 +43,8 @@ app.get("/api/test", (req, res) => {
     message: "Chala Mobile API is running!",
     endpoints: {
       auth: "/api/auth",
-      products: "/api/products (public)", // 👈 Updated to show it's public
+      products: "/api/products (public)",
+      upload: "/api/upload/product-image (public)",
       customers: "/api/customers (protected)",
       repairs: "/api/repairs (protected)",
       sales: "/api/sales (protected)",
@@ -46,11 +53,20 @@ app.get("/api/test", (req, res) => {
   });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal server error",
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Chala Mobile API running on port ${PORT}`);
   console.log(`📝 Test: http://localhost:${PORT}/api/test`);
-  console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
   console.log(`📦 Products: http://localhost:${PORT}/api/products (PUBLIC)`);
+  console.log(`📤 Upload: http://localhost:${PORT}/api/upload/product-image`);
 });
