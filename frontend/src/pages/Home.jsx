@@ -121,7 +121,7 @@ const whatWeSell = [
     title: "Smartphones",
     desc: "New & used iPhones, Samsung, Tecno, Infinix",
     brands: "Apple, Samsung, Huawei, Xiaomi",
-    price: "From $150",
+    price: "",
     slug: "smartphones",
   },
   {
@@ -129,7 +129,7 @@ const whatWeSell = [
     title: "Laptops",
     desc: "HP, Dell, Lenovo, MacBooks for work & gaming",
     brands: "HP, Dell, Lenovo, Apple, Acer",
-    price: "From $350",
+    price: "",
     slug: "laptops",
   },
   {
@@ -137,7 +137,7 @@ const whatWeSell = [
     title: "Tablets",
     desc: "iPads, Samsung tablets for entertainment & work",
     brands: "Apple, Samsung, Huawei",
-    price: "From $200",
+    price: "",
     slug: "tablets",
   },
   {
@@ -145,7 +145,7 @@ const whatWeSell = [
     title: "Audio",
     desc: "Headphones, earphones, speakers, earbuds",
     brands: "JBL, Sony, Bose, Anker",
-    price: "From $15",
+    price: "",
     slug: "audio",
   },
   {
@@ -153,7 +153,7 @@ const whatWeSell = [
     title: "Wearables",
     desc: "Smartwatches, fitness trackers, smart bands",
     brands: "Apple Watch, Samsung, Fitbit",
-    price: "From $50",
+    price: "",
     slug: "wearables",
   },
   {
@@ -161,7 +161,7 @@ const whatWeSell = [
     title: "Cameras",
     desc: "Digital cameras, webcams, security cameras",
     brands: "Canon, Nikon, Sony, Logitech",
-    price: "From $80",
+    price: "",
     slug: "cameras",
   },
   {
@@ -169,7 +169,7 @@ const whatWeSell = [
     title: "Speakers",
     desc: "Bluetooth speakers, soundbars, home audio",
     brands: "JBL, Bose, Sony, Anker",
-    price: "From $25",
+    price: "",
     slug: "speakers",
   },
   {
@@ -177,7 +177,7 @@ const whatWeSell = [
     title: "Gaming",
     desc: "Consoles, controllers, gaming accessories",
     brands: "PlayStation, Xbox, Nintendo",
-    price: "From $40",
+    price: "",
     slug: "gaming",
   },
 ];
@@ -188,21 +188,21 @@ const services = [
     icon: <BuildIcon sx={{ fontSize: 40 }} />,
     title: "Expert Repairs",
     desc: "Screen replacement, battery service, water damage repair",
-    price: "From $49",
+    price: "",
     slug: "repairs",
   },
   {
     icon: <LaptopIcon sx={{ fontSize: 40 }} />,
     title: "Maintenance",
     desc: "Computer cleaning, virus removal, performance optimization",
-    price: "From $39",
+    price: "",
     slug: "maintenance",
   },
   {
     icon: <SupportIcon sx={{ fontSize: 40 }} />,
     title: "24/7 Support",
     desc: "Technical support and consultation, remote assistance",
-    price: "From $19",
+    price: "",
     slug: "support",
   },
   {
