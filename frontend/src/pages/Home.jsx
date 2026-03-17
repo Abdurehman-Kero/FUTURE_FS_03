@@ -79,7 +79,7 @@ const featuredProducts = [
     name: "MacBook Pro 14",
     category: "Laptops",
     price: "",
-    image: "https://imgur.com/a/wLPoWEQ",
+    image: "https://i.imgur.com/Omysr24.jpeg",
     rating: 4.9,
     reviews: 89,
     slug: "macbook-pro-14",
