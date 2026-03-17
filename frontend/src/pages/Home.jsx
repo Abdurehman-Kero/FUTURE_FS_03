@@ -955,16 +955,37 @@ export default function Home() {
                         },
                       }}
                     >
+                      {/* Fixed size image container */}
                       <Box
-                        component="img"
-                        src={product.image}
-                        alt={product.name}
                         sx={{
                           width: "100%",
-                          height: "auto",
+                          height: { xs: 100, sm: 120, md: 140 },
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           mb: 1,
+                          overflow: "hidden",
                         }}
-                      />
+                      >
+                        <Box
+                          component="img"
+                          src={product.image}
+                          alt={product.name}
+                          onError={(e) => {
+                            e.target.src =
+                              "https://via.placeholder.com/140x140/FF8500/FFFFFF?text=Product";
+                          }}
+                          sx={{
+                            maxWidth: "90%",
+                            maxHeight: "90%",
+                            objectFit: "contain",
+                            transition: "transform 0.3s ease",
+                            "&:hover": {
+                              transform: "scale(1.05)",
+                            },
+                          }}
+                        />
+                      </Box>
                       <Typography variant="caption" color={colors.gray}>
                         {product.category}
                       </Typography>
@@ -987,7 +1008,7 @@ export default function Home() {
                           fontWeight={700}
                           sx={{ fontSize: { xs: "0.9rem", md: "1rem" } }}
                         >
-                          {product.price}
+                          {product.price || "Call"}
                         </Typography>
                         <Stack
                           direction="row"
@@ -1177,7 +1198,7 @@ export default function Home() {
                       {item.brands}
                     </Typography>
                     <Typography color={colors.primary} fontWeight={600}>
-                      {item.price}
+                      {item.price || "Call"}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -1252,6 +1273,7 @@ export default function Home() {
                   }}
                 >
                   <Box sx={{ p: { xs: 1.5, md: 2 } }}>
+                    {/* Fixed size image container */}
                     <Box
                       sx={{
                         height: { xs: 150, md: 180 },
@@ -1261,12 +1283,17 @@ export default function Home() {
                         mb: 2,
                         bgcolor: colors.light,
                         borderRadius: "12px",
+                        overflow: "hidden",
                       }}
                     >
                       <Box
                         component="img"
                         src={product.image}
                         alt={product.name}
+                        onError={(e) => {
+                          e.target.src =
+                            "https://via.placeholder.com/180x180/FF8500/FFFFFF?text=Product";
+                        }}
                         sx={{
                           maxWidth: "80%",
                           maxHeight: "80%",
@@ -1323,7 +1350,7 @@ export default function Home() {
                         fontWeight={700}
                         sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
                       >
-                        {product.price}
+                        {product.price || "Call"}
                       </Typography>
                       <IconButton
                         size="small"
