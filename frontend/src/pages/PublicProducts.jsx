@@ -132,7 +132,7 @@ const PublicProducts = () => {
   const handleWhatsApp = (product) => {
     const msg = `Hello Chala Mobile, I'm interested in:%0A%0A*Product:* ${product.name}%0A*Brand:* ${product.brand} ${product.model}%0A*Price:* ETB ${product.price}%0A*Condition:* ${product.type}`;
     window.open(
-      `https://wa.me/251912345678?text=${encodeURIComponent(msg)}`,
+      `https://wa.me/251982310974?text=${encodeURIComponent(msg)}`,
       "_blank",
     );
   };

@@ -45,7 +45,7 @@ const PublicRepairRequest = () => {
   const handleSubmit = () => {
     const msg = `🔧 Repair Request:\nDevice: ${formData.deviceBrand} ${formData.deviceModel}\nIssue: ${formData.issueDescription}\nCustomer: ${formData.name}\nPhone: ${formData.phone}`;
     window.open(
-      `https://wa.me/251912345678?text=${encodeURIComponent(msg)}`,
+      `https://wa.me/251982310974?text=${encodeURIComponent(msg)}`,
       "_blank",
     );
     setSnackbar({ open: true, message: "Redirecting to WhatsApp..." });
@@ -210,7 +210,7 @@ const PublicRepairRequest = () => {
               <Button
                 variant="outlined"
                 startIcon={<PhoneIcon />}
-                href="tel:+251912345678"
+                href="tel:+251982310974"
                 sx={{ borderColor: "#BE3300", color: "#BE3300" }}
               >
                 Call Us: +251 982310974
