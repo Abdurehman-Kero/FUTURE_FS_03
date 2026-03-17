@@ -31,6 +31,12 @@ import {
   TablePagination,
   Stack,
   alpha,
+  useMediaQuery,
+  useTheme,
+  Drawer,
+  BottomNavigation,
+  BottomNavigationAction,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -44,16 +50,16 @@ import {
   AttachMoney as MoneyIcon,
   Receipt as ReceiptIcon,
   Assignment as AssignmentIcon,
+  Close as CloseIcon,
+  FilterList as FilterIcon,
 } from "@mui/icons-material";
 import {
   getRepairs,
   createRepair,
   updateRepairStatus,
-  addRepairPart,
   getRepairsByStatus,
 } from "../services/api";
 import { searchCustomers } from "../services/api";
-import { getProducts } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 // Simple status configuration
@@ -73,27 +79,40 @@ const statusConfig = {
   delivered: { label: "Delivered", color: "#607d8b", icon: <ReceiptIcon /> },
 };
 
-const statusSteps = [
-  "received",
-  "diagnosing",
-  "in_progress",
-  "completed",
-  "delivered",
-];
+// Color scheme
+const colors = {
+  primary: "#FF8500",
+  secondary: "#FFA33C",
+  gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
+  light: "#F8F9FA",
+  dark: "#1E1A3A",
+  gray: "#6B7280",
+  lightGray: "#E5E7EB",
+  white: "#FFFFFF",
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  info: "#3B82F6",
+};
 
 const Repairs = () => {
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
+
   const [repairs, setRepairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
   const [openDialog, setOpenDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [selectedRepair, setSelectedRepair] = useState(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -112,6 +131,11 @@ const Repairs = () => {
   });
 
   const [statusData, setStatusData] = useState({ status: "", final_cost: "" });
+
+  // Update rows per page on screen size change
+  useEffect(() => {
+    setRowsPerPage(isMobile ? 5 : 10);
+  }, [isMobile]);
 
   useEffect(() => {
     loadRepairs();
@@ -150,6 +174,8 @@ const Repairs = () => {
       if (customerSearch) {
         const res = await searchCustomers(customerSearch);
         setSearchResults(res.data.data);
+      } else {
+        setSearchResults([]);
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -161,7 +187,8 @@ const Repairs = () => {
   const filteredRepairs = repairs.filter(
     (r) =>
       (r.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.customer_phone?.includes(searchTerm)) &&
+        r.customer_phone?.includes(searchTerm) ||
+        r.device_model?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === "all" || r.status === statusFilter),
   );
 
@@ -211,21 +238,26 @@ const Repairs = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case "received":
-        return "#2196f3";
+        return colors.info;
       case "diagnosing":
-        return "#ff9800";
+        return colors.warning;
       case "in_progress":
         return "#9c27b0";
       case "completed":
-        return "#4caf50";
+        return colors.success;
       case "delivered":
-        return "#607d8b";
+        return colors.gray;
       default:
-        return "#757575";
+        return colors.gray;
     }
   };
 
-  if (loading)
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+  };
+
+  if (loading) {
     return (
       <Box
         sx={{
@@ -235,251 +267,358 @@ const Repairs = () => {
           height: "50vh",
         }}
       >
-        <CircularProgress />
+        <CircularProgress sx={{ color: colors.primary }} />
       </Box>
     );
+  }
 
   return (
-    <Box>
+    <Box
+      sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "100%", overflow: "hidden" }}
+    >
       {/* Header */}
       <Box
         sx={{
           display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: { xs: "stretch", sm: "center" },
+          gap: { xs: 2, sm: 0 },
           mb: 3,
         }}
       >
-        <Typography variant="h5" fontWeight="600">
+        <Typography
+          variant={isMobile ? "h5" : "h5"}
+          fontWeight="600"
+          color={colors.dark}
+          sx={{ textAlign: { xs: "center", sm: "left" } }}
+        >
           Repairs
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
-          sx={{ bgcolor: "#FF8500", "&:hover": { bgcolor: "#FFA33C" } }}
+          fullWidth={isMobile}
+          sx={{
+            background: colors.gradient,
+            borderRadius: 2,
+            textTransform: "none",
+            px: 3,
+            py: { xs: 1.5, sm: 1 },
+            "&:hover": { background: colors.secondary },
+          }}
         >
           New Repair
         </Button>
       </Box>
 
-      {/* Status Filter Chips */}
-      <Box sx={{ display: "flex", gap: 1, mb: 3, flexWrap: "wrap" }}>
-        <Chip
-          label={`All (${repairs.length})`}
-          onClick={() => setStatusFilter("all")}
-          color={statusFilter === "all" ? "primary" : "default"}
-          sx={{ borderRadius: 2 }}
-        />
-        {Object.entries(statusConfig).map(([key, config]) => (
-          <Chip
-            key={key}
-            label={`${config.label} (${repairs.filter((r) => r.status === key).length})`}
-            onClick={() => setStatusFilter(key)}
-            sx={{
-              bgcolor:
-                statusFilter === key ? config.color : alpha(config.color, 0.1),
-              color: statusFilter === key ? "white" : config.color,
-              fontWeight: 500,
-              borderRadius: 2,
-              "&:hover": {
-                bgcolor:
-                  statusFilter === key
-                    ? config.color
-                    : alpha(config.color, 0.2),
-              },
+      {/* Search Bar */}
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, borderRadius: 2 }}>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder={
+              isMobile ? "Search repairs..." : "Search by customer or device..."
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon
+                    sx={{ color: colors.primary }}
+                    fontSize={isMobile ? "small" : "medium"}
+                  />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchTerm("")}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
+            sx={{ bgcolor: colors.light, borderRadius: 1 }}
           />
-        ))}
-      </Box>
+          <Tooltip title="Refresh">
+            <IconButton onClick={loadRepairs} sx={{ bgcolor: colors.light }}>
+              <RefreshIcon fontSize={isMobile ? "small" : "medium"} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Filter">
+            <IconButton
+              onClick={() => setShowFilters(!showFilters)}
+              sx={{
+                bgcolor: statusFilter !== "all" ? colors.primary : colors.light,
+                color: statusFilter !== "all" ? colors.white : colors.gray,
+              }}
+            >
+              <FilterIcon fontSize={isMobile ? "small" : "medium"} />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
-      {/* Search */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          placeholder="Search by customer name or phone..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          size="small"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <IconButton onClick={loadRepairs} size="small">
-                <RefreshIcon />
-              </IconButton>
-            ),
-          }}
-        />
+        {/* Filter Chips - Collapsible */}
+        {showFilters && (
+          <Box sx={{ mt: 2 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mb: 1, display: "block" }}
+            >
+              Filter by status:
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              <Chip
+                label={`All (${repairs.length})`}
+                onClick={() => setStatusFilter("all")}
+                color={statusFilter === "all" ? "primary" : "default"}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              />
+              {Object.entries(statusConfig).map(([key, config]) => (
+                <Chip
+                  key={key}
+                  label={`${config.label} (${repairs.filter((r) => r.status === key).length})`}
+                  onClick={() => setStatusFilter(key)}
+                  size="small"
+                  sx={{
+                    bgcolor:
+                      statusFilter === key
+                        ? config.color
+                        : alpha(config.color, 0.1),
+                    color: statusFilter === key ? "white" : config.color,
+                    borderRadius: 2,
+                    "&:hover": {
+                      bgcolor:
+                        statusFilter === key
+                          ? config.color
+                          : alpha(config.color, 0.2),
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
       </Paper>
 
       {/* Repairs List */}
-      <Stack spacing={2}>
-        {paginatedRepairs.map((repair) => (
-          <Card key={repair.id} sx={{ borderRadius: 2 }}>
-            <CardContent>
-              {/* Header with Status */}
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Avatar
-                    sx={{
-                      bgcolor: getStatusColor(repair.status),
-                      width: 40,
-                      height: 40,
-                    }}
-                  >
-                    {statusConfig[repair.status]?.icon || <AssignmentIcon />}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="600">
-                      {repair.device_brand} {repair.device_model}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      #{repair.id} •{" "}
-                      {new Date(repair.created_at).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Chip
-                  label={statusConfig[repair.status]?.label}
-                  size="small"
+      {paginatedRepairs.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2 }}>
+          <BuildIcon sx={{ fontSize: 48, color: colors.gray, mb: 2 }} />
+          <Typography color={colors.gray}>No repairs found</Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenDialog(true)}
+            sx={{
+              mt: 2,
+              bgcolor: colors.primary,
+              "&:hover": { bgcolor: colors.secondary },
+            }}
+          >
+            Create First Repair
+          </Button>
+        </Paper>
+      ) : (
+        <Stack spacing={2}>
+          {paginatedRepairs.map((repair) => (
+            <Card key={repair.id} sx={{ borderRadius: 2 }}>
+              <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                {/* Header with Status */}
+                <Box
                   sx={{
-                    bgcolor: alpha(getStatusColor(repair.status), 0.1),
-                    color: getStatusColor(repair.status),
-                    fontWeight: 600,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 2,
                   }}
-                />
-              </Box>
-
-              {/* Customer & Device Info */}
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <PersonIcon
-                      sx={{ fontSize: 18, color: "text.secondary" }}
-                    />
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: getStatusColor(repair.status),
+                        width: { xs: 40, sm: 48 },
+                        height: { xs: 40, sm: 48 },
+                      }}
+                    >
+                      {statusConfig[repair.status]?.icon || <AssignmentIcon />}
+                    </Avatar>
                     <Box>
-                      <Typography variant="body2">
-                        {repair.customer_name}
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight="600"
+                        sx={{ fontSize: { xs: "0.95rem", sm: "1rem" } }}
+                      >
+                        {repair.device_brand} {repair.device_model}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {repair.customer_phone}
+                        #{repair.id} •{" "}
+                        {new Date(repair.created_at).toLocaleDateString()}
                       </Typography>
                     </Box>
                   </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <DevicesIcon
-                      sx={{ fontSize: 18, color: "text.secondary" }}
-                    />
-                    <Typography variant="body2">
-                      {repair.device_type} • {repair.device_brand}{" "}
-                      {repair.device_model}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
+                  <Chip
+                    label={statusConfig[repair.status]?.label}
+                    size="small"
+                    sx={{
+                      bgcolor: alpha(getStatusColor(repair.status), 0.1),
+                      color: getStatusColor(repair.status),
+                      fontWeight: 600,
+                      height: 24,
+                    }}
+                  />
+                </Box>
 
-              {/* Issue & Cost */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Issue:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  {repair.issue_description}
-                </Typography>
-                <Box sx={{ display: "flex", gap: 2 }}>
+                <Divider sx={{ my: 1.5 }} />
+
+                {/* Customer & Device Info */}
+                <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <PersonIcon sx={{ fontSize: 18, color: colors.gray }} />
+                      <Box>
+                        <Typography variant="body2" fontWeight="500">
+                          {repair.customer_name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {repair.customer_phone}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <DevicesIcon sx={{ fontSize: 18, color: colors.gray }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {repair.device_type} • {repair.device_brand}{" "}
+                        {repair.device_model}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* Issue */}
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    gutterBottom
+                  >
+                    Issue:
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ bgcolor: colors.light, p: 1, borderRadius: 1 }}
+                  >
+                    {repair.issue_description}
+                  </Typography>
+                </Box>
+
+                {/* Cost & Parts */}
+                <Box
+                  sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1.5 }}
+                >
                   <Chip
                     icon={<MoneyIcon />}
                     label={`Est: ETB ${repair.estimated_cost?.toLocaleString() || "TBD"}`}
                     size="small"
                     variant="outlined"
+                    sx={{ borderColor: colors.primary, color: colors.primary }}
                   />
                   {repair.final_cost && (
                     <Chip
                       icon={<CheckCircleIcon />}
                       label={`Final: ETB ${repair.final_cost?.toLocaleString()}`}
                       size="small"
-                      color="success"
-                      variant="outlined"
+                      sx={{
+                        bgcolor: alpha(colors.success, 0.1),
+                        color: colors.success,
+                      }}
                     />
                   )}
                 </Box>
-              </Box>
 
-              {/* Parts Used (if any) */}
-              {repair.parts_used?.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    Parts Used:
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {repair.parts_used.map((p) => (
-                      <Chip
-                        key={p.id}
-                        label={`${p.part_name} x${p.quantity}`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
+                {/* Parts Used */}
+                {repair.parts_used?.length > 0 && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                      gutterBottom
+                    >
+                      Parts Used:
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                      {repair.parts_used.map((p) => (
+                        <Chip
+                          key={p.id}
+                          label={`${p.part_name} x${p.quantity}`}
+                          size="small"
+                          variant="outlined"
+                          sx={{ height: 24 }}
+                        />
+                      ))}
+                    </Box>
                   </Box>
-                </Box>
-              )}
+                )}
 
-              {/* Action Buttons */}
-              {(user?.role === "technician" || user?.role === "admin") && (
-                <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      setSelectedRepair(repair);
-                      setStatusData({
-                        status: repair.status,
-                        final_cost: repair.final_cost || "",
-                      });
-                      setOpenStatusDialog(true);
-                    }}
-                    sx={{ borderColor: "#FF8500", color: "#FF8500" }}
-                  >
-                    Update Status
-                  </Button>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
+                {/* Action Buttons */}
+                {(user?.role === "technician" || user?.role === "admin") && (
+                  <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      fullWidth={isMobile}
+                      onClick={() => {
+                        setSelectedRepair(repair);
+                        setStatusData({
+                          status: repair.status,
+                          final_cost: repair.final_cost || "",
+                        });
+                        setOpenStatusDialog(true);
+                      }}
+                      sx={{
+                        background: colors.gradient,
+                        "&:hover": { background: colors.secondary },
+                        textTransform: "none",
+                      }}
+                    >
+                      Update Status
+                    </Button>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+      )}
 
       {/* Pagination */}
-      <Box sx={{ mt: 3, display: "flex", justifyContent: "center" }}>
-        <TablePagination
-          component="div"
-          count={filteredRepairs.length}
-          page={page}
-          onPageChange={(e, p) => setPage(p)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-        />
-      </Box>
+      {filteredRepairs.length > 0 && (
+        <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+          <TablePagination
+            component="div"
+            count={filteredRepairs.length}
+            page={page}
+            onPageChange={(e, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
+            labelRowsPerPage={isMobile ? "Rows:" : "Rows per page:"}
+          />
+        </Box>
+      )}
 
       {/* New Repair Dialog */}
       <Dialog
@@ -487,9 +626,26 @@ const Repairs = () => {
         onClose={() => setOpenDialog(false)}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
-        <DialogTitle sx={{ bgcolor: "#FF8500", color: "white" }}>
+        <DialogTitle
+          sx={{
+            background: colors.gradient,
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           New Repair Ticket
+          {isMobile && (
+            <IconButton
+              onClick={() => setOpenDialog(false)}
+              sx={{ color: "white" }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent sx={{ pt: 3 }}>
@@ -502,6 +658,7 @@ const Repairs = () => {
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="Type name or phone..."
+                  size={isMobile ? "small" : "medium"}
                 />
                 {searchResults.length > 0 && (
                   <Paper sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
@@ -521,7 +678,7 @@ const Repairs = () => {
                         }}
                       >
                         <ListItemIcon>
-                          <PersonIcon />
+                          <PersonIcon sx={{ color: colors.primary }} />
                         </ListItemIcon>
                         <ListItemText primary={c.name} secondary={c.phone} />
                       </ListItem>
@@ -541,7 +698,7 @@ const Repairs = () => {
 
               {/* Device Details */}
               <Grid item xs={6}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Device Type</InputLabel>
                   <Select
                     name="device_type"
@@ -562,7 +719,7 @@ const Repairs = () => {
                 <TextField
                   name="device_brand"
                   label="Brand"
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   fullWidth
                   value={formData.device_brand}
                   onChange={(e) =>
@@ -576,7 +733,7 @@ const Repairs = () => {
                 <TextField
                   name="device_model"
                   label="Model"
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   fullWidth
                   value={formData.device_model}
                   onChange={(e) =>
@@ -591,7 +748,7 @@ const Repairs = () => {
                   name="estimated_cost"
                   label="Est. Cost"
                   type="number"
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   fullWidth
                   value={formData.estimated_cost}
                   onChange={(e) =>
@@ -610,7 +767,7 @@ const Repairs = () => {
                   name="issue_description"
                   label="Issue Description"
                   multiline
-                  rows={3}
+                  rows={isMobile ? 2 : 3}
                   fullWidth
                   value={formData.issue_description}
                   onChange={(e) =>
@@ -621,17 +778,27 @@ const Repairs = () => {
                   }
                   required
                   placeholder="Describe the problem..."
+                  size={isMobile ? "small" : "medium"}
                 />
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <DialogActions
+            sx={{ p: 2, flexDirection: isMobile ? "column" : "row", gap: 1 }}
+          >
+            {!isMobile && (
+              <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            )}
             <Button
               type="submit"
               variant="contained"
+              fullWidth={isMobile}
               disabled={!formData.customer_id}
-              sx={{ bgcolor: "#FF8500", "&:hover": { bgcolor: "#FFA33C" } }}
+              sx={{
+                background: colors.gradient,
+                "&:hover": { background: colors.secondary },
+                py: isMobile ? 1.5 : 1,
+              }}
             >
               Create Ticket
             </Button>
@@ -645,15 +812,32 @@ const Repairs = () => {
         onClose={() => setOpenStatusDialog(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
-        <DialogTitle sx={{ bgcolor: "#FF8500", color: "white" }}>
+        <DialogTitle
+          sx={{
+            background: colors.gradient,
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           Update Status
+          {isMobile && (
+            <IconButton
+              onClick={() => setOpenStatusDialog(false)}
+              sx={{ color: "white" }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
         </DialogTitle>
         <form onSubmit={handleUpdateStatus}>
           <DialogContent sx={{ pt: 3 }}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Status</InputLabel>
                   <Select
                     name="status"
@@ -677,7 +861,7 @@ const Repairs = () => {
                   name="final_cost"
                   label="Final Cost"
                   type="number"
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   fullWidth
                   value={statusData.final_cost}
                   onChange={(e) =>
@@ -692,14 +876,23 @@ const Repairs = () => {
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setOpenStatusDialog(false)}>Cancel</Button>
+          <DialogActions
+            sx={{ p: 2, flexDirection: isMobile ? "column" : "row", gap: 1 }}
+          >
+            {!isMobile && (
+              <Button onClick={() => setOpenStatusDialog(false)}>Cancel</Button>
+            )}
             <Button
               type="submit"
               variant="contained"
-              sx={{ bgcolor: "#FF8500", "&:hover": { bgcolor: "#FFA33C" } }}
+              fullWidth={isMobile}
+              sx={{
+                background: colors.gradient,
+                "&:hover": { background: colors.secondary },
+                py: isMobile ? 1.5 : 1,
+              }}
             >
-              Update
+              Update Status
             </Button>
           </DialogActions>
         </form>
@@ -710,9 +903,15 @@ const Repairs = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{
+          vertical: isMobile ? "top" : "bottom",
+          horizontal: isMobile ? "center" : "right",
+        }}
       >
-        <Alert severity={snackbar.severity} sx={{ borderRadius: 1 }}>
+        <Alert
+          severity={snackbar.severity}
+          sx={{ borderRadius: 1, width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
