@@ -31,6 +31,12 @@ import {
   TablePagination,
   Stack,
   alpha,
+  useMediaQuery,
+  useTheme,
+  Drawer,
+  BottomNavigation,
+  BottomNavigationAction,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -46,6 +52,8 @@ import {
   Phone as PhoneIcon,
   Inventory as InventoryIcon,
   Verified as VerifiedIcon,
+  Close as CloseIcon,
+  FilterList as FilterIcon,
 } from "@mui/icons-material";
 import { getSales, createSale, getTodaysSales } from "../services/api";
 import { getProducts } from "../services/api";
@@ -73,12 +81,16 @@ const paymentMethods = {
 
 const Sales = () => {
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
+
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
   const [openDialog, setOpenDialog] = useState(false);
   const [openReceiptDialog, setOpenReceiptDialog] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
@@ -87,6 +99,7 @@ const Sales = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
   const [warrantyPeriod, setWarrantyPeriod] = useState("12");
+  const [showFilters, setShowFilters] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -98,6 +111,11 @@ const Sales = () => {
     customer_phone: "",
     payment_method: "cash",
   });
+
+  // Update rows per page on screen size change
+  useEffect(() => {
+    setRowsPerPage(isMobile ? 5 : 10);
+  }, [isMobile]);
 
   useEffect(() => {
     loadSales();
@@ -113,7 +131,6 @@ const Sales = () => {
       setLoading(true);
       const res =
         dateFilter === "today" ? await getTodaysSales() : await getSales();
-      console.log("Sales data:", res.data.data); // Debug: Check if warranty_months is coming from backend
       setSales(res.data.data || []);
     } catch (error) {
       showSnackbar("Failed to load sales", "error");
@@ -134,6 +151,8 @@ const Sales = () => {
       if (customerSearch) {
         const res = await searchCustomers(customerSearch);
         setSearchResults(res.data.data);
+      } else {
+        setSearchResults([]);
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -201,10 +220,7 @@ const Sales = () => {
     }
     try {
       for (const item of cart) {
-        // Parse warranty period to integer
         const warrantyMonths = parseInt(warrantyPeriod) || 12;
-
-        console.log("Sending warranty_months:", warrantyMonths); // Debug
 
         await createSale({
           product_id: item.product_id,
@@ -213,7 +229,7 @@ const Sales = () => {
           customer_phone: formData.customer_phone || "",
           quantity: item.quantity,
           payment_method: formData.payment_method,
-          warranty_months: warrantyMonths, // This is the key field
+          warranty_months: warrantyMonths,
         });
       }
       showSnackbar("Sale completed successfully!", "success");
@@ -234,6 +250,11 @@ const Sales = () => {
     }
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDateFilter("today");
+  };
+
   if (loading) {
     return (
       <Box
@@ -250,17 +271,26 @@ const Sales = () => {
   }
 
   return (
-    <Box>
+    <Box
+      sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "100%", overflow: "hidden" }}
+    >
       {/* Header */}
       <Box
         sx={{
           display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: { xs: "stretch", sm: "center" },
+          gap: { xs: 2, sm: 0 },
           mb: 3,
         }}
       >
-        <Typography variant="h5" fontWeight="600" color={colors.dark}>
+        <Typography
+          variant={isMobile ? "h5" : "h5"}
+          fontWeight="600"
+          color={colors.dark}
+          sx={{ textAlign: { xs: "center", sm: "left" } }}
+        >
           Sales
         </Typography>
         <Button
@@ -276,11 +306,13 @@ const Sales = () => {
             });
             setOpenDialog(true);
           }}
+          fullWidth={isMobile}
           sx={{
             background: colors.gradient,
             borderRadius: 2,
             textTransform: "none",
             px: 3,
+            py: { xs: 1.5, sm: 1 },
             "&:hover": { background: colors.secondary },
           }}
         >
@@ -288,99 +320,139 @@ const Sales = () => {
         </Button>
       </Box>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Simplified */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid item xs={4}>
           <Card
             sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
           >
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                }}
+              >
                 <Avatar
                   sx={{
                     bgcolor: alpha(colors.primary, 0.1),
                     color: colors.primary,
-                    mr: 2,
-                    width: 48,
-                    height: 48,
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    mb: 1,
                   }}
                 >
-                  <TodayIcon />
+                  <TodayIcon fontSize={isMobile ? "small" : "medium"} />
                 </Avatar>
-                {/* <Box>
-                  <Typography color="text.secondary" variant="caption">
-                    Today's Sales
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="caption"
+                    display="block"
+                  >
+                    Today
                   </Typography>
-                  <Typography variant="h6" fontWeight="600">
-                    ETB{" "}
-                    {sales
-                      .filter(
+                  <Typography
+                    variant={isMobile ? "subtitle2" : "h6"}
+                    fontWeight="600"
+                  >
+                    {
+                      sales.filter(
                         (s) =>
                           new Date(s.created_at).toDateString() ===
                           new Date().toDateString(),
-                      )
-                      .reduce((sum, s) => sum + (s.total_amount || 0), 0)
-                      .toLocaleString()}
+                      ).length
+                    }
                   </Typography>
-                </Box> */}
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid item xs={4}>
           <Card
             sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
           >
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                }}
+              >
                 <Avatar
                   sx={{
                     bgcolor: alpha("#2196f3", 0.1),
                     color: "#2196f3",
-                    mr: 2,
-                    width: 48,
-                    height: 48,
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    mb: 1,
                   }}
                 >
-                  <MoneyIcon />
+                  <MoneyIcon fontSize={isMobile ? "small" : "medium"} />
                 </Avatar>
-                {/* <Box>
-                  <Typography color="text.secondary" variant="caption">
-                    Total Sales
+                <Box>
+                  <Typography
+                    color="text.secondary"
+                    variant="caption"
+                    display="block"
+                  >
+                    Total
                   </Typography>
-                  <Typography variant="h6" fontWeight="600">
+                  <Typography
+                    variant={isMobile ? "subtitle2" : "h6"}
+                    fontWeight="600"
+                  >
                     ETB{" "}
                     {sales
                       .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                       .toLocaleString()}
                   </Typography>
-                </Box> */}
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid item xs={4}>
           <Card
             sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
           >
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                }}
+              >
                 <Avatar
                   sx={{
                     bgcolor: alpha("#ff9800", 0.1),
                     color: "#ff9800",
-                    mr: 2,
-                    width: 48,
-                    height: 48,
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    mb: 1,
                   }}
                 >
-                  <ReceiptIcon />
+                  <ReceiptIcon fontSize={isMobile ? "small" : "medium"} />
                 </Avatar>
                 <Box>
-                  <Typography color="text.secondary" variant="caption">
+                  <Typography
+                    color="text.secondary"
+                    variant="caption"
+                    display="block"
+                  >
                     Transactions
                   </Typography>
-                  <Typography variant="h6" fontWeight="600">
+                  <Typography
+                    variant={isMobile ? "subtitle2" : "h6"}
+                    fontWeight="600"
+                  >
                     {sales.length}
                   </Typography>
                 </Box>
@@ -391,67 +463,101 @@ const Sales = () => {
       </Grid>
 
       {/* Search & Filters */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TextField
-              fullWidth
-              placeholder="Search by customer or product..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+            mb: showFilters ? 2 : 0,
+          }}
+        >
+          <TextField
+            fullWidth
+            placeholder={
+              isMobile ? "Search sales..." : "Search by customer or product..."
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon
+                    sx={{ color: colors.primary }}
+                    fontSize={isMobile ? "small" : "medium"}
+                  />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchTerm("")}>
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{ bgcolor: colors.light, borderRadius: 1 }}
+          />
+          <Tooltip title="Refresh">
+            <IconButton onClick={loadSales} sx={{ bgcolor: colors.light }}>
+              <RefreshIcon fontSize={isMobile ? "small" : "medium"} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Filter">
+            <IconButton
+              onClick={() => setShowFilters(!showFilters)}
+              sx={{
+                bgcolor: dateFilter !== "today" ? colors.primary : colors.light,
+                color: dateFilter !== "today" ? colors.white : colors.gray,
+              }}
+            >
+              <FilterIcon fontSize={isMobile ? "small" : "medium"} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {/* Filter Chips */}
+        {showFilters && (
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Chip
+              label="Today"
+              onClick={() => setDateFilter("today")}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: colors.primary }} />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm("")}>
-                      <ClearIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
+              sx={{
+                bgcolor:
+                  dateFilter === "today" ? colors.primary : "transparent",
+                color: dateFilter === "today" ? "white" : colors.gray,
+                border:
+                  dateFilter === "today"
+                    ? "none"
+                    : `1px solid ${colors.lightGray}`,
               }}
             />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Chip
+              label="All"
+              onClick={() => setDateFilter("all")}
+              size="small"
+              sx={{
+                bgcolor: dateFilter === "all" ? colors.primary : "transparent",
+                color: dateFilter === "all" ? "white" : colors.gray,
+                border:
+                  dateFilter === "all"
+                    ? "none"
+                    : `1px solid ${colors.lightGray}`,
+              }}
+            />
+            {(searchTerm || dateFilter !== "today") && (
               <Chip
-                label="Today"
-                onClick={() => setDateFilter("today")}
-                sx={{
-                  bgcolor:
-                    dateFilter === "today" ? colors.primary : "transparent",
-                  color: dateFilter === "today" ? "white" : colors.gray,
-                  border:
-                    dateFilter === "today"
-                      ? "none"
-                      : `1px solid ${colors.lightGray}`,
-                }}
+                label="Clear"
+                onClick={handleClearFilters}
+                size="small"
+                icon={<ClearIcon />}
+                sx={{ bgcolor: colors.light, color: colors.gray }}
               />
-              <Chip
-                label="All"
-                onClick={() => setDateFilter("all")}
-                sx={{
-                  bgcolor:
-                    dateFilter === "all" ? colors.primary : "transparent",
-                  color: dateFilter === "all" ? "white" : colors.gray,
-                  border:
-                    dateFilter === "all"
-                      ? "none"
-                      : `1px solid ${colors.lightGray}`,
-                }}
-              />
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 12, md: 2 }} sx={{ textAlign: "right" }}>
-            <IconButton onClick={loadSales} size="small">
-              <RefreshIcon />
-            </IconButton>
-          </Grid>
-        </Grid>
+            )}
+          </Box>
+        )}
       </Paper>
 
       {/* Sales List */}
@@ -463,6 +569,7 @@ const Sales = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setOpenDialog(true)}
+            fullWidth={isMobile}
             sx={{
               mt: 2,
               bgcolor: colors.primary,
@@ -476,88 +583,133 @@ const Sales = () => {
         <Stack spacing={2}>
           {paginatedSales.map((sale) => (
             <Card key={sale.id} sx={{ borderRadius: 2 }}>
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Avatar
-                        sx={{
-                          bgcolor: alpha(
-                            paymentMethods[sale.payment_method]?.color ||
-                              "#757575",
-                            0.1,
-                          ),
-                          color:
-                            paymentMethods[sale.payment_method]?.color ||
-                            "#757575",
-                          mr: 2,
-                          width: 40,
-                          height: 40,
-                        }}
+              <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                {/* Sale Header */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 1.5,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: alpha(
+                          paymentMethods[sale.payment_method]?.color ||
+                            colors.gray,
+                          0.1,
+                        ),
+                        color:
+                          paymentMethods[sale.payment_method]?.color ||
+                          colors.gray,
+                        width: { xs: 40, sm: 48 },
+                        height: { xs: 40, sm: 48 },
+                      }}
+                    >
+                      {paymentMethods[sale.payment_method]?.icon || (
+                        <ReceiptIcon />
+                      )}
+                    </Avatar>
+                    <Box>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight="600"
+                        sx={{ fontSize: { xs: "0.95rem", sm: "1rem" } }}
                       >
-                        {paymentMethods[sale.payment_method]?.icon || (
-                          <ReceiptIcon />
-                        )}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight="600">
-                          {sale.product_name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(sale.created_at).toLocaleDateString()}
-                        </Typography>
-                      </Box>
+                        {sale.product_name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(sale.created_at).toLocaleDateString()} •{" "}
+                        {new Date(sale.created_at).toLocaleTimeString()}
+                      </Typography>
                     </Box>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 2 }}>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <PersonIcon
-                        sx={{ fontSize: 16, mr: 0.5, color: colors.gray }}
-                      />
-                      <Typography variant="body2">
+                  </Box>
+                  <Chip
+                    label={sale.payment_method}
+                    size="small"
+                    sx={{
+                      bgcolor: alpha(
+                        paymentMethods[sale.payment_method]?.color ||
+                          colors.gray,
+                        0.1,
+                      ),
+                      color:
+                        paymentMethods[sale.payment_method]?.color ||
+                        colors.gray,
+                      height: 24,
+                    }}
+                  />
+                </Box>
+
+                <Divider sx={{ my: 1.5 }} />
+
+                {/* Sale Details */}
+                <Grid container spacing={1.5}>
+                  <Grid item xs={6}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <PersonIcon sx={{ fontSize: 16, color: colors.gray }} />
+                      <Typography variant="body2" noWrap>
                         {sale.customer_name || "Walk-in"}
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid size={{ xs: 12, md: 2 }}>
-                    <Chip
-                      label={`Qty: ${sale.quantity}`}
-                      size="small"
-                      sx={{ mr: 1 }}
-                    />
-                    {/* Show warranty badge if available */}
-                    {sale.warranty_months && (
-                      <Chip
-                        label={`${sale.warranty_months}m`}
-                        size="small"
-                        sx={{
-                          bgcolor: alpha(colors.primary, 0.1),
-                          color: colors.primary,
-                        }}
-                      />
-                    )}
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 3 }}>
-                    <Typography
-                      variant="h6"
-                      sx={{ color: colors.primary, fontWeight: 600 }}
-                    >
-                      ETB {sale.total_amount?.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setSelectedSale(sale);
-                        setOpenReceiptDialog(true);
+                  <Grid item xs={6}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        justifyContent: "flex-end",
                       }}
-                      sx={{ color: colors.primary }}
                     >
-                      <ReceiptIcon />
-                    </IconButton>
+                      <Typography variant="body2" color="text.secondary">
+                        Qty: {sale.quantity}
+                      </Typography>
+                      {sale.warranty_months && (
+                        <Chip
+                          label={`${sale.warranty_months}m`}
+                          size="small"
+                          sx={{
+                            bgcolor: alpha(colors.primary, 0.1),
+                            color: colors.primary,
+                            height: 20,
+                          }}
+                        />
+                      )}
+                    </Box>
                   </Grid>
                 </Grid>
+
+                {/* Total & Actions */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mt: 1.5,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{ color: colors.primary, fontWeight: 600 }}
+                  >
+                    ETB {sale.total_amount?.toLocaleString()}
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<ReceiptIcon />}
+                    onClick={() => {
+                      setSelectedSale(sale);
+                      setOpenReceiptDialog(true);
+                    }}
+                    sx={{ borderColor: colors.primary, color: colors.primary }}
+                  >
+                    Receipt
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           ))}
@@ -566,7 +718,7 @@ const Sales = () => {
 
       {/* Pagination */}
       {paginatedSales.length > 0 && (
-        <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
+        <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
           <TablePagination
             component="div"
             count={filteredSales.length}
@@ -577,6 +729,8 @@ const Sales = () => {
               setRowsPerPage(parseInt(e.target.value, 10));
               setPage(0);
             }}
+            rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
+            labelRowsPerPage={isMobile ? "Rows:" : "Rows per page:"}
           />
         </Box>
       )}
@@ -587,21 +741,38 @@ const Sales = () => {
         onClose={() => setOpenDialog(false)}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
-        <DialogTitle sx={{ bgcolor: colors.primary, color: "white" }}>
+        <DialogTitle
+          sx={{
+            background: colors.gradient,
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           New Sale
+          {isMobile && (
+            <IconButton
+              onClick={() => setOpenDialog(false)}
+              sx={{ color: "white" }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent sx={{ pt: 3 }}>
+          <DialogContent sx={{ pt: 3, pb: isMobile ? 2 : 3 }}>
             <Grid container spacing={2}>
               {/* Customer Search */}
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Search Customer (Optional)"
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   placeholder="Type name or phone..."
                 />
                 {searchResults.length > 0 && (
@@ -632,7 +803,7 @@ const Sales = () => {
               </Grid>
 
               {formData.customer_id && (
-                <Grid size={{ xs: 12 }}>
+                <Grid item xs={12}>
                   <Alert severity="success" sx={{ borderRadius: 1 }}>
                     Customer: {formData.customer_name} (
                     {formData.customer_phone})
@@ -641,7 +812,7 @@ const Sales = () => {
               )}
 
               {/* Products */}
-              <Grid size={{ xs: 12 }}>
+              <Grid item xs={12}>
                 <Typography variant="subtitle2" gutterBottom>
                   Select Products
                 </Typography>
@@ -680,7 +851,7 @@ const Sales = () => {
 
               {/* Cart */}
               {cart.length > 0 && (
-                <Grid size={{ xs: 12 }}>
+                <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
                     Cart
                   </Typography>
@@ -695,7 +866,13 @@ const Sales = () => {
                           mb: 1,
                         }}
                       >
-                        <Typography variant="body2">{item.name}</Typography>
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{ maxWidth: "40%" }}
+                        >
+                          {item.name}
+                        </Typography>
                         <Box sx={{ display: "flex", alignItems: "center" }}>
                           <IconButton
                             size="small"
@@ -722,9 +899,9 @@ const Sales = () => {
                           <IconButton
                             size="small"
                             onClick={() => removeFromCart(item.product_id)}
-                            sx={{ ml: 1, color: "#f44336" }}
+                            sx={{ ml: 0.5, color: "#f44336" }}
                           >
-                            <ClearIcon />
+                            <ClearIcon fontSize="small" />
                           </IconButton>
                         </Box>
                       </Box>
@@ -742,28 +919,27 @@ const Sales = () => {
                 </Grid>
               )}
 
-              {/* Warranty Period - This is the key field */}
-              <Grid size={{ xs: 12 }}>
+              {/* Warranty Period */}
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Warranty Period (months)"
+                  label="Warranty (months)"
                   type="number"
                   value={warrantyPeriod}
                   onChange={(e) => setWarrantyPeriod(e.target.value)}
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">months</InputAdornment>
                     ),
                   }}
-                  helperText="Enter warranty duration in months (e.g., 6, 12, 24)"
-                  required
+                  helperText="e.g., 6, 12, 24"
                 />
               </Grid>
 
               {/* Payment Method */}
-              <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth size="small">
+              <Grid item xs={12}>
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Payment Method</InputLabel>
                   <Select
                     value={formData.payment_method}
@@ -783,15 +959,21 @@ const Sales = () => {
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <DialogActions
+            sx={{ p: 2, flexDirection: isMobile ? "column" : "row", gap: 1 }}
+          >
+            {!isMobile && (
+              <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            )}
             <Button
               type="submit"
               variant="contained"
+              fullWidth={isMobile}
               disabled={cart.length === 0}
               sx={{
-                bgcolor: colors.primary,
-                "&:hover": { bgcolor: colors.secondary },
+                background: colors.gradient,
+                "&:hover": { background: colors.secondary },
+                py: isMobile ? 1.5 : 1,
               }}
             >
               Complete Sale
@@ -800,26 +982,38 @@ const Sales = () => {
         </form>
       </Dialog>
 
-      {/* Receipt Dialog with Dynamic Warranty */}
+      {/* Receipt Dialog */}
       <Dialog
         open={openReceiptDialog}
         onClose={() => setOpenReceiptDialog(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle
           sx={{
-            bgcolor: colors.primary,
+            background: colors.gradient,
             color: "white",
             textAlign: "center",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          <VerifiedIcon sx={{ fontSize: 30, mb: 1 }} />
+          <VerifiedIcon sx={{ fontSize: 24 }} />
           <Typography variant="h6" fontWeight="600">
-            SALE RECEIPT
+            Receipt
           </Typography>
+          {isMobile && (
+            <IconButton
+              onClick={() => setOpenReceiptDialog(false)}
+              sx={{ color: "white" }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
         </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           {selectedSale && (
             <Box>
               {/* Store Info */}
@@ -831,7 +1025,7 @@ const Sales = () => {
                   Chala Mobile
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Abosto, Shashemene • +251 98 231 0974
+                  Abosto, Shashemene
                 </Typography>
               </Box>
 
@@ -856,14 +1050,7 @@ const Sales = () => {
                 </Grid>
                 <Grid item xs={8}>
                   <Typography variant="body2">
-                    {new Date(selectedSale.created_at).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      },
-                    )}
+                    {new Date(selectedSale.created_at).toLocaleDateString()}
                   </Typography>
                 </Grid>
               </Grid>
@@ -919,104 +1106,71 @@ const Sales = () => {
                 </Grid>
               </Paper>
 
-              {/* Warranty Info - DYNAMIC based on what was selected */}
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  borderRadius: 1,
-                  borderColor: colors.primary,
-                  bgcolor: alpha(colors.primary, 0.02),
-                }}
-              >
-                <Typography
-                  variant="subtitle2"
-                  color={colors.primary}
-                  gutterBottom
+              {/* Warranty Info */}
+              {selectedSale.warranty_months && (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    borderRadius: 1,
+                    borderColor: colors.primary,
+                  }}
                 >
-                  WARRANTY
-                </Typography>
-
-                {/* Get warranty months from the sale data */}
-                {(() => {
-                  // Parse warranty months - ensure it's a number
-                  const warrantyMonths = selectedSale.warranty_months
-                    ? parseInt(selectedSale.warranty_months)
-                    : 12;
-
-                  // Calculate valid until date
-                  const validUntil = new Date(selectedSale.created_at);
-                  validUntil.setMonth(validUntil.getMonth() + warrantyMonths);
-
-                  return (
-                    <>
-                      {/* Show the warranty period badge */}
-                      <Box sx={{ mb: 1 }}>
-                        <Chip
-                          label={`${warrantyMonths} MONTHS WARRANTY`}
-                          size="small"
-                          sx={{
-                            bgcolor: alpha(colors.primary, 0.1),
-                            color: colors.primary,
-                            fontWeight: 600,
-                          }}
-                        />
-                      </Box>
-
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                          >
-                            Valid From:
-                          </Typography>
-                          <Typography variant="body2" fontWeight="500">
-                            {new Date(
-                              selectedSale.created_at,
-                            ).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                          >
-                            Valid Until:
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            fontWeight="700"
-                            color={colors.primary}
-                          >
-                            {validUntil.toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </Typography>
-                        </Grid>
-                      </Grid>
-
-                      {/* Show warranty duration in years/months */}
-                      <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {warrantyMonths >= 12
-                            ? `Covered for ${warrantyMonths / 12} ${warrantyMonths / 12 === 1 ? "year" : "years"} from purchase date`
-                            : `Covered for ${warrantyMonths} ${warrantyMonths === 1 ? "month" : "months"} from purchase date`}
-                        </Typography>
-                      </Box>
-                    </>
-                  );
-                })()}
-              </Paper>
+                  <Typography
+                    variant="subtitle2"
+                    color={colors.primary}
+                    gutterBottom
+                  >
+                    WARRANTY
+                  </Typography>
+                  <Box sx={{ mb: 1 }}>
+                    <Chip
+                      label={`${selectedSale.warranty_months} MONTHS`}
+                      size="small"
+                      sx={{
+                        bgcolor: alpha(colors.primary, 0.1),
+                        color: colors.primary,
+                      }}
+                    />
+                  </Box>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        From:
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedSale.created_at).toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Until:
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight="600"
+                        color={colors.primary}
+                      >
+                        {new Date(
+                          new Date(selectedSale.created_at).setMonth(
+                            new Date(selectedSale.created_at).getMonth() +
+                              (selectedSale.warranty_months || 12),
+                          ),
+                        ).toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
 
               {/* Total */}
               <Box
@@ -1057,25 +1211,31 @@ const Sales = () => {
               {/* Thank You Note */}
               <Box sx={{ textAlign: "center", mt: 3 }}>
                 <Typography variant="body2" sx={{ color: colors.primary }}>
-                  Thank you for your purchase!
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  This receipt serves as warranty proof
+                  Thank you!
                 </Typography>
               </Box>
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, justifyContent: "center" }}>
+        <DialogActions
+          sx={{
+            p: 2,
+            justifyContent: "center",
+            flexDirection: isMobile ? "column" : "row",
+            gap: 1,
+          }}
+        >
           <Button
             onClick={() => setOpenReceiptDialog(false)}
             variant="outlined"
+            fullWidth={isMobile}
           >
             Close
           </Button>
           <Button
             startIcon={<PrintIcon />}
             variant="contained"
+            fullWidth={isMobile}
             sx={{
               bgcolor: colors.primary,
               "&:hover": { bgcolor: colors.secondary },
@@ -1092,9 +1252,15 @@ const Sales = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{
+          vertical: isMobile ? "top" : "bottom",
+          horizontal: isMobile ? "center" : "right",
+        }}
       >
-        <Alert severity={snackbar.severity} sx={{ borderRadius: 1 }}>
+        <Alert
+          severity={snackbar.severity}
+          sx={{ borderRadius: 1, width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
