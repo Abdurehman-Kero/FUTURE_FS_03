@@ -68,6 +68,10 @@ const categoryColors = {
   accessory: "#9c27b0",
 };
 
+// Default image for products without image
+const DEFAULT_PRODUCT_IMAGE =
+  "https://via.placeholder.com/300x200/FF8500/FFFFFF?text=Product";
+
 const Products = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
@@ -77,6 +81,7 @@ const Products = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -134,6 +139,7 @@ const Products = () => {
         description: product.description || "",
         image_url: product.image_url || "",
       });
+      setImagePreview(product.image_url || null);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -147,6 +153,7 @@ const Products = () => {
         description: "",
         image_url: "",
       });
+      setImagePreview(null);
     }
     setOpenDialog(true);
   };
@@ -154,6 +161,7 @@ const Products = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
+    setImagePreview(null);
   };
 
   const handleInputChange = (e) => {
@@ -162,6 +170,11 @@ const Products = () => {
       ...prev,
       [name]: value,
     }));
+
+    // Update image preview when URL changes
+    if (name === "image_url") {
+      setImagePreview(value);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -231,6 +244,11 @@ const Products = () => {
     setPage(0);
   };
 
+  // Function to get product image
+  const getProductImage = (product) => {
+    return product.image_url || DEFAULT_PRODUCT_IMAGE;
+  };
+
   // Low stock alerts
   const lowStockCount = products.filter(
     (p) => p.stock_quantity < 5 && p.stock_quantity > 0,
@@ -272,11 +290,11 @@ const Products = () => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
             sx={{
-              bgcolor: "#BE3300",
+              bgcolor: "#FF8500",
               borderRadius: 2,
               textTransform: "none",
               px: 3,
-              "&:hover": { bgcolor: "#A02B00" },
+              "&:hover": { bgcolor: "#FFA33C" },
             }}
           >
             Add Product
@@ -415,12 +433,18 @@ const Products = () => {
                 <TableCell>
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <Avatar
+                      src={getProductImage(product)}
+                      alt={product.name}
                       sx={{
-                        bgcolor: categoryColors[product.category],
-                        width: 40,
-                        height: 40,
+                        width: 50,
+                        height: 50,
                         mr: 2,
+                        bgcolor: categoryColors[product.category] || "#FF8500",
+                        "& img": {
+                          objectFit: "cover",
+                        },
                       }}
+                      variant="rounded"
                     >
                       {categoryIcons[product.category]}
                     </Avatar>
@@ -454,7 +478,7 @@ const Products = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body1" fontWeight="600" color="#BE3300">
+                  <Typography variant="body1" fontWeight="600" color="#FF8500">
                     ETB {product.price?.toLocaleString()}
                   </Typography>
                 </TableCell>
@@ -530,13 +554,34 @@ const Products = () => {
         fullWidth
       >
         <DialogTitle
-          sx={{ bgcolor: "#f5f5f5", color: "#BE3300", fontWeight: 600 }}
+          sx={{ bgcolor: "#FF8500", color: "white", fontWeight: 600 }}
         >
           {editingProduct ? "Edit Product" : "Add New Product"}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent sx={{ pt: 3 }}>
             <Grid container spacing={2}>
+              {/* Image Preview */}
+              {imagePreview && (
+                <Grid size={{ xs: 12 }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", mb: 2 }}
+                  >
+                    <Avatar
+                      src={imagePreview}
+                      alt="Preview"
+                      sx={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 2,
+                        border: `2px solid #FF8500`,
+                      }}
+                      variant="rounded"
+                    />
+                  </Box>
+                </Grid>
+              )}
+
               <Grid size={{ xs: 12 }}>
                 <TextField
                   name="name"
@@ -648,6 +693,7 @@ const Products = () => {
                   value={formData.image_url}
                   onChange={handleInputChange}
                   placeholder="https://example.com/image.jpg"
+                  helperText="Enter a valid image URL"
                 />
               </Grid>
             </Grid>
@@ -660,8 +706,8 @@ const Products = () => {
               type="submit"
               variant="contained"
               sx={{
-                bgcolor: "#BE3300",
-                "&:hover": { bgcolor: "#A02B00" },
+                bgcolor: "#FF8500",
+                "&:hover": { bgcolor: "#FFA33C" },
               }}
             >
               {editingProduct ? "Update Product" : "Create Product"}
