@@ -526,6 +526,30 @@ const PublicProducts = () => {
                         </Button>
                       )}
                     </Box>
+                    // Add this button next to the WhatsApp button
+                    {/* Buy Now Button */}
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<ShoppingCartIcon />}
+                      onClick={() =>
+                        navigate(`/checkout/${p.slug}`, {
+                          state: { product: p },
+                        })
+                      }
+                      sx={{
+                        mt: 1,
+                        bgcolor: colors.primary,
+                        color: colors.white,
+                        borderRadius: "12px",
+                        py: 1,
+                        textTransform: "none",
+                        fontWeight: 600,
+                        "&:hover": { bgcolor: colors.secondary },
+                      }}
+                    >
+                      Buy Now
+                    </Button>
                   </Card>
                 </Grid>
               );
