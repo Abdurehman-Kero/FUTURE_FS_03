@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useCart } from "../context/CartContext";
+import { Badge } from "@mui/material";
+
 import {
   Box,
   Button,
@@ -279,6 +282,8 @@ export default function Home() {
     }
     setMobileMenuOpen(false);
   };
+  const { cartCount } = useCart();
+
 
   const handleNavigation = (path, section = null) => {
     if (path === "/" && section) {
@@ -559,6 +564,17 @@ export default function Home() {
               alignItems="center"
               sx={{ display: { xs: "none", md: "flex" } }}
             >
+              <IconButton
+                onClick={() => navigate("/cart")}
+                sx={{
+                  color: colors.gray,
+                  "&:hover": { color: colors.primary },
+                }}
+              >
+                <Badge badgeContent={cartCount} color="primary">
+                  <ShoppingCartIcon />
+                </Badge>
+              </IconButton>
               {/* Admin Button */}
               <IconButton
                 onClick={handleAdminLogin}
