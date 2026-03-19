@@ -84,6 +84,29 @@ CREATE TABLE IF NOT EXISTS repair_parts (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
+CREATE TABLE IF NOT EXISTS transactions (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  tx_ref VARCHAR(100) UNIQUE NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) DEFAULT 'ETB',
+  customer_name VARCHAR(255) NOT NULL,
+  customer_email VARCHAR(255) NOT NULL,
+  customer_phone VARCHAR(20),
+  product_name VARCHAR(255) NOT NULL,
+  product_id INT,
+  status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
+  payment_method VARCHAR(50),
+  chapa_transaction_id VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_tx_ref (tx_ref),
+  INDEX idx_status (status),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+);
+
+-- Add tx_ref column to sales table if not exists
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS tx_ref VARCHAR(100);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending';
 -- 7. Insert Sample Data
 
 -- Sample Staff (password is 'password123' - you'll need to hash this in your app)
