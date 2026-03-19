@@ -265,12 +265,62 @@ const getSalesByPaymentMethod = async (req, res) => {
         });
     }
 };
+// Create sale from successful transaction
+const createSaleFromTransaction = async (transaction) => {
+  try {
+    // Check if sale already exists for this transaction
+    const [existing] = await db.query(
+      'SELECT id FROM sales WHERE tx_ref = ?',
+      [transaction.tx_ref]
+    );
+
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    // Create new sale
+    const [result] = await db.query(
+      `INSERT INTO sales 
+       (product_id, customer_name, customer_phone, customer_email, quantity, 
+        unit_price, total_amount, payment_method, payment_status, tx_ref, warranty_months) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        transaction.product_id,
+        transaction.customer_name,
+        transaction.customer_phone || null,
+        transaction.customer_email,
+        1, // quantity
+        transaction.amount,
+        transaction.amount,
+        'chapa',
+        'paid',
+        transaction.tx_ref,
+        12 // default warranty
+      ]
+    );
+
+    // Update product stock
+    if (transaction.product_id) {
+      await db.query(
+        'UPDATE products SET stock_quantity = stock_quantity - 1 WHERE id = ?',
+        [transaction.product_id]
+      );
+    }
+
+    return result.insertId;
+  } catch (error) {
+    console.error('Error creating sale from transaction:', error);
+    throw error;
+  }
+};
+
 
 module.exports = {
-    getAllSales,
-    getSaleById,
-    createSale,
-    getSalesByDateRange,
-    getTodaysSales,
-    getSalesByPaymentMethod
+  getAllSales,
+  getSaleById,
+  createSale,
+  getSalesByDateRange,
+  getTodaysSales,
+  getSalesByPaymentMethod,
+  createSaleFromTransaction,
 };
