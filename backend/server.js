@@ -3,7 +3,7 @@ const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 // Add to your imports
-const paymentRoutes = require('./routes/paymentRoutes');
+
 
 // Add before protected routes (public)
 // Import routes
@@ -27,6 +27,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from uploads directory
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use('/api/payments', paymentRoutes);
 // Public routes

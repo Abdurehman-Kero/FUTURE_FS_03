@@ -1,14 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const Chapa = require("chapa-nodejs").default;
+const { Chapa } = require("chapa-nodejs"); // Notice the destructuring
 const Transaction = require("../models/Transaction");
-const { createSaleFromTransaction } = require("../controllers/saleController");
 
 // Initialize Chapa
 const chapa = new Chapa({
   secretKey: process.env.CHAPA_SECRET_KEY,
 });
-
 // Initialize payment
 router.post("/initialize", async (req, res) => {
   try {
