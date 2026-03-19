@@ -6,6 +6,9 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import Cart from "./pages/Cart";
+import { CartProvider } from "./context/CartContext";
+
 
 // Public Pages
 import Home from "./pages/Home";
@@ -53,10 +56,12 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/products" element={<PublicProducts />} />
+      <Route path="/cart" element={<Cart />} />
+
       <Route path="/repair-request" element={<PublicRepairRequest />} />
 
-<Route path="/checkout/:slug" element={<Checkout />} />
-<Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/checkout/:slug" element={<Checkout />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
       {/* Protected Routes - Note: These are still defined but won't render if not authenticated */}
       <Route
         path="/dashboard"
@@ -119,7 +124,12 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <CartProvider>
+          {" "}
+          {/* Add this */}
+          <AppRoutes />
+        </CartProvider>{" "}
+        {/* Add this */}
       </AuthProvider>
     </Router>
   );
