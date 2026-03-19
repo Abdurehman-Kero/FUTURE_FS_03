@@ -78,6 +78,7 @@ router.get("/test-payment", async (req, res) => {
 });
 
 // Initialize payment
+// Initialize payment
 router.post("/initialize", async (req, res) => {
   try {
     const {
@@ -87,6 +88,7 @@ router.post("/initialize", async (req, res) => {
       last_name,
       product_name,
       customer_phone,
+      product_id, // Make sure to pass this from frontend
     } = req.body;
 
     // Validate required fields
@@ -115,23 +117,33 @@ router.post("/initialize", async (req, res) => {
       },
     };
 
-    console.log(
-      "🔵 Initializing payment:",
-      JSON.stringify(paymentData, null, 2),
-    );
+    console.log("🔵 Initializing payment:", JSON.stringify(paymentData, null, 2));
 
-    const response = await chapaApi.post(
-      "/transaction/initialize",
-      paymentData,
-    );
+    const response = await chapaApi.post('/transaction/initialize', paymentData);
 
     console.log("🟢 Chapa response:", JSON.stringify(response.data, null, 2));
 
-    if (
-      response.data &&
-      response.data.data &&
-      response.data.data.checkout_url
-    ) {
+    if (response.data && response.data.data && response.data.data.checkout_url) {
+      
+      // ✅ SAVE TO DATABASE
+      try {
+        // Make sure you have a Transaction model with a saveTransaction method
+        await Transaction.saveTransaction({
+          tx_ref: tx_ref,
+          amount: parseFloat(amount),
+          customer_name: `${first_name} ${last_name}`.trim(),
+          customer_email: email,
+          customer_phone: customer_phone || '',
+          product_name: product_name,
+          product_id: product_id || null,
+          status: 'pending'
+        });
+        console.log('✅ Transaction saved to database with status: pending');
+      } catch (dbError) {
+        console.error('❌ Failed to save transaction to database:', dbError);
+        // Continue - payment was still initialized
+      }
+
       res.json({
         success: true,
         checkout_url: response.data.data.checkout_url,
@@ -140,11 +152,12 @@ router.post("/initialize", async (req, res) => {
     } else {
       throw new Error("Invalid response from Chapa");
     }
+
   } catch (error) {
     console.error("🔴 Payment initialization error:", {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status,
+      status: error.response?.status
     });
 
     res.status(error.response?.status || 500).json({
@@ -154,7 +167,6 @@ router.post("/initialize", async (req, res) => {
     });
   }
 });
-
 // Verify payment webhook
 router.post("/verify", async (req, res) => {
   const { tx_ref, status } = req.body;
