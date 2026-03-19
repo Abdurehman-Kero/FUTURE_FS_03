@@ -22,6 +22,11 @@ import Sales from "./pages/Sales";
 import Layout from "./layouts/Layout";
 
 import "./App.css";
+// Import new pages
+import Checkout from './pages/Checkout';
+import PaymentSuccess from './pages/PaymentSuccess';
+
+// Add to your Routes (public routes section)
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -50,6 +55,8 @@ function AppRoutes() {
       <Route path="/products" element={<PublicProducts />} />
       <Route path="/repair-request" element={<PublicRepairRequest />} />
 
+<Route path="/checkout/:slug" element={<Checkout />} />
+<Route path="/payment-success" element={<PaymentSuccess />} />
       {/* Protected Routes - Note: These are still defined but won't render if not authenticated */}
       <Route
         path="/dashboard"
