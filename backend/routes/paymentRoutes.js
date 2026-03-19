@@ -1,61 +1,83 @@
 const express = require("express");
 const router = express.Router();
-const { Chapa } = require("chapa-nodejs");
+const axios = require("axios"); // You'll need to install axios if not already
+const crypto = require("crypto");
 
-// Initialize Chapa with your test key
-const chapa = new Chapa({
-  secretKey:
-    process.env.CHAPA_SECRET_KEY ||
-    "CHASECK_TEST-JyBVeiRocvJGtofsAa4cgE8Gw8jkoQft",
+// Chapa configuration
+const CHAPA_SECRET_KEY =
+  process.env.CHAPA_SECRET_KEY ||
+  "CHASECK_TEST-JyBVeiRocvJGtofsAa4cgE8Gw8jkoQft";
+const CHAPA_API_URL = "https://api.chapa.co/v1";
+
+// Create axios instance for Chapa
+const chapaApi = axios.create({
+  baseURL: CHAPA_API_URL,
+  headers: {
+    Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
+    "Content-Type": "application/json",
+  },
 });
 
-// Test endpoint to verify Chapa is working
+// Test endpoint
 router.get("/test", (req, res) => {
   res.json({
     success: true,
     message: "Payment routes are working",
-    chapa_initialized: !!chapa,
+    chapa_configured: !!CHAPA_SECRET_KEY,
   });
 });
 
-// Simple test payment
+// Test payment with direct axios
+// ✅ TEST PAYMENT ENDPOINT - With valid email
 router.get("/test-payment", async (req, res) => {
   try {
-    const testData = {
+    const tx_ref = `TEST-${Date.now()}`;
+    
+    const paymentData = {
       amount: "100",
       currency: "ETB",
-      email: "test@example.com",
+      email: "customer@gmail.com",  // Use a realistic email
       first_name: "Test",
       last_name: "User",
-      tx_ref: `TEST-${Date.now()}`,
+      phone_number: "0982310974",    // Add phone number (required)
+      tx_ref: tx_ref,
       callback_url: "http://localhost:5000/api/payments/verify",
       return_url: "http://localhost:5173/payment-success",
       customization: {
         title: "Test Payment",
-        description: "Testing Chapa Integration",
-      },
+        description: "Testing Chapa Integration"
+      }
     };
 
-    console.log("Testing Chapa with:", testData);
+    console.log("🔵 Sending to Chapa:", JSON.stringify(paymentData, null, 2));
 
-    const response = await chapa.initialize(testData);
+    const response = await chapaApi.post('/transaction/initialize', paymentData);
+    
+    console.log("🟢 Chapa Response:", JSON.stringify(response.data, null, 2));
 
     res.json({
       success: true,
-      message: "Chapa test successful",
-      checkout_url: response.data?.checkout_url,
+      message: "Payment initialized successfully",
+      checkout_url: response.data.data?.checkout_url,
+      data: response.data
     });
+
   } catch (error) {
-    console.error("Chapa test failed:", error);
-    res.status(500).json({
-      success: false,
+    console.error("🔴 Chapa Error:", {
       message: error.message,
-      error: error.response?.data || error,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+
+    res.status(error.response?.status || 500).json({
+      success: false,
+      message: "Payment initialization failed",
+      error: error.response?.data || error.message
     });
   }
 });
 
-// Initialize payment - CORRECTED VERSION
+// Initialize payment
 router.post("/initialize", async (req, res) => {
   try {
     const {
@@ -75,10 +97,8 @@ router.post("/initialize", async (req, res) => {
       });
     }
 
-    // Generate unique transaction reference
     const tx_ref = `CHALA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // Prepare payment data - EXACT format Chapa expects
     const paymentData = {
       amount: amount.toString(),
       currency: "ETB",
@@ -95,30 +115,42 @@ router.post("/initialize", async (req, res) => {
       },
     };
 
-    console.log("Sending to Chapa:", JSON.stringify(paymentData, null, 2));
+    console.log(
+      "🔵 Initializing payment:",
+      JSON.stringify(paymentData, null, 2),
+    );
 
-    // Initialize with Chapa
-    const response = await chapa.initialize(paymentData);
+    const response = await chapaApi.post(
+      "/transaction/initialize",
+      paymentData,
+    );
 
-    console.log("Chapa response:", JSON.stringify(response, null, 2));
+    console.log("🟢 Chapa response:", JSON.stringify(response.data, null, 2));
 
-    if (response && response.data && response.data.checkout_url) {
+    if (
+      response.data &&
+      response.data.data &&
+      response.data.data.checkout_url
+    ) {
       res.json({
         success: true,
-        checkout_url: response.data.checkout_url,
+        checkout_url: response.data.data.checkout_url,
         tx_ref: tx_ref,
       });
     } else {
-      throw new Error(response?.message || "Payment initialization failed");
+      throw new Error("Invalid response from Chapa");
     }
   } catch (error) {
-    console.error("Payment initialization error:", error);
+    console.error("🔴 Payment initialization error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
 
-    // Detailed error response
-    res.status(500).json({
+    res.status(error.response?.status || 500).json({
       success: false,
-      message: error.message || "Payment initialization failed",
-      details: error.response?.data || error,
+      message: error.response?.data?.message || "Payment initialization failed",
+      details: error.response?.data || error.message,
     });
   }
 });
@@ -128,24 +160,27 @@ router.post("/verify", async (req, res) => {
   const { tx_ref, status } = req.body;
 
   try {
-    console.log("Verifying payment:", { tx_ref, status });
+    console.log("🔵 Verifying payment:", { tx_ref, status });
 
     // Verify with Chapa
-    const verifyResponse = await chapa.verify(tx_ref);
+    const response = await chapaApi.get(`/transaction/verify/${tx_ref}`);
 
-    console.log("Verify response:", verifyResponse);
+    console.log(
+      "🟢 Verification response:",
+      JSON.stringify(response.data, null, 2),
+    );
 
-    if (
-      verifyResponse.status === "success" &&
-      verifyResponse.data?.status === "success"
-    ) {
+    if (response.data.status === "success") {
       // Payment successful
       res.sendStatus(200);
     } else {
       res.sendStatus(400);
     }
   } catch (error) {
-    console.error("Verification error:", error);
+    console.error(
+      "🔴 Verification error:",
+      error.response?.data || error.message,
+    );
     res.sendStatus(500);
   }
 });
@@ -155,17 +190,17 @@ router.get("/status/:tx_ref", async (req, res) => {
   try {
     const { tx_ref } = req.params;
 
-    // You can verify with Chapa or check your database
-    const verifyResponse = await chapa.verify(tx_ref);
+    const response = await chapaApi.get(`/transaction/verify/${tx_ref}`);
 
     res.json({
       success: true,
-      data: verifyResponse.data,
+      data: response.data,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("🔴 Status error:", error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
       success: false,
-      message: error.message,
+      message: error.response?.data?.message || error.message,
     });
   }
 });
