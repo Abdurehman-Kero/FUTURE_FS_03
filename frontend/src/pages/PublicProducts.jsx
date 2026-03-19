@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import {
   Box,
   Container,
@@ -45,6 +46,7 @@ const colors = {
   success: "#10B981",
   gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
 };
+const { addToCart, cartCount } = useCart();
 
 // Category configuration
 const categoryConfig = {
@@ -549,62 +551,89 @@ const PublicProducts = () => {
                     </CardContent>
 
                     {/* Action Buttons */}
-                    <Box sx={{ p: 2, pt: 0 }}>
-                      {stockQuantity > 0 ? (
-                        <>
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<ShoppingCartIcon />}
-                            onClick={() => handleBuyNow(p)}
-                            sx={{
-                              mb: 1,
-                              bgcolor: colors.primary,
-                              color: colors.white,
-                              borderRadius: "12px",
-                              py: 1,
-                              textTransform: "none",
-                              fontWeight: 600,
-                              "&:hover": { bgcolor: colors.secondary },
-                            }}
-                          >
-                            Buy Now
-                          </Button>
-                          <Button
-                            fullWidth
-                            variant="outlined"
-                            startIcon={<WhatsAppIcon />}
-                            onClick={() => handleWhatsApp(p)}
-                            sx={{
-                              borderColor: "#25D366",
-                              color: "#25D366",
-                              borderRadius: "12px",
-                              py: 1,
-                              textTransform: "none",
-                              fontWeight: 600,
-                              "&:hover": {
-                                bgcolor: alpha("#25D366", 0.1),
-                              },
-                            }}
-                          >
-                            Inquire
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          disabled
-                          sx={{
-                            borderRadius: "12px",
-                            py: 1,
-                            textTransform: "none",
-                          }}
-                        >
-                          Out of Stock
-                        </Button>
-                      )}
-                    </Box>
+                   // Add this import at the top
+import { useCart } from "../context/CartContext";
+
+<Box sx={{ p: 2, pt: 0 }}>
+  {stockQuantity > 0 ? (
+    <>
+      {/* Add to Cart Button */}
+      <Button
+        fullWidth
+        variant="outlined"
+        startIcon={<ShoppingCartIcon />}
+        onClick={() => addToCart(p)}
+        sx={{
+          mb: 1,
+          borderColor: colors.primary,
+          color: colors.primary,
+          borderRadius: "12px",
+          py: 1,
+          textTransform: "none",
+          fontWeight: 600,
+          "&:hover": {
+            bgcolor: alpha(colors.primary, 0.1),
+          },
+        }}
+      >
+        Add to Cart
+      </Button>
+      
+      {/* Buy Now Button */}
+      <Button
+        fullWidth
+        variant="contained"
+        startIcon={<ShoppingCartIcon />}
+        onClick={() => handleBuyNow(p)}
+        sx={{
+          mb: 1,
+          bgcolor: colors.primary,
+          color: colors.white,
+          borderRadius: "12px",
+          py: 1,
+          textTransform: "none",
+          fontWeight: 600,
+          "&:hover": { bgcolor: colors.secondary },
+        }}
+      >
+        Buy Now
+      </Button>
+      
+      <Button
+        fullWidth
+        variant="outlined"
+        startIcon={<WhatsAppIcon />}
+        onClick={() => handleWhatsApp(p)}
+        sx={{
+          borderColor: "#25D366",
+          color: "#25D366",
+          borderRadius: "12px",
+          py: 1,
+          textTransform: "none",
+          fontWeight: 600,
+          "&:hover": {
+            bgcolor: alpha("#25D366", 0.1),
+          },
+        }}
+      >
+        Inquire
+      </Button>
+    </>
+  ) : (
+    <Button
+      fullWidth
+      variant="outlined"
+      disabled
+      sx={{
+        borderRadius: "12px",
+        py: 1,
+        textTransform: "none",
+      }}
+    >
+      Out of Stock
+    </Button>
+  )}
+</Box>
                   </Card>
                 </Grid>
               );
