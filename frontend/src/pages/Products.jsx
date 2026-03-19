@@ -92,7 +92,8 @@ const categoryColors = {
 
 // Default image for products without image
 const DEFAULT_PRODUCT_IMAGE =
-  "https://via.placeholder.com/300x200/FF8500/FFFFFF?text=Product";
+  "https://placehold.co/300x200/FF8500/FFFFFF?text=Product";
+
 
 const Products = () => {
   const { user } = useAuth();
