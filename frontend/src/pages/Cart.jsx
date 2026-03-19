@@ -10,7 +10,6 @@ import {
   Divider,
   Card,
   CardContent,
-  CardMedia,
   Chip,
   TextField,
   Alert,
@@ -61,25 +60,51 @@ const Cart = () => {
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
-    // For single item, go to checkout
+    // For single item, go to checkout with that item
     if (cart.length === 1) {
-      const product = cart[0];
-      navigate(`/checkout/${product.slug}`, {
+      const item = cart[0];
+      navigate(`/checkout/${item.slug || item.id}`, {
         state: {
           product: {
-            id: product.id,
-            name: product.name,
-            brand: product.brand,
-            model: product.model,
-            price: product.price,
-            slug: product.slug,
-            quantity: product.quantity,
+            id: item.id,
+            name: item.name,
+            brand: item.brand,
+            model: item.model,
+            price: item.price,
+            slug: item.slug,
+            image_url: item.image,
+            quantity: item.quantity,
           },
         },
       });
     } else {
-      // For multiple items, go to bulk checkout
-      navigate("/bulk-checkout", { state: { cart } });
+      // For multiple items, you have two options:
+
+      // OPTION 1: Go to bulk checkout page (if you create one)
+      // navigate("/bulk-checkout", { state: { cart } });
+
+      // OPTION 2: For now, just go to first item's checkout
+      // (You can implement a multi-item checkout later)
+      const firstItem = cart[0];
+      navigate(`/checkout/${firstItem.slug || firstItem.id}`, {
+        state: {
+          product: {
+            id: firstItem.id,
+            name: firstItem.name,
+            brand: firstItem.brand,
+            model: firstItem.model,
+            price: firstItem.price,
+            slug: firstItem.slug,
+            image_url: firstItem.image,
+            quantity: firstItem.quantity,
+          },
+        },
+      });
+
+      // Show a message that multi-item checkout is coming soon
+      alert(
+        "Multi-item checkout coming soon! For now, we'll checkout with the first item.",
+      );
     }
   };
 
