@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-
 import {
   Box,
   Container,
@@ -22,6 +21,11 @@ import {
   Paper,
   IconButton,
   CircularProgress,
+  Badge,
+  useMediaQuery,
+  useTheme,
+  Drawer,
+  Fab,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -30,9 +34,12 @@ import {
   ArrowBack as ArrowBackIcon,
   ShoppingCart as ShoppingCartIcon,
   Inventory as InventoryIcon,
+  FilterList as FilterIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { getProducts } from "../services/api";
+import { useCart } from "../context/CartContext";
 
 // Color palette matching homepage
 const colors = {
@@ -46,7 +53,6 @@ const colors = {
   success: "#10B981",
   gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
 };
-const { addToCart, cartCount } = useCart();
 
 // Category configuration
 const categoryConfig = {
@@ -82,6 +88,12 @@ const DEFAULT_PRODUCT_IMAGE =
 
 const PublicProducts = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
+
+  const { addToCart, cartCount } = useCart();
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,7 +101,10 @@ const PublicProducts = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [imageErrors, setImageErrors] = useState({});
-  const itemsPerPage = 12;
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+
+  const itemsPerPage = isMobile ? 6 : 12;
 
   useEffect(() => {
     loadProducts();
@@ -99,14 +114,9 @@ const PublicProducts = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("Fetching products...");
       const res = await getProducts();
-      console.log("API Response:", res);
-
-      // Safe data extraction
       const productsData = res?.data?.data || [];
       setProducts(productsData);
-      console.log("Products set:", productsData.length);
     } catch (error) {
       console.error("Failed to load products:", error);
       setError(error?.message || "Failed to load products");
@@ -118,6 +128,12 @@ const PublicProducts = () => {
 
   const handleImageError = (productId) => {
     setImageErrors((prev) => ({ ...prev, [productId]: true }));
+  };
+
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    // Optional: Show a quick snackbar notification
+    // You can implement a snackbar later
   };
 
   // Safe filtering with null checks
@@ -163,7 +179,6 @@ const PublicProducts = () => {
   const handleBuyNow = (product) => {
     if (!product) return;
 
-    // Ensure product has a slug, if not create one from name
     const productSlug =
       product.slug ||
       product.name?.toLowerCase().replace(/\s+/g, "-") ||
@@ -177,7 +192,83 @@ const PublicProducts = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setCategoryFilter("all");
+    setFilterDrawerOpen(false);
   };
+
+  // Mobile filter drawer
+  const filterDrawer = (
+    <Drawer
+      anchor="bottom"
+      open={filterDrawerOpen}
+      onClose={() => setFilterDrawerOpen(false)}
+      PaperProps={{
+        sx: {
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          maxHeight: "80vh",
+        },
+      }}
+    >
+      <Box sx={{ p: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
+          <Typography variant="h6" fontWeight="600">
+            Filter Products
+          </Typography>
+          <IconButton onClick={() => setFilterDrawerOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        <TextField
+          fullWidth
+          placeholder="Search by product name or brand..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          size="small"
+          sx={{ mb: 2 }}
+        />
+
+        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+          <InputLabel>Category</InputLabel>
+          <Select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            label="Category"
+          >
+            <MenuItem value="all">All Categories</MenuItem>
+            {Object.entries(categoryConfig).map(([key, config]) => (
+              <MenuItem key={key} value={key}>
+                {config.icon} {config.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={handleClearFilters}
+          sx={{ bgcolor: colors.primary, mb: 1 }}
+        >
+          Clear Filters
+        </Button>
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={() => setFilterDrawerOpen(false)}
+        >
+          Apply Filters
+        </Button>
+      </Box>
+    </Drawer>
+  );
 
   if (loading) {
     return (
@@ -214,16 +305,24 @@ const PublicProducts = () => {
   }
 
   return (
-    <Box sx={{ bgcolor: colors.light, minHeight: "100vh", py: 4 }}>
-      <Container maxWidth="lg">
-        {/* Header with Back Button */}
+    <Box
+      sx={{ bgcolor: colors.light, minHeight: "100vh", pb: { xs: 8, sm: 4 } }}
+    >
+      <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+        {/* Header - Mobile Optimized */}
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          sx={{ mb: 3 }}
+          sx={{
+            py: 2,
+            position: "sticky",
+            top: 0,
+            bgcolor: colors.light,
+            zIndex: 10,
+          }}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center">
             <IconButton
               onClick={handleBackToHome}
               sx={{
@@ -235,132 +334,189 @@ const PublicProducts = () => {
                   color: colors.white,
                 },
               }}
+              size={isMobile ? "small" : "medium"}
             >
-              <ArrowBackIcon />
+              <ArrowBackIcon fontSize={isMobile ? "small" : "medium"} />
             </IconButton>
-            <Box>
-              <Typography variant="h4" fontWeight="600" color={colors.dark}>
+            <Box sx={{ display: { xs: "none", sm: "block" } }}>
+              <Typography variant="h5" fontWeight="600" color={colors.dark}>
                 Our Products
               </Typography>
-              <Typography variant="body2" color={colors.gray}>
-                Browse our collection of quality devices and accessories
+              <Typography variant="caption" color={colors.gray}>
+                Browse our collection
               </Typography>
             </Box>
           </Stack>
-          <Button
-            variant="outlined"
-            startIcon={<HomeIcon />}
-            onClick={handleBackToHome}
-            sx={{
-              borderColor: colors.primary,
-              color: colors.primary,
-              borderRadius: "50px",
-              px: 3,
-              display: { xs: "none", sm: "flex" },
-              "&:hover": {
-                borderColor: colors.secondary,
-                color: colors.secondary,
-                bgcolor: alpha(colors.primary, 0.05),
-              },
-            }}
-          >
-            Back to Home
-          </Button>
+
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            {/* Cart Icon with Badge */}
+            <IconButton
+              onClick={() => navigate("/cart")}
+              sx={{
+                bgcolor: colors.white,
+                border: `1px solid ${colors.lightGray}`,
+                borderRadius: "12px",
+                "&:hover": {
+                  bgcolor: colors.primary,
+                  color: colors.white,
+                },
+              }}
+              size={isMobile ? "small" : "medium"}
+            >
+              <Badge badgeContent={cartCount} color="primary">
+                <ShoppingCartIcon fontSize={isMobile ? "small" : "medium"} />
+              </Badge>
+            </IconButton>
+
+            {/* Filter Button - Mobile Only */}
+            {isMobile && (
+              <IconButton
+                onClick={() => setFilterDrawerOpen(true)}
+                sx={{
+                  bgcolor: colors.white,
+                  border: `1px solid ${colors.lightGray}`,
+                  borderRadius: "12px",
+                }}
+                size="small"
+              >
+                <FilterIcon />
+              </IconButton>
+            )}
+
+            {/* Desktop Home Button */}
+            {!isMobile && (
+              <Button
+                variant="outlined"
+                startIcon={<HomeIcon />}
+                onClick={handleBackToHome}
+                sx={{
+                  borderColor: colors.primary,
+                  color: colors.primary,
+                  borderRadius: "50px",
+                  px: 3,
+                  "&:hover": {
+                    borderColor: colors.secondary,
+                    color: colors.secondary,
+                    bgcolor: alpha(colors.primary, 0.05),
+                  },
+                }}
+              >
+                Back to Home
+              </Button>
+            )}
+          </Box>
         </Stack>
 
-        {/* Filters */}
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            mb: 4,
-            borderRadius: "20px",
-            border: `1px solid ${colors.lightGray}`,
-          }}
-        >
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 7 }}>
-              <TextField
-                fullWidth
-                placeholder="Search by product name or brand..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: colors.primary }} />
-                    </InputAdornment>
-                  ),
-                }}
-                size="medium"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "12px",
-                    "&:hover fieldset": {
-                      borderColor: colors.primary,
-                    },
-                  },
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 5 }}>
-              <FormControl fullWidth size="medium">
-                <InputLabel sx={{ color: colors.gray }}>Category</InputLabel>
-                <Select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  label="Category"
+        {/* Mobile Title */}
+        {isMobile && (
+          <Typography
+            variant="h5"
+            fontWeight="600"
+            color={colors.dark}
+            sx={{ mb: 2 }}
+          >
+            Our Products
+          </Typography>
+        )}
+
+        {/* Desktop Filters - Hidden on Mobile */}
+        {!isMobile && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 4,
+              borderRadius: "20px",
+              border: `1px solid ${colors.lightGray}`,
+            }}
+          >
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 7 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search by product name or brand..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: colors.primary }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  size="medium"
                   sx={{
-                    borderRadius: "12px",
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: colors.primary,
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: colors.primary,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "12px",
+                      "&:hover fieldset": {
+                        borderColor: colors.primary,
+                      },
                     },
                   }}
-                >
-                  <MenuItem value="all">
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <span>📦</span>
-                      <span>All Categories</span>
-                    </Stack>
-                  </MenuItem>
-                  {Object.entries(categoryConfig).map(([key, config]) => (
-                    <MenuItem key={key} value={key}>
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 5 }}>
+                <FormControl fullWidth size="medium">
+                  <InputLabel sx={{ color: colors.gray }}>Category</InputLabel>
+                  <Select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    label="Category"
+                    sx={{
+                      borderRadius: "12px",
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: colors.primary,
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: colors.primary,
+                      },
+                    }}
+                  >
+                    <MenuItem value="all">
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <span>{config.icon}</span>
-                        <span>{config.label}</span>
+                        <span>📦</span>
+                        <span>All Categories</span>
                       </Stack>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    {Object.entries(categoryConfig).map(([key, config]) => (
+                      <MenuItem key={key} value={key}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <span>{config.icon}</span>
+                          <span>{config.label}</span>
+                        </Stack>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-          </Grid>
 
-          {/* Active Filters */}
-          {searchTerm && (
-            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-              <Chip
-                label={`Search: "${searchTerm}"`}
-                onDelete={() => setSearchTerm("")}
-                size="small"
-                sx={{
-                  bgcolor: alpha(colors.primary, 0.1),
-                  color: colors.primary,
-                  "& .MuiChip-deleteIcon": {
+            {/* Active Filters */}
+            {searchTerm && (
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <Chip
+                  label={`Search: "${searchTerm}"`}
+                  onDelete={() => setSearchTerm("")}
+                  size="small"
+                  sx={{
+                    bgcolor: alpha(colors.primary, 0.1),
                     color: colors.primary,
-                  },
-                }}
-              />
-            </Stack>
-          )}
-        </Paper>
+                    "& .MuiChip-deleteIcon": {
+                      color: colors.primary,
+                    },
+                  }}
+                />
+              </Stack>
+            )}
+          </Paper>
+        )}
+
+        {/* Mobile Filter Drawer */}
+        {filterDrawer}
 
         {/* Products Grid */}
         {displayedProducts.length > 0 ? (
-          <Grid container spacing={3}>
+          <Grid container spacing={isMobile ? 1.5 : 3}>
             {displayedProducts.map((p) => {
               if (!p) return null;
 
@@ -381,34 +537,36 @@ const PublicProducts = () => {
               const productModel = p.model || "";
 
               return (
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={p.id}>
+                <Grid size={{ xs: 6, sm: 6, md: 4, lg: 3 }} key={p.id}>
                   <Card
                     sx={{
                       height: "100%",
                       transition: "all 0.3s ease",
-                      borderRadius: "20px",
+                      borderRadius: { xs: "16px", sm: "20px" },
                       border: `1px solid ${colors.lightGray}`,
                       boxShadow: "none",
                       display: "flex",
                       flexDirection: "column",
                       "&:hover": {
-                        transform: "translateY(-8px)",
-                        boxShadow: `0 20px 40px ${alpha(colors.primary, 0.15)}`,
-                        borderColor: colors.primary,
+                        transform: { xs: "none", sm: "translateY(-8px)" },
+                        boxShadow: {
+                          sm: `0 20px 40px ${alpha(colors.primary, 0.15)}`,
+                        },
+                        borderColor: { sm: colors.primary },
                       },
                     }}
                   >
-                    <CardContent sx={{ p: 2, flex: 1 }}>
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, flex: 1 }}>
                       {/* Product Image */}
                       <Box
                         sx={{
-                          height: 160,
+                          height: { xs: 120, sm: 160 },
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          mb: 2,
+                          mb: 1.5,
                           bgcolor: category.bgColor,
-                          borderRadius: "12px",
+                          borderRadius: { xs: "10px", sm: "12px" },
                           position: "relative",
                           overflow: "hidden",
                         }}
@@ -423,24 +581,16 @@ const PublicProducts = () => {
                               maxWidth: "80%",
                               maxHeight: "80%",
                               objectFit: "contain",
-                              transition: "transform 0.3s ease",
-                              "&:hover": {
-                                transform: "scale(1.05)",
-                              },
                             }}
                           />
                         ) : (
                           <Box sx={{ textAlign: "center" }}>
                             <InventoryIcon
-                              sx={{ fontSize: 48, color: colors.primary }}
+                              sx={{
+                                fontSize: { xs: 32, sm: 48 },
+                                color: colors.primary,
+                              }}
                             />
-                            <Typography
-                              variant="caption"
-                              display="block"
-                              sx={{ mt: 1, color: colors.gray }}
-                            >
-                              {productName}
-                            </Typography>
                           </Box>
                         )}
                         <Chip
@@ -448,35 +598,46 @@ const PublicProducts = () => {
                           size="small"
                           sx={{
                             position: "absolute",
-                            top: 8,
-                            right: 8,
+                            top: { xs: 4, sm: 8 },
+                            right: { xs: 4, sm: 8 },
                             bgcolor: colors.white,
                             color: category.color,
                             fontWeight: 500,
-                            fontSize: "0.7rem",
+                            fontSize: { xs: "0.6rem", sm: "0.7rem" },
+                            height: { xs: 18, sm: 20 },
                           }}
                         />
                       </Box>
 
                       {/* Product Details */}
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          mb: 1,
-                        }}
-                      >
+                      <Box sx={{ mb: 1 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: colors.gray,
+                            fontSize: { xs: "0.65rem", sm: "0.75rem" },
+                          }}
+                        >
+                          {productBrand || "Unknown"}
+                        </Typography>
                         <Typography
                           variant="subtitle2"
-                          sx={{ color: colors.gray }}
+                          sx={{
+                            fontSize: { xs: "0.8rem", sm: "0.9rem" },
+                            fontWeight: 600,
+                            color: colors.dark,
+                            mb: 0.5,
+                          }}
+                          noWrap
                         >
-                          {productBrand || "Unknown Brand"}
+                          {productName}
                         </Typography>
                         <Chip
                           label={productType}
                           size="small"
                           sx={{
+                            height: { xs: 16, sm: 20 },
+                            fontSize: { xs: "0.55rem", sm: "0.65rem" },
                             bgcolor:
                               productType === "new"
                                 ? alpha(colors.success, 0.1)
@@ -485,53 +646,34 @@ const PublicProducts = () => {
                               productType === "new"
                                 ? colors.success
                                 : colors.primary,
-                            fontWeight: 500,
-                            fontSize: "0.7rem",
                           }}
                         />
                       </Box>
-
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontSize: "1rem",
-                          fontWeight: 600,
-                          color: colors.dark,
-                          mb: 0.5,
-                        }}
-                      >
-                        {productName}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        sx={{ color: colors.gray, mb: 2 }}
-                      >
-                        {productModel}
-                      </Typography>
 
                       <Box
                         sx={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          mb: 2,
+                          mt: 1,
                         }}
                       >
                         <Typography
-                          variant="h6"
+                          variant="subtitle2"
                           sx={{
                             color: colors.primary,
                             fontWeight: 700,
-                            fontSize: "1.1rem",
+                            fontSize: { xs: "0.85rem", sm: "1rem" },
                           }}
                         >
                           {productPrice}
                         </Typography>
                         <Chip
-                          label={`Stock: ${stockQuantity}`}
+                          label={`${stockQuantity}`}
                           size="small"
                           sx={{
+                            height: { xs: 16, sm: 20 },
+                            fontSize: { xs: "0.55rem", sm: "0.65rem" },
                             bgcolor:
                               stockQuantity > 5
                                 ? alpha(colors.success, 0.1)
@@ -544,96 +686,110 @@ const PublicProducts = () => {
                                 : stockQuantity > 0
                                   ? colors.primary
                                   : "#f44336",
-                            fontWeight: 500,
                           }}
                         />
                       </Box>
                     </CardContent>
 
                     {/* Action Buttons */}
-                   // Add this import at the top
-import { useCart } from "../context/CartContext";
+                    <Box sx={{ p: { xs: 1.5, sm: 2 }, pt: 0 }}>
+                      {stockQuantity > 0 ? (
+                        <>
+                          {/* Add to Cart Button - Mobile Optimized */}
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            size={isMobile ? "small" : "medium"}
+                            startIcon={<ShoppingCartIcon />}
+                            onClick={() => handleAddToCart(p)}
+                            sx={{
+                              mb: 1,
+                              borderColor: colors.primary,
+                              color: colors.primary,
+                              borderRadius: "10px",
+                              py: { xs: 0.8, sm: 1 },
+                              fontSize: { xs: "0.7rem", sm: "0.85rem" },
+                              "&:hover": {
+                                bgcolor: alpha(colors.primary, 0.1),
+                              },
+                            }}
+                          >
+                            Add
+                          </Button>
 
-<Box sx={{ p: 2, pt: 0 }}>
-  {stockQuantity > 0 ? (
-    <>
-      {/* Add to Cart Button */}
-      <Button
-        fullWidth
-        variant="outlined"
-        startIcon={<ShoppingCartIcon />}
-        onClick={() => addToCart(p)}
-        sx={{
-          mb: 1,
-          borderColor: colors.primary,
-          color: colors.primary,
-          borderRadius: "12px",
-          py: 1,
-          textTransform: "none",
-          fontWeight: 600,
-          "&:hover": {
-            bgcolor: alpha(colors.primary, 0.1),
-          },
-        }}
-      >
-        Add to Cart
-      </Button>
-      
-      {/* Buy Now Button */}
-      <Button
-        fullWidth
-        variant="contained"
-        startIcon={<ShoppingCartIcon />}
-        onClick={() => handleBuyNow(p)}
-        sx={{
-          mb: 1,
-          bgcolor: colors.primary,
-          color: colors.white,
-          borderRadius: "12px",
-          py: 1,
-          textTransform: "none",
-          fontWeight: 600,
-          "&:hover": { bgcolor: colors.secondary },
-        }}
-      >
-        Buy Now
-      </Button>
-      
-      <Button
-        fullWidth
-        variant="outlined"
-        startIcon={<WhatsAppIcon />}
-        onClick={() => handleWhatsApp(p)}
-        sx={{
-          borderColor: "#25D366",
-          color: "#25D366",
-          borderRadius: "12px",
-          py: 1,
-          textTransform: "none",
-          fontWeight: 600,
-          "&:hover": {
-            bgcolor: alpha("#25D366", 0.1),
-          },
-        }}
-      >
-        Inquire
-      </Button>
-    </>
-  ) : (
-    <Button
-      fullWidth
-      variant="outlined"
-      disabled
-      sx={{
-        borderRadius: "12px",
-        py: 1,
-        textTransform: "none",
-      }}
-    >
-      Out of Stock
-    </Button>
-  )}
-</Box>
+                          {/* Buy Now Button */}
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            size={isMobile ? "small" : "medium"}
+                            startIcon={<ShoppingCartIcon />}
+                            onClick={() => handleBuyNow(p)}
+                            sx={{
+                              mb: 1,
+                              bgcolor: colors.primary,
+                              color: colors.white,
+                              borderRadius: "10px",
+                              py: { xs: 0.8, sm: 1 },
+                              fontSize: { xs: "0.7rem", sm: "0.85rem" },
+                              "&:hover": { bgcolor: colors.secondary },
+                            }}
+                          >
+                            Buy
+                          </Button>
+
+                          {/* WhatsApp Button - Icon only on mobile */}
+                          {isMobile ? (
+                            <IconButton
+                              fullWidth
+                              onClick={() => handleWhatsApp(p)}
+                              sx={{
+                                bgcolor: alpha("#25D366", 0.1),
+                                color: "#25D366",
+                                borderRadius: "10px",
+                                width: "100%",
+                              }}
+                              size="small"
+                            >
+                              <WhatsAppIcon fontSize="small" />
+                            </IconButton>
+                          ) : (
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              size="small"
+                              startIcon={<WhatsAppIcon />}
+                              onClick={() => handleWhatsApp(p)}
+                              sx={{
+                                borderColor: "#25D366",
+                                color: "#25D366",
+                                borderRadius: "10px",
+                                py: 0.8,
+                                fontSize: "0.75rem",
+                                "&:hover": {
+                                  bgcolor: alpha("#25D366", 0.1),
+                                },
+                              }}
+                            >
+                              Inquire
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          disabled
+                          size={isMobile ? "small" : "medium"}
+                          sx={{
+                            borderRadius: "10px",
+                            py: { xs: 0.8, sm: 1 },
+                            fontSize: { xs: "0.7rem", sm: "0.85rem" },
+                          }}
+                        >
+                          Out of Stock
+                        </Button>
+                      )}
+                    </Box>
                   </Card>
                 </Grid>
               );
@@ -642,12 +798,15 @@ import { useCart } from "../context/CartContext";
         ) : (
           <Paper
             sx={{
-              p: 6,
+              p: { xs: 4, sm: 6 },
               textAlign: "center",
               borderRadius: "20px",
               bgcolor: colors.white,
             }}
           >
+            <InventoryIcon
+              sx={{ fontSize: { xs: 40, sm: 60 }, color: colors.gray, mb: 2 }}
+            />
             <Typography variant="h6" color={colors.gray} gutterBottom>
               No products found
             </Typography>
@@ -661,10 +820,6 @@ import { useCart } from "../context/CartContext";
                 mt: 2,
                 borderColor: colors.primary,
                 color: colors.primary,
-                "&:hover": {
-                  borderColor: colors.secondary,
-                  color: colors.secondary,
-                },
               }}
             >
               Clear Filters
@@ -678,7 +833,7 @@ import { useCart } from "../context/CartContext";
             sx={{
               display: "flex",
               justifyContent: "center",
-              mt: 6,
+              mt: { xs: 4, sm: 6 },
               mb: 2,
             }}
           >
@@ -687,15 +842,13 @@ import { useCart } from "../context/CartContext";
               page={page}
               onChange={(e, v) => setPage(v)}
               color="primary"
+              size={isMobile ? "small" : "medium"}
               sx={{
                 "& .MuiPaginationItem-root": {
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   "&.Mui-selected": {
                     bgcolor: colors.primary,
                     color: colors.white,
-                    "&:hover": {
-                      bgcolor: colors.secondary,
-                    },
                   },
                 },
               }}
@@ -703,34 +856,28 @@ import { useCart } from "../context/CartContext";
           </Box>
         )}
 
-        {/* Mobile Back Button */}
-        <Box
-          sx={{
-            display: { xs: "flex", sm: "none" },
-            justifyContent: "center",
-            mt: 3,
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<HomeIcon />}
+        {/* Mobile Back Button - Fixed at bottom */}
+        {isMobile && (
+          <Fab
+            variant="extended"
+            size="small"
             onClick={handleBackToHome}
-            fullWidth
             sx={{
-              borderColor: colors.primary,
+              position: "fixed",
+              bottom: 16,
+              left: 16,
+              bgcolor: colors.white,
               color: colors.primary,
-              borderRadius: "50px",
-              py: 1.2,
-              "&:hover": {
-                borderColor: colors.secondary,
-                color: colors.secondary,
-                bgcolor: alpha(colors.primary, 0.05),
-              },
+              border: `1px solid ${colors.primary}`,
+              boxShadow: 2,
+              display: { xs: "flex", sm: "none" },
+              zIndex: 100,
             }}
           >
-            Back to Home
-          </Button>
-        </Box>
+            <HomeIcon sx={{ mr: 1, fontSize: 18 }} />
+            Home
+          </Fab>
+        )}
       </Container>
     </Box>
   );
