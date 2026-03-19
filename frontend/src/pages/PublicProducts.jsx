@@ -5,7 +5,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
   Typography,
   Button,
   Chip,
@@ -21,12 +20,15 @@ import {
   Pagination,
   Paper,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
 import {
   Search as SearchIcon,
   WhatsApp as WhatsAppIcon,
   Home as HomeIcon,
   ArrowBack as ArrowBackIcon,
+  ShoppingCart as ShoppingCartIcon,
+  Inventory as InventoryIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { getProducts } from "../services/api";
@@ -74,7 +76,7 @@ const categoryConfig = {
 
 // Default image for products without image
 const DEFAULT_PRODUCT_IMAGE =
-  "https://via.placeholder.com/300x200/FF8500/FFFFFF?text=Product";
+  "https://placehold.co/300x200/FF8500/FFFFFF?text=Product";
 
 const PublicProducts = () => {
   const navigate = useNavigate();
@@ -84,6 +86,7 @@ const PublicProducts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [imageErrors, setImageErrors] = useState({});
   const itemsPerPage = 12;
 
   useEffect(() => {
@@ -97,41 +100,36 @@ const PublicProducts = () => {
       console.log("Fetching products...");
       const res = await getProducts();
       console.log("API Response:", res);
-      console.log("Products data:", res.data);
 
-      if (res.data && res.data.data) {
-        setProducts(res.data.data);
-        console.log("Products set:", res.data.data.length);
-      } else {
-        console.log("No products data in response");
-        setProducts([]);
-      }
+      // Safe data extraction
+      const productsData = res?.data?.data || [];
+      setProducts(productsData);
+      console.log("Products set:", productsData.length);
     } catch (error) {
       console.error("Failed to load products:", error);
-      setError(error.message);
-      if (error.response) {
-        console.log(
-          "Error response:",
-          error.response.status,
-          error.response.data,
-        );
-      }
+      setError(error?.message || "Failed to load products");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Function to get product image
-  const getProductImage = (product) => {
-    return product.image_url || DEFAULT_PRODUCT_IMAGE;
+  const handleImageError = (productId) => {
+    setImageErrors((prev) => ({ ...prev, [productId]: true }));
   };
 
-  const filteredProducts = products.filter(
-    (p) =>
-      (p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.brand?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (categoryFilter === "all" || p.category === categoryFilter),
-  );
+  // Safe filtering with null checks
+  const filteredProducts = products.filter((p) => {
+    if (!p) return false;
+
+    const searchLower = searchTerm?.toLowerCase() || "";
+    const nameMatch = p.name?.toLowerCase().includes(searchLower) || false;
+    const brandMatch = p.brand?.toLowerCase().includes(searchLower) || false;
+    const categoryMatch =
+      categoryFilter === "all" || p.category === categoryFilter;
+
+    return (nameMatch || brandMatch) && categoryMatch;
+  });
 
   const displayedProducts = filteredProducts.slice(
     (page - 1) * itemsPerPage,
@@ -139,7 +137,17 @@ const PublicProducts = () => {
   );
 
   const handleWhatsApp = (product) => {
-    const msg = `Hello Chala Mobile, I'm interested in:%0A%0A*Product:* ${product.name}%0A*Brand:* ${product.brand} ${product.model}%0A*Price:* ETB ${product.price}%0A*Condition:* ${product.type}`;
+    if (!product) return;
+
+    const productName = product.name || "Product";
+    const productBrand = product.brand || "";
+    const productModel = product.model || "";
+    const productPrice = product.price
+      ? `ETB ${product.price}`
+      : "Price on request";
+    const productType = product.type || "new";
+
+    const msg = `Hello Chala Mobile, I'm interested in:%0A%0A*Product:* ${productName}%0A*Brand:* ${productBrand} ${productModel}%0A*Price:* ${productPrice}%0A*Condition:* ${productType}`;
     window.open(
       `https://wa.me/251982310974?text=${encodeURIComponent(msg)}`,
       "_blank",
@@ -150,12 +158,32 @@ const PublicProducts = () => {
     navigate("/");
   };
 
+  const handleBuyNow = (product) => {
+    if (!product) return;
+
+    // Ensure product has a slug, if not create one from name
+    const productSlug =
+      product.slug ||
+      product.name?.toLowerCase().replace(/\s+/g, "-") ||
+      "product";
+
+    navigate(`/checkout/${productSlug}`, {
+      state: { product: { ...product, slug: productSlug } },
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setCategoryFilter("all");
+  };
+
   if (loading) {
     return (
       <Box sx={{ bgcolor: colors.light, minHeight: "100vh", py: 4 }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: "center", py: 8 }}>
-            <Typography>Loading products...</Typography>
+            <CircularProgress sx={{ color: colors.primary }} />
+            <Typography sx={{ mt: 2 }}>Loading products...</Typography>
           </Box>
         </Container>
       </Box>
@@ -167,7 +195,9 @@ const PublicProducts = () => {
       <Box sx={{ bgcolor: colors.light, minHeight: "100vh", py: 4 }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: "center", py: 8 }}>
-            <Typography color="error">Error: {error}</Typography>
+            <Typography color="error" gutterBottom>
+              Error: {error}
+            </Typography>
             <Button
               variant="contained"
               onClick={loadProducts}
@@ -330,12 +360,23 @@ const PublicProducts = () => {
         {displayedProducts.length > 0 ? (
           <Grid container spacing={3}>
             {displayedProducts.map((p) => {
+              if (!p) return null;
+
               const category = categoryConfig[p.category] || {
-                label: p.category,
+                label: p.category || "Other",
                 color: colors.gray,
                 bgColor: colors.lightGray,
                 icon: "📦",
               };
+
+              const stockQuantity = p.stock_quantity || 0;
+              const productPrice = p.price
+                ? `ETB ${p.price.toLocaleString()}`
+                : "Price on request";
+              const productType = p.type || "new";
+              const productName = p.name || "Unnamed Product";
+              const productBrand = p.brand || "";
+              const productModel = p.model || "";
 
               return (
                 <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={p.id}>
@@ -346,6 +387,8 @@ const PublicProducts = () => {
                       borderRadius: "20px",
                       border: `1px solid ${colors.lightGray}`,
                       boxShadow: "none",
+                      display: "flex",
+                      flexDirection: "column",
                       "&:hover": {
                         transform: "translateY(-8px)",
                         boxShadow: `0 20px 40px ${alpha(colors.primary, 0.15)}`,
@@ -353,7 +396,7 @@ const PublicProducts = () => {
                       },
                     }}
                   >
-                    <Box sx={{ p: 2 }}>
+                    <CardContent sx={{ p: 2, flex: 1 }}>
                       {/* Product Image */}
                       <Box
                         sx={{
@@ -368,23 +411,36 @@ const PublicProducts = () => {
                           overflow: "hidden",
                         }}
                       >
-                        <Box
-                          component="img"
-                          src={getProductImage(p)}
-                          alt={p.name}
-                          onError={(e) => {
-                            e.target.src = DEFAULT_PRODUCT_IMAGE;
-                          }}
-                          sx={{
-                            maxWidth: "80%",
-                            maxHeight: "80%",
-                            objectFit: "contain",
-                            transition: "transform 0.3s ease",
-                            "&:hover": {
-                              transform: "scale(1.05)",
-                            },
-                          }}
-                        />
+                        {!imageErrors[p.id] && p.image_url ? (
+                          <Box
+                            component="img"
+                            src={p.image_url}
+                            alt={productName}
+                            onError={() => handleImageError(p.id)}
+                            sx={{
+                              maxWidth: "80%",
+                              maxHeight: "80%",
+                              objectFit: "contain",
+                              transition: "transform 0.3s ease",
+                              "&:hover": {
+                                transform: "scale(1.05)",
+                              },
+                            }}
+                          />
+                        ) : (
+                          <Box sx={{ textAlign: "center" }}>
+                            <InventoryIcon
+                              sx={{ fontSize: 48, color: colors.primary }}
+                            />
+                            <Typography
+                              variant="caption"
+                              display="block"
+                              sx={{ mt: 1, color: colors.gray }}
+                            >
+                              {productName}
+                            </Typography>
+                          </Box>
+                        )}
                         <Chip
                           label={category.label}
                           size="small"
@@ -413,18 +469,18 @@ const PublicProducts = () => {
                           variant="subtitle2"
                           sx={{ color: colors.gray }}
                         >
-                          {p.brand}
+                          {productBrand || "Unknown Brand"}
                         </Typography>
                         <Chip
-                          label={p.type}
+                          label={productType}
                           size="small"
                           sx={{
                             bgcolor:
-                              p.type === "new"
+                              productType === "new"
                                 ? alpha(colors.success, 0.1)
                                 : alpha(colors.primary, 0.1),
                             color:
-                              p.type === "new"
+                              productType === "new"
                                 ? colors.success
                                 : colors.primary,
                             fontWeight: 500,
@@ -442,14 +498,14 @@ const PublicProducts = () => {
                           mb: 0.5,
                         }}
                       >
-                        {p.name}
+                        {productName}
                       </Typography>
 
                       <Typography
                         variant="body2"
                         sx={{ color: colors.gray, mb: 2 }}
                       >
-                        {p.model}
+                        {productModel}
                       </Typography>
 
                       <Box
@@ -468,49 +524,72 @@ const PublicProducts = () => {
                             fontSize: "1.1rem",
                           }}
                         >
-                          ETB {p.price?.toLocaleString()}
+                          {productPrice}
                         </Typography>
                         <Chip
-                          label={`Stock: ${p.stock_quantity}`}
+                          label={`Stock: ${stockQuantity}`}
                           size="small"
                           sx={{
                             bgcolor:
-                              p.stock_quantity > 5
+                              stockQuantity > 5
                                 ? alpha(colors.success, 0.1)
-                                : p.stock_quantity > 0
+                                : stockQuantity > 0
                                   ? alpha(colors.primary, 0.1)
                                   : alpha("#f44336", 0.1),
                             color:
-                              p.stock_quantity > 5
+                              stockQuantity > 5
                                 ? colors.success
-                                : p.stock_quantity > 0
+                                : stockQuantity > 0
                                   ? colors.primary
                                   : "#f44336",
                             fontWeight: 500,
                           }}
                         />
                       </Box>
+                    </CardContent>
 
-                      {p.stock_quantity > 0 ? (
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<WhatsAppIcon />}
-                          onClick={() => handleWhatsApp(p)}
-                          sx={{
-                            bgcolor: "#25D366",
-                            color: colors.white,
-                            borderRadius: "12px",
-                            py: 1,
-                            textTransform: "none",
-                            fontWeight: 600,
-                            "&:hover": {
-                              bgcolor: "#128C7E",
-                            },
-                          }}
-                        >
-                          Inquire via WhatsApp
-                        </Button>
+                    {/* Action Buttons */}
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      {stockQuantity > 0 ? (
+                        <>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            startIcon={<ShoppingCartIcon />}
+                            onClick={() => handleBuyNow(p)}
+                            sx={{
+                              mb: 1,
+                              bgcolor: colors.primary,
+                              color: colors.white,
+                              borderRadius: "12px",
+                              py: 1,
+                              textTransform: "none",
+                              fontWeight: 600,
+                              "&:hover": { bgcolor: colors.secondary },
+                            }}
+                          >
+                            Buy Now
+                          </Button>
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            startIcon={<WhatsAppIcon />}
+                            onClick={() => handleWhatsApp(p)}
+                            sx={{
+                              borderColor: "#25D366",
+                              color: "#25D366",
+                              borderRadius: "12px",
+                              py: 1,
+                              textTransform: "none",
+                              fontWeight: 600,
+                              "&:hover": {
+                                bgcolor: alpha("#25D366", 0.1),
+                              },
+                            }}
+                          >
+                            Inquire
+                          </Button>
+                        </>
                       ) : (
                         <Button
                           fullWidth
@@ -526,30 +605,6 @@ const PublicProducts = () => {
                         </Button>
                       )}
                     </Box>
-                    // Add this button next to the WhatsApp button
-                    {/* Buy Now Button */}
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={<ShoppingCartIcon />}
-                      onClick={() =>
-                        navigate(`/checkout/${p.slug}`, {
-                          state: { product: p },
-                        })
-                      }
-                      sx={{
-                        mt: 1,
-                        bgcolor: colors.primary,
-                        color: colors.white,
-                        borderRadius: "12px",
-                        py: 1,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        "&:hover": { bgcolor: colors.secondary },
-                      }}
-                    >
-                      Buy Now
-                    </Button>
                   </Card>
                 </Grid>
               );
@@ -572,10 +627,7 @@ const PublicProducts = () => {
             </Typography>
             <Button
               variant="outlined"
-              onClick={() => {
-                setSearchTerm("");
-                setCategoryFilter("all");
-              }}
+              onClick={handleClearFilters}
               sx={{
                 mt: 2,
                 borderColor: colors.primary,
