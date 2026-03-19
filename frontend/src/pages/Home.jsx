@@ -31,6 +31,7 @@ import {
   ArrowForward as ArrowIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
+  ShoppingCart as ShoppingCartIcon, // 👈 ADD THIS LINE
   ChevronRight as ChevronRightIcon,
   ShoppingCart as CartIcon,
   Verified as VerifiedIcon,
