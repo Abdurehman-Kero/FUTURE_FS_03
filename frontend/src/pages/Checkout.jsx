@@ -150,15 +150,15 @@ const Checkout = () => {
         throw new Error("Invalid product price");
       }
 
-     const paymentData = {
-       amount: cleanPrice,
-       email: formData.email,
-       first_name: formData.firstName,
-       last_name: formData.lastName,
-       product_name: product.name,
-       product_id: product.id, // ✅ ADD THIS
-       customer_phone: formData.phone,
-     };
+const paymentData = {
+  amount: cleanPrice, // This is correct - using cleanPrice
+  email: formData.email,
+  first_name: formData.firstName,
+  last_name: formData.lastName,
+  product_name: product.name,
+  product_id: product.id,
+  customer_phone: formData.phone,
+};
 
       console.log("Sending payment data:", paymentData);
 

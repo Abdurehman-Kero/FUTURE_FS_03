@@ -2,10 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
-// Add to your imports
 
-
-// Add before protected routes (public)
 // Import routes
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
@@ -13,29 +10,29 @@ const customerRoutes = require("./routes/customerRoutes");
 const repairRoutes = require("./routes/repairRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
-const uploadRoutes = require("./routes/uploadRoutes"); // 👈 Add this
+const uploadRoutes = require("./routes/uploadRoutes");
+const paymentRoutes = require("./routes/paymentRoutes"); // 👈 MOVED WITH OTHER IMPORTS
 
 // Import middleware
 const { verifyToken } = require("./middleware/auth");
 
 const app = express();
 
-const paymentRoutes = require("./routes/paymentRoutes");
-// Middleware
+// Middleware (these should come first)
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from uploads directory
-
+// Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use('/api/payments', paymentRoutes);
-// Public routes
+
+// ✅ PUBLIC ROUTES - ALL PUBLIC ROUTES TOGETHER
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/upload", uploadRoutes); // 👈 Add this - public upload endpoint
+app.use("/api/upload", uploadRoutes);
+app.use("/api/payments", paymentRoutes); // 👈 MOVED HERE WITH OTHER PUBLIC ROUTES
 
-// Protected routes (require authentication)
+// ✅ PROTECTED ROUTES - ALL PROTECTED ROUTES TOGETHER
 app.use("/api/customers", verifyToken, customerRoutes);
 app.use("/api/repairs", verifyToken, repairRoutes);
 app.use("/api/sales", verifyToken, saleRoutes);
@@ -50,6 +47,7 @@ app.get("/api/test", (req, res) => {
       auth: "/api/auth",
       products: "/api/products (public)",
       upload: "/api/upload/product-image (public)",
+      payments: "/api/payments (public)", // 👈 ADDED
       customers: "/api/customers (protected)",
       repairs: "/api/repairs (protected)",
       sales: "/api/sales (protected)",
@@ -74,4 +72,5 @@ app.listen(PORT, () => {
   console.log(`📝 Test: http://localhost:${PORT}/api/test`);
   console.log(`📦 Products: http://localhost:${PORT}/api/products (PUBLIC)`);
   console.log(`📤 Upload: http://localhost:${PORT}/api/upload/product-image`);
+  console.log(`💳 Payments: http://localhost:${PORT}/api/payments (PUBLIC)`); // 👈 ADDED
 });

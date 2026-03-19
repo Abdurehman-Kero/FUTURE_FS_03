@@ -33,10 +33,12 @@ import {
   alpha,
   useMediaQuery,
   useTheme,
-  Drawer,
-  BottomNavigation,
-  BottomNavigationAction,
   Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -54,11 +56,18 @@ import {
   Verified as VerifiedIcon,
   Close as CloseIcon,
   FilterList as FilterIcon,
+  Home as HomeIcon,
+  Email as EmailIcon,
+  LocationOn as LocationIcon,
+  Download as DownloadIcon,
+  WhatsApp as WhatsAppIcon,
+  CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { getSales, createSale, getTodaysSales } from "../services/api";
 import { getProducts } from "../services/api";
 import { getCustomers, searchCustomers } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import jsPDF from "jspdf";
 
 // Color scheme matching homepage
 const colors = {
@@ -83,7 +92,6 @@ const Sales = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +120,6 @@ const Sales = () => {
     payment_method: "cash",
   });
 
-  // Update rows per page on screen size change
   useEffect(() => {
     setRowsPerPage(isMobile ? 5 : 10);
   }, [isMobile]);
@@ -221,7 +228,6 @@ const Sales = () => {
     try {
       for (const item of cart) {
         const warrantyMonths = parseInt(warrantyPeriod) || 12;
-
         await createSale({
           product_id: item.product_id,
           customer_id: formData.customer_id || null,
@@ -253,6 +259,161 @@ const Sales = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setDateFilter("today");
+  };
+
+  const calculateWarrantyUntil = (sale) => {
+    if (!sale) return "";
+    const date = new Date(sale.created_at);
+    date.setMonth(date.getMonth() + (sale.warranty_months || 12));
+    return date.toLocaleDateString();
+  };
+
+  const handleDownloadPDF = (sale) => {
+    try {
+      const doc = new jsPDF();
+      const primaryColor = [255, 133, 0];
+      const textColor = [50, 50, 50];
+
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("CHALA MOBILE", 105, 20, { align: "center" });
+
+      doc.setFontSize(12);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.text("Solutions Hub", 105, 30, { align: "center" });
+      doc.text("Abosto, Shashemene, Ethiopia", 105, 38, { align: "center" });
+      doc.text("+251 98 231 0974", 105, 46, { align: "center" });
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, 52, 190, 52);
+
+      doc.setFontSize(16);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("OFFICIAL RECEIPT", 105, 65, { align: "center" });
+
+      let yPos = 80;
+      const lineHeight = 7;
+
+      doc.setFontSize(10);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Receipt No:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(`#${sale.id?.toString().padStart(6, "0")}`, 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Date:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(new Date(sale.created_at).toLocaleString(), 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Payment:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(sale.payment_method || "Chapa", 80, yPos);
+
+      yPos += lineHeight * 2;
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("CUSTOMER INFORMATION", 20, yPos);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Name:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(sale.customer_name || "Walk-in Customer", 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Email:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(sale.customer_email || "Not provided", 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Phone:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(sale.customer_phone || "Not provided", 80, yPos);
+
+      yPos += lineHeight * 2;
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("PRODUCT DETAILS", 20, yPos);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Product:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(sale.product_name, 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Quantity:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(sale.quantity.toString(), 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Unit Price:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(`ETB ${sale.unit_price?.toLocaleString()}`, 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Total:", 20, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text(`ETB ${sale.total_amount?.toLocaleString()}`, 80, yPos);
+
+      yPos += lineHeight * 2;
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("WARRANTY INFORMATION", 20, yPos);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Period:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${sale.warranty_months || 12} months`, 80, yPos);
+
+      yPos += lineHeight;
+      doc.setFont("helvetica", "bold");
+      doc.text("Valid Until:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      const validUntil = new Date(sale.created_at);
+      validUntil.setMonth(validUntil.getMonth() + (sale.warranty_months || 12));
+      doc.text(validUntil.toLocaleDateString(), 80, yPos);
+
+      yPos = 260;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, yPos, 190, yPos);
+
+      yPos += 10;
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Thank you for choosing Chala Mobile!", 105, yPos, {
+        align: "center",
+      });
+      yPos += 5;
+      doc.text("This receipt serves as your warranty proof.", 105, yPos, {
+        align: "center",
+      });
+
+      doc.save(`receipt-${sale.id}.pdf`);
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      showSnackbar("Failed to generate PDF", "error");
+    }
   };
 
   if (loading) {
@@ -320,7 +481,7 @@ const Sales = () => {
         </Button>
       </Box>
 
-      {/* Stats Cards - Simplified */}
+      {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={4}>
           <Card
@@ -517,7 +678,6 @@ const Sales = () => {
           </Tooltip>
         </Box>
 
-        {/* Filter Chips */}
         {showFilters && (
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             <Chip
@@ -584,7 +744,6 @@ const Sales = () => {
           {paginatedSales.map((sale) => (
             <Card key={sale.id} sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-                {/* Sale Header */}
                 <Box
                   sx={{
                     display: "flex",
@@ -645,7 +804,6 @@ const Sales = () => {
 
                 <Divider sx={{ my: 1.5 }} />
 
-                {/* Sale Details */}
                 <Grid container spacing={1.5}>
                   <Grid item xs={6}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -682,7 +840,6 @@ const Sales = () => {
                   </Grid>
                 </Grid>
 
-                {/* Total & Actions */}
                 <Box
                   sx={{
                     display: "flex",
@@ -765,7 +922,6 @@ const Sales = () => {
         <form onSubmit={handleSubmit}>
           <DialogContent sx={{ pt: 3, pb: isMobile ? 2 : 3 }}>
             <Grid container spacing={2}>
-              {/* Customer Search */}
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -811,7 +967,6 @@ const Sales = () => {
                 </Grid>
               )}
 
-              {/* Products */}
               <Grid item xs={12}>
                 <Typography variant="subtitle2" gutterBottom>
                   Select Products
@@ -849,7 +1004,6 @@ const Sales = () => {
                 </Paper>
               </Grid>
 
-              {/* Cart */}
               {cart.length > 0 && (
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
@@ -919,7 +1073,6 @@ const Sales = () => {
                 </Grid>
               )}
 
-              {/* Warranty Period */}
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -937,7 +1090,6 @@ const Sales = () => {
                 />
               </Grid>
 
-              {/* Payment Method */}
               <Grid item xs={12}>
                 <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Payment Method</InputLabel>
@@ -986,232 +1138,310 @@ const Sales = () => {
       <Dialog
         open={openReceiptDialog}
         onClose={() => setOpenReceiptDialog(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         fullScreen={isMobile}
+        PaperProps={{ sx: { borderRadius: isMobile ? 0 : 3 } }}
       >
         <DialogTitle
           sx={{
             background: colors.gradient,
             color: "white",
             textAlign: "center",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            py: 3,
           }}
         >
-          <VerifiedIcon sx={{ fontSize: 24 }} />
-          <Typography variant="h6" fontWeight="600">
-            Receipt
+          <VerifiedIcon sx={{ fontSize: 40, mb: 1 }} />
+          <Typography
+            component="div"
+            sx={{ fontSize: "1.5rem", fontWeight: 700 }}
+          >
+            OFFICIAL RECEIPT
           </Typography>
-          {isMobile && (
-            <IconButton
-              onClick={() => setOpenReceiptDialog(false)}
-              sx={{ color: "white" }}
-            >
-              <CloseIcon />
-            </IconButton>
-          )}
         </DialogTitle>
-        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 4 } }}>
           {selectedSale && (
             <Box>
-              {/* Store Info */}
-              <Box sx={{ textAlign: "center", mb: 2 }}>
+              <Box sx={{ textAlign: "center", mb: 4 }}>
                 <Typography
-                  variant="h6"
+                  variant="h4"
                   sx={{ color: colors.primary, fontWeight: 700 }}
                 >
-                  Chala Mobile
+                  CHALA MOBILE
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Abosto, Shashemene
+                <Typography variant="subtitle1" color="text.secondary">
+                  Solutions Hub
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  Abosto, Shashemene, Ethiopia
+                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: 2,
+                    mt: 1,
+                  }}
+                >
+                  <Chip
+                    icon={<PhoneIcon />}
+                    label="+251 98 231 0974"
+                    size="small"
+                    variant="outlined"
+                  />
+                  <Chip
+                    icon={<EmailIcon />}
+                    label="info@chalamobile.com"
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+              </Box>
+
+              <Divider sx={{ mb: 4 }} />
+
+              <Box sx={{ textAlign: "center", mb: 4 }}>
+                <CheckCircleIcon sx={{ fontSize: 60, color: colors.success }} />
+                <Typography variant="h5" fontWeight="600" gutterBottom>
+                  Payment Successful! 🎉
+                </Typography>
+                <Typography color="text.secondary">
+                  Transaction completed successfully
                 </Typography>
               </Box>
 
-              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
+                Official Receipt
+              </Typography>
 
-              {/* Receipt Info */}
-              <Grid container spacing={1} sx={{ mb: 2 }}>
-                <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">
-                    Receipt No:
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body2" fontWeight="500">
-                    #{selectedSale.id?.toString().padStart(6, "0")}
-                  </Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="caption" color="text.secondary">
-                    Date:
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="body2">
-                    {new Date(selectedSale.created_at).toLocaleDateString()}
-                  </Typography>
-                </Grid>
-              </Grid>
-
-              {/* Customer Info */}
-              <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 1 }}>
-                <Typography
-                  variant="subtitle2"
-                  color={colors.primary}
-                  gutterBottom
-                >
-                  CUSTOMER
-                </Typography>
-                <Typography variant="body1" fontWeight="600">
-                  {selectedSale.customer_name || "Walk-in Customer"}
-                </Typography>
-                {selectedSale.customer_phone && (
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedSale.customer_phone}
-                  </Typography>
-                )}
-              </Paper>
-
-              {/* Product Info */}
-              <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 1 }}>
-                <Typography
-                  variant="subtitle2"
-                  color={colors.primary}
-                  gutterBottom
-                >
-                  PRODUCT
-                </Typography>
-                <Typography variant="body1" fontWeight="600">
-                  {selectedSale.product_name}
-                </Typography>
-                <Grid container spacing={1} sx={{ mt: 1 }}>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Quantity:
-                    </Typography>
-                    <Typography variant="body2">
-                      {selectedSale.quantity}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Unit Price:
-                    </Typography>
-                    <Typography variant="body2">
-                      ETB {selectedSale.unit_price?.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-
-              {/* Warranty Info */}
-              {selectedSale.warranty_months && (
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    borderRadius: 1,
-                    borderColor: colors.primary,
-                  }}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    color={colors.primary}
-                    gutterBottom
-                  >
-                    WARRANTY
-                  </Typography>
-                  <Box sx={{ mb: 1 }}>
-                    <Chip
-                      label={`${selectedSale.warranty_months} MONTHS`}
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(colors.primary, 0.1),
-                        color: colors.primary,
-                      }}
-                    />
-                  </Box>
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        display="block"
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{ mb: 4 }}
+              >
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                        width="40%"
                       >
-                        From:
-                      </Typography>
-                      <Typography variant="body2">
-                        {new Date(selectedSale.created_at).toLocaleDateString()}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        display="block"
+                        Receipt Number
+                      </TableCell>
+                      <TableCell>
+                        #{selectedSale.id?.toString().padStart(6, "0")}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
                       >
-                        Until:
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        fontWeight="600"
-                        color={colors.primary}
+                        Date & Time
+                      </TableCell>
+                      <TableCell>
+                        {new Date(selectedSale.created_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
                       >
-                        {new Date(
-                          new Date(selectedSale.created_at).setMonth(
-                            new Date(selectedSale.created_at).getMonth() +
-                              (selectedSale.warranty_months || 12),
-                          ),
-                        ).toLocaleDateString()}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              )}
+                        Payment Method
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={selectedSale.payment_method}
+                          size="small"
+                          sx={{
+                            bgcolor: colors.primary,
+                            color: "white",
+                            textTransform: "capitalize",
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-              {/* Total */}
-              <Box
+              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
+                Customer Information
+              </Typography>
+
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{ mb: 4 }}
+              >
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                        width="40%"
+                      >
+                        Full Name
+                      </TableCell>
+                      <TableCell>
+                        {selectedSale.customer_name || "Walk-in Customer"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                      >
+                        Email Address
+                      </TableCell>
+                      <TableCell>
+                        {selectedSale.customer_email || "Not provided"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                      >
+                        Phone Number
+                      </TableCell>
+                      <TableCell>
+                        {selectedSale.customer_phone || "Not provided"}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
+                Product Details
+              </Typography>
+
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{ mb: 4 }}
+              >
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                        width="40%"
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell>{selectedSale.product_name}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                      >
+                        Quantity
+                      </TableCell>
+                      <TableCell>{selectedSale.quantity}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                      >
+                        Unit Price
+                      </TableCell>
+                      <TableCell>
+                        ETB {selectedSale.unit_price?.toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
+                      >
+                        Total Amount
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="h6" sx={{ color: colors.primary }}>
+                          ETB {selectedSale.total_amount?.toLocaleString()}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
+                Warranty Information
+              </Typography>
+
+              <Paper
+                variant="outlined"
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mt: 2,
+                  p: 3,
+                  mb: 4,
+                  borderColor: colors.primary,
+                  bgcolor: colors.lightGray,
                 }}
               >
-                <Typography variant="h6">TOTAL:</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      Warranty Period
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: colors.primary }}>
+                      {selectedSale.warranty_months || 12} Months
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      Purchase Date
+                    </Typography>
+                    <Typography variant="body1">
+                      {new Date(selectedSale.created_at).toLocaleDateString()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      Valid Until
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{ color: colors.primary, fontWeight: 600 }}
+                    >
+                      {calculateWarrantyUntil(selectedSale)}
+                    </Typography>
+                  </Grid>
+                </Grid>
                 <Typography
-                  variant="h5"
-                  sx={{ color: colors.primary, fontWeight: 700 }}
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 2 }}
                 >
-                  ETB {selectedSale.total_amount?.toLocaleString()}
+                  ⓘ This receipt serves as your official warranty proof. Please
+                  keep it for future reference.
                 </Typography>
-              </Box>
+              </Paper>
 
-              {/* Payment Method */}
-              <Box sx={{ mt: 2, textAlign: "center" }}>
-                <Chip
-                  label={`Paid via ${selectedSale.payment_method}`}
-                  size="small"
-                  sx={{
-                    bgcolor: alpha(
-                      paymentMethods[selectedSale.payment_method]?.color ||
-                        colors.gray,
-                      0.1,
-                    ),
-                    color:
-                      paymentMethods[selectedSale.payment_method]?.color ||
-                      colors.gray,
-                  }}
-                />
-              </Box>
-
-              {/* Thank You Note */}
-              <Box sx={{ textAlign: "center", mt: 3 }}>
-                <Typography variant="body2" sx={{ color: colors.primary }}>
-                  Thank you!
+              <Box sx={{ textAlign: "center", mt: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Thank you for choosing Chala Mobile!
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  For any inquiries, please contact us at +251 98 231 0974
                 </Typography>
               </Box>
             </Box>
@@ -1219,16 +1449,18 @@ const Sales = () => {
         </DialogContent>
         <DialogActions
           sx={{
-            p: 2,
+            p: 3,
             justifyContent: "center",
             flexDirection: isMobile ? "column" : "row",
-            gap: 1,
+            gap: 2,
+            borderTop: `1px solid ${colors.lightGray}`,
           }}
         >
           <Button
             onClick={() => setOpenReceiptDialog(false)}
             variant="outlined"
             fullWidth={isMobile}
+            sx={{ minWidth: 120 }}
           >
             Close
           </Button>
@@ -1239,15 +1471,24 @@ const Sales = () => {
             sx={{
               bgcolor: colors.primary,
               "&:hover": { bgcolor: colors.secondary },
+              minWidth: 120,
             }}
             onClick={() => window.print()}
           >
-            Print
+            Print Receipt
+          </Button>
+          <Button
+            startIcon={<DownloadIcon />}
+            variant="outlined"
+            fullWidth={isMobile}
+            sx={{ borderColor: colors.gray, color: colors.gray, minWidth: 120 }}
+            onClick={() => handleDownloadPDF(selectedSale)}
+          >
+            Download PDF
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

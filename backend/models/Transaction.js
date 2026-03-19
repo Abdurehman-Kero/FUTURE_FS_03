@@ -12,6 +12,7 @@ const createTransactionsTable = async () => {
       customer_phone VARCHAR(20),
       product_name VARCHAR(255) NOT NULL,
       product_id INT,
+      warranty_months INT DEFAULT 12,
       status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
       payment_method VARCHAR(50),
       chapa_transaction_id VARCHAR(100),
@@ -22,7 +23,7 @@ const createTransactionsTable = async () => {
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
     )
   `);
-  console.log("✅ Transactions table ready");
+  console.log("✅ Transactions table ready with warranty_months field");
 };
 
 createTransactionsTable();
@@ -32,8 +33,8 @@ module.exports = {
   saveTransaction: async (txData) => {
     const [result] = await db.query(
       `INSERT INTO transactions 
-       (tx_ref, amount, customer_name, customer_email, customer_phone, product_name, product_id, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (tx_ref, amount, customer_name, customer_email, customer_phone, product_name, product_id, warranty_months, status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         txData.tx_ref,
         txData.amount,
@@ -42,6 +43,7 @@ module.exports = {
         txData.customer_phone,
         txData.product_name,
         txData.product_id,
+        txData.warranty_months || 12,
         "pending",
       ],
     );
@@ -54,15 +56,29 @@ module.exports = {
     status,
     chapa_transaction_id = null,
   ) => {
-    const query = chapa_transaction_id
-      ? "UPDATE transactions SET status = ?, chapa_transaction_id = ? WHERE tx_ref = ?"
-      : "UPDATE transactions SET status = ? WHERE tx_ref = ?";
+    let query, params;
 
-    const params = chapa_transaction_id
-      ? [status, chapa_transaction_id, tx_ref]
-      : [status, tx_ref];
+    if (chapa_transaction_id) {
+      query =
+        "UPDATE transactions SET status = ?, chapa_transaction_id = ? WHERE tx_ref = ?";
+      params = [status, chapa_transaction_id, tx_ref];
+    } else {
+      query = "UPDATE transactions SET status = ? WHERE tx_ref = ?";
+      params = [status, tx_ref];
+    }
 
     await db.query(query, params);
+  },
+
+  // Update transaction with payment method
+  updateTransactionPaymentDetails: async (
+    tx_ref,
+    payment_method,
+    chapa_transaction_id,
+  ) => {
+    const query =
+      "UPDATE transactions SET payment_method = ?, chapa_transaction_id = ? WHERE tx_ref = ?";
+    await db.query(query, [payment_method, chapa_transaction_id, tx_ref]);
   },
 
   // Get transaction by reference
@@ -81,5 +97,68 @@ module.exports = {
       [email],
     );
     return rows;
+  },
+
+  // Get all transactions (for admin)
+  getAllTransactions: async () => {
+    const [rows] = await db.query(
+      "SELECT * FROM transactions ORDER BY created_at DESC",
+    );
+    return rows;
+  },
+
+  // Get pending transactions
+  getPendingTransactions: async () => {
+    const [rows] = await db.query(
+      "SELECT * FROM transactions WHERE status = 'pending' ORDER BY created_at DESC",
+    );
+    return rows;
+  },
+
+  // Get completed transactions
+  getCompletedTransactions: async () => {
+    const [rows] = await db.query(
+      "SELECT * FROM transactions WHERE status = 'completed' ORDER BY created_at DESC",
+    );
+    return rows;
+  },
+
+  // Delete transaction (admin only)
+  deleteTransaction: async (tx_ref) => {
+    const [result] = await db.query(
+      "DELETE FROM transactions WHERE tx_ref = ?",
+      [tx_ref],
+    );
+    return result.affectedRows > 0;
+  },
+
+  // Get transactions by date range
+  getTransactionsByDateRange: async (startDate, endDate) => {
+    const [rows] = await db.query(
+      "SELECT * FROM transactions WHERE DATE(created_at) BETWEEN ? AND ? ORDER BY created_at DESC",
+      [startDate, endDate],
+    );
+    return rows;
+  },
+
+  // Get transaction statistics
+  getTransactionStats: async () => {
+    const [total] = await db.query(
+      "SELECT COUNT(*) as count, SUM(amount) as total FROM transactions WHERE status = 'completed'",
+    );
+
+    const [today] = await db.query(
+      "SELECT COUNT(*) as count, SUM(amount) as total FROM transactions WHERE DATE(created_at) = CURDATE() AND status = 'completed'",
+    );
+
+    const [byStatus] = await db.query(
+      "SELECT status, COUNT(*) as count, SUM(amount) as total FROM transactions GROUP BY status",
+    );
+
+    return {
+      total: total[0],
+      today: today[0],
+      byStatus: byStatus,
+    };
   },
 };
