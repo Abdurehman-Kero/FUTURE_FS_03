@@ -547,6 +547,7 @@ const PublicProducts = () => {
                       boxShadow: "none",
                       display: "flex",
                       flexDirection: "column",
+                      cursor: "pointer",
                       "&:hover": {
                         transform: { xs: "none", sm: "translateY(-8px)" },
                         boxShadow: {
@@ -555,6 +556,7 @@ const PublicProducts = () => {
                         borderColor: { sm: colors.primary },
                       },
                     }}
+                    onClick={() => navigate(`/product/${p.slug || p.id}`)} // 👈 Make entire card clickable
                   >
                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, flex: 1 }}>
                       {/* Product Image */}
