@@ -34,9 +34,9 @@ import {
   Tooltip,
   useMediaQuery,
   useTheme,
-  Tab,
-  Tabs,
   Fab,
+  ImageList,
+  ImageListItem,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -53,6 +53,8 @@ import {
   CloudUpload as UploadIcon,
   Link as LinkIcon,
   Inventory as InventoryIcon,
+  DeleteOutline as DeleteOutlineIcon,
+  AddPhotoAlternate as AddPhotoIcon,
 } from "@mui/icons-material";
 import {
   getProducts,
@@ -81,12 +83,14 @@ const categoryColors = {
   tablet: "#ff9800",
   accessory: "#9c27b0",
 };
+
 const categoryIcons = {
   phone: <PhoneIcon />,
   laptop: <LaptopIcon />,
   tablet: <TabletIcon />,
   accessory: <AccessoryIcon />,
 };
+
 const DEFAULT_PRODUCT_IMAGE =
   "https://placehold.co/300x200/FF8500/FFFFFF?text=Product";
 
@@ -103,15 +107,14 @@ const Products = () => {
   const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [uploadTab, setUploadTab] = useState(0);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+
   const [formData, setFormData] = useState({
     name: "",
     category: "phone",
@@ -122,11 +125,14 @@ const Products = () => {
     stock_quantity: "",
     description: "",
     image_url: "",
+    images: [],
+    warranty_months: 12,
   });
 
   useEffect(() => {
     setRowsPerPage(isMobile ? 5 : 10);
   }, [isMobile]);
+
   useEffect(() => {
     loadProducts();
   }, []);
@@ -135,17 +141,32 @@ const Products = () => {
     try {
       setLoading(true);
       const response = await getProducts();
-      setProducts(response.data.data);
-    } catch {
+      let productsData = response.data.data || [];
+
+      // Parse images JSON for each product
+      productsData = productsData.map((p) => ({
+        ...p,
+        images:
+          typeof p.images === "string"
+            ? JSON.parse(p.images || "[]")
+            : p.images || [],
+      }));
+
+      setProducts(productsData);
+    } catch (error) {
       showSnackbar("Failed to load products", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const showSnackbar = (message, severity = "success") =>
+  const showSnackbar = (message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
-  const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const handleOpenDialog = (product = null) => {
     if (product) {
@@ -160,8 +181,10 @@ const Products = () => {
         stock_quantity: product.stock_quantity || "",
         description: product.description || "",
         image_url: product.image_url || "",
+        images: product.images || [],
+        warranty_months: product.warranty_months || 12,
       });
-      setImagePreview(product.image_url || null);
+      setImagePreview(product.images || []);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -174,43 +197,71 @@ const Products = () => {
         stock_quantity: "",
         description: "",
         image_url: "",
+        images: [],
+        warranty_months: 12,
       });
-      setImagePreview(null);
-      setSelectedFile(null);
+      setImagePreview([]);
     }
-    setUploadTab(0);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
-    setImagePreview(null);
-    setSelectedFile(null);
+    setImagePreview([]);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === "image_url") setImagePreview(value);
   };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setImagePreview(URL.createObjectURL(file));
+  const handleAddImageUrl = () => {
+    const url = prompt("Enter image URL:");
+    if (url && url.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, url.trim()],
+      }));
+      setImagePreview((prev) => [...prev, url.trim()]);
     }
   };
 
-  const handleImageUpload = async () => {
-    if (!selectedFile) return null;
+  const handleRemoveImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+    setImagePreview((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("image", selectedFile);
-      const response = await uploadProductImage(formData);
-      return response.data.imageUrl;
+      const uploadedUrls = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("image", file);
+        const response = await uploadProductImage(formData);
+        if (response.data.imageUrl) {
+          uploadedUrls.push(response.data.imageUrl);
+        }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...uploadedUrls],
+      }));
+      setImagePreview((prev) => [...prev, ...uploadedUrls]);
+      showSnackbar(
+        `${uploadedUrls.length} image(s) uploaded successfully`,
+        "success",
+      );
+    } catch (error) {
+      showSnackbar("Failed to upload images", "error");
     } finally {
       setUploading(false);
     }
@@ -218,61 +269,84 @@ const Products = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!formData.name || !formData.price || !formData.stock_quantity) {
       showSnackbar("Please fill in all required fields", "error");
       return;
     }
+
     try {
-      let imageUrl = formData.image_url;
-      if (uploadTab === 1 && selectedFile) {
-        const uploadedUrl = await handleImageUpload();
-        if (uploadedUrl) imageUrl = uploadedUrl;
+      const productData = {
+        ...formData,
+        images: JSON.stringify(formData.images),
+      };
+
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, productData);
+        showSnackbar("Product updated successfully", "success");
+      } else {
+        await createProduct(productData);
+        showSnackbar("Product created successfully", "success");
       }
-      const productData = { ...formData, image_url: imageUrl };
-      if (editingProduct) await updateProduct(editingProduct.id, productData);
-      else await createProduct(productData);
       handleCloseDialog();
       loadProducts();
-    } catch {
-      showSnackbar("Operation failed", "error");
+    } catch (error) {
+      showSnackbar(
+        error.response?.data?.message || "Operation failed",
+        "error",
+      );
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this product?")) return;
+    if (!window.confirm("Are you sure you want to delete this product?"))
+      return;
     try {
       await deleteProduct(id);
+      showSnackbar("Product deleted successfully", "success");
       loadProducts();
     } catch {
-      showSnackbar("Delete failed", "error");
+      showSnackbar("Failed to delete product", "error");
     }
   };
 
-  const filteredProducts = products.filter(
-    (p) =>
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredProducts = products.filter((product) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      product.name?.toLowerCase().includes(searchLower) ||
+      product.brand?.toLowerCase().includes(searchLower) ||
+      product.model?.toLowerCase().includes(searchLower) ||
+      product.category?.toLowerCase().includes(searchLower)
+    );
+  });
+
   const paginatedProducts = filteredProducts.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage,
   );
-  const lowStockCount = products.filter(
-    (p) => p.stock_quantity < 5 && p.stock_quantity > 0,
-  ).length;
-  const outOfStockCount = products.filter((p) => p.stock_quantity === 0).length;
   const handleChangePage = (e, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (e) =>
     setRowsPerPage(parseInt(e.target.value, 10)) || setPage(0);
 
-  if (loading)
+  const lowStockCount = products.filter(
+    (p) => p.stock_quantity < 5 && p.stock_quantity > 0,
+  ).length;
+  const outOfStockCount = products.filter((p) => p.stock_quantity === 0).length;
+
+  if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "50vh",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
+  }
 
   return (
     <Box sx={{ width: "100%", overflowX: "hidden" }}>
@@ -318,67 +392,109 @@ const Products = () => {
 
         {/* Stats Cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          {[
-            {
-              icon: <PhoneIcon />,
-              label: "Total",
-              value: products.length,
-              color: colors.primary,
-            },
-            {
-              icon: <WarningIcon />,
-              label: "Low Stock",
-              value: lowStockCount,
-              color: "#ff9800",
-            },
-            {
-              icon: <DeleteIcon />,
-              label: "Out of Stock",
-              value: outOfStockCount,
-              color: "#f44336",
-            },
-          ].map((stat, i) => (
-            <Grid item xs={4} key={i}>
-              <Card
-                sx={{
-                  borderRadius: 2,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                }}
-              >
-                <CardContent
-                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
+          <Grid item xs={4}>
+            <Card
+              sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+            >
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha(colors.primary, 0.1),
+                    color: colors.primary,
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    mx: "auto",
+                    mb: 1,
+                  }}
                 >
-                  <Avatar
-                    sx={{
-                      bgcolor: alpha(stat.color, 0.1),
-                      color: stat.color,
-                      width: { xs: 40, sm: 48 },
-                      height: { xs: 40, sm: 48 },
-                      mx: "auto",
-                      mb: 1,
-                    }}
-                  >
-                    {stat.icon}
-                  </Avatar>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                  >
-                    {stat.label}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: { xs: "1.2rem", sm: "1.4rem" },
-                      fontWeight: 600,
-                    }}
-                  >
-                    {stat.value}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+                  <PhoneIcon fontSize={isMobile ? "small" : "medium"} />
+                </Avatar>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Total
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                    fontWeight: 600,
+                  }}
+                >
+                  {products.length}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={4}>
+            <Card sx={{ borderRadius: 2, bgcolor: alpha("#ff9800", 0.05) }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#ff9800", 0.1),
+                    color: "#ff9800",
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    mx: "auto",
+                    mb: 1,
+                  }}
+                >
+                  <WarningIcon fontSize={isMobile ? "small" : "medium"} />
+                </Avatar>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Low Stock
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                    fontWeight: 600,
+                    color: "#ff9800",
+                  }}
+                >
+                  {lowStockCount}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={4}>
+            <Card sx={{ borderRadius: 2, bgcolor: alpha("#f44336", 0.05) }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}>
+                <Avatar
+                  sx={{
+                    bgcolor: alpha("#f44336", 0.1),
+                    color: "#f44336",
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    mx: "auto",
+                    mb: 1,
+                  }}
+                >
+                  <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
+                </Avatar>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Out of Stock
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                    fontWeight: 600,
+                    color: "#f44336",
+                  }}
+                >
+                  {outOfStockCount}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
         {/* Search */}
@@ -417,34 +533,35 @@ const Products = () => {
         {/* Products List */}
         {isMobile ? (
           <Box>
-            {paginatedProducts.map((p) => (
-              <Card key={p.id} sx={{ mb: 2, borderRadius: 2 }}>
+            {paginatedProducts.map((product) => (
+              <Card key={product.id} sx={{ mb: 2, borderRadius: 2 }}>
                 <CardContent sx={{ p: 2 }}>
                   <Box sx={{ display: "flex", gap: 2 }}>
                     <Avatar
-                      src={p.image_url || DEFAULT_PRODUCT_IMAGE}
-                      alt={p.name}
+                      src={product.image_url || DEFAULT_PRODUCT_IMAGE}
+                      alt={product.name}
                       sx={{
                         width: 70,
                         height: 70,
-                        bgcolor: categoryColors[p.category] || colors.primary,
+                        bgcolor:
+                          categoryColors[product.category] || colors.primary,
                         borderRadius: 2,
                         flexShrink: 0,
                       }}
                       variant="rounded"
                     >
-                      {categoryIcons[p.category]}
+                      {categoryIcons[product.category]}
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography fontWeight={600} noWrap>
-                        {p.name}
+                        {product.name}
                       </Typography>
                       <Typography
                         variant="caption"
                         color="text.secondary"
                         noWrap
                       >
-                        {p.brand} {p.model}
+                        {product.brand} {product.model}
                       </Typography>
                       <Box
                         sx={{
@@ -455,19 +572,19 @@ const Products = () => {
                         }}
                       >
                         <Chip
-                          label={p.type}
+                          label={product.type}
                           size="small"
-                          color={p.type === "new" ? "success" : "warning"}
+                          color={product.type === "new" ? "success" : "warning"}
                           variant="outlined"
                           sx={{ height: 20 }}
                         />
                         <Chip
-                          label={`Stock: ${p.stock_quantity}`}
+                          label={`Stock: ${product.stock_quantity}`}
                           size="small"
                           color={
-                            p.stock_quantity === 0
+                            product.stock_quantity === 0
                               ? "error"
-                              : p.stock_quantity < 5
+                              : product.stock_quantity < 5
                                 ? "warning"
                                 : "success"
                           }
@@ -483,7 +600,7 @@ const Products = () => {
                         }}
                       >
                         <Typography fontWeight={600} color={colors.primary}>
-                          ETB {p.price?.toLocaleString()}
+                          ETB {product.price?.toLocaleString()}
                         </Typography>
                         <Box>
                           {(user?.role === "admin" ||
@@ -491,7 +608,7 @@ const Products = () => {
                             <>
                               <IconButton
                                 size="small"
-                                onClick={() => handleOpenDialog(p)}
+                                onClick={() => handleOpenDialog(product)}
                               >
                                 <EditIcon fontSize="small" />
                               </IconButton>
@@ -499,7 +616,7 @@ const Products = () => {
                                 <IconButton
                                   size="small"
                                   color="error"
-                                  onClick={() => handleDelete(p.id)}
+                                  onClick={() => handleDelete(product.id)}
                                 >
                                   <DeleteIcon fontSize="small" />
                                 </IconButton>
@@ -541,65 +658,66 @@ const Products = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedProducts.map((p) => (
-                  <TableRow key={p.id} hover>
+                {paginatedProducts.map((product) => (
+                  <TableRow key={product.id} hover>
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
                         <Avatar
-                          src={p.image_url || DEFAULT_PRODUCT_IMAGE}
-                          alt={p.name}
+                          src={product.image_url || DEFAULT_PRODUCT_IMAGE}
+                          alt={product.name}
                           sx={{
                             width: 40,
                             height: 40,
                             mr: 2,
                             bgcolor:
-                              categoryColors[p.category] || colors.primary,
+                              categoryColors[product.category] ||
+                              colors.primary,
                           }}
                           variant="rounded"
                         >
-                          {categoryIcons[p.category]}
+                          {categoryIcons[product.category]}
                         </Avatar>
                         <Box>
                           <Typography variant="body2" fontWeight="600">
-                            {p.name}
+                            {product.name}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {p.brand} {p.model}
+                            {product.brand} {product.model}
                           </Typography>
                         </Box>
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={p.category}
+                        label={product.category}
                         size="small"
                         sx={{
-                          bgcolor: categoryColors[p.category],
+                          bgcolor: categoryColors[product.category],
                           color: "white",
                         }}
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={p.type}
+                        label={product.type}
                         size="small"
-                        color={p.type === "new" ? "success" : "warning"}
+                        color={product.type === "new" ? "success" : "warning"}
                         variant="outlined"
                       />
                     </TableCell>
                     <TableCell>
                       <Typography fontWeight={600} color={colors.primary}>
-                        ETB {p.price?.toLocaleString()}
+                        ETB {product.price?.toLocaleString()}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={p.stock_quantity}
+                        label={product.stock_quantity}
                         size="small"
                         color={
-                          p.stock_quantity === 0
+                          product.stock_quantity === 0
                             ? "error"
-                            : p.stock_quantity < 5
+                            : product.stock_quantity < 5
                               ? "warning"
                               : "success"
                         }
@@ -611,7 +729,7 @@ const Products = () => {
                           <Tooltip title="Edit">
                             <IconButton
                               size="small"
-                              onClick={() => handleOpenDialog(p)}
+                              onClick={() => handleOpenDialog(product)}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
@@ -621,7 +739,7 @@ const Products = () => {
                               <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => handleDelete(p.id)}
+                                onClick={() => handleDelete(product.id)}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -655,7 +773,7 @@ const Products = () => {
           </TableContainer>
         )}
 
-        {/* Add FAB for Mobile */}
+        {/* Mobile FAB */}
         {isMobile && (user?.role === "admin" || user?.role === "sales") && (
           <Fab
             onClick={() => handleOpenDialog()}
@@ -673,7 +791,7 @@ const Products = () => {
           </Fab>
         )}
 
-        {/* Dialog */}
+        {/* Add/Edit Product Dialog */}
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
@@ -699,94 +817,16 @@ const Products = () => {
             )}
           </DialogTitle>
           <form onSubmit={handleSubmit}>
-            <DialogContent sx={{ pt: 3, pb: isMobile ? 10 : 3 }}>
+            <DialogContent
+              sx={{
+                pt: 3,
+                pb: isMobile ? 10 : 3,
+                maxHeight: "70vh",
+                overflowY: "auto",
+              }}
+            >
               <Grid container spacing={2}>
-                {imagePreview && (
-                  <Grid item xs={12}>
-                    <Box
-                      sx={{ display: "flex", justifyContent: "center", mb: 2 }}
-                    >
-                      <Avatar
-                        src={imagePreview}
-                        alt="Preview"
-                        sx={{
-                          width: 100,
-                          height: 100,
-                          borderRadius: 2,
-                          border: `3px solid ${colors.primary}`,
-                        }}
-                        variant="rounded"
-                      />
-                    </Box>
-                  </Grid>
-                )}
-                <Grid item xs={12}>
-                  <Tabs
-                    value={uploadTab}
-                    onChange={(e, v) => setUploadTab(v)}
-                    variant="fullWidth"
-                    sx={{
-                      mb: 2,
-                      "& .MuiTab-root.Mui-selected": { color: colors.primary },
-                      "& .MuiTabs-indicator": {
-                        backgroundColor: colors.primary,
-                      },
-                    }}
-                  >
-                    <Tab icon={<LinkIcon />} label="URL" />
-                    <Tab icon={<UploadIcon />} label="Upload" />
-                  </Tabs>
-                  {uploadTab === 0 ? (
-                    <TextField
-                      fullWidth
-                      name="image_url"
-                      label="Image URL"
-                      value={formData.image_url}
-                      onChange={handleInputChange}
-                      placeholder="https://example.com/image.jpg"
-                      size={isMobile ? "small" : "medium"}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        textAlign: "center",
-                        p: 2,
-                        border: `2px dashed ${colors.lightGray}`,
-                        borderRadius: 2,
-                      }}
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        style={{ display: "none" }}
-                        id="product-image-upload"
-                      />
-                      <label htmlFor="product-image-upload">
-                        <Button
-                          variant="outlined"
-                          component="span"
-                          startIcon={<UploadIcon />}
-                          sx={{
-                            borderColor: colors.primary,
-                            color: colors.primary,
-                          }}
-                        >
-                          Choose Image
-                        </Button>
-                      </label>
-                      {selectedFile && (
-                        <Typography
-                          variant="caption"
-                          display="block"
-                          sx={{ mt: 1 }}
-                        >
-                          Selected: {selectedFile.name}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </Grid>
+                {/* Basic Info */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -882,16 +922,122 @@ const Products = () => {
                     InputProps={{ inputProps: { min: 0 } }}
                   />
                 </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    name="warranty_months"
+                    label="Warranty (months)"
+                    type="number"
+                    value={formData.warranty_months}
+                    onChange={handleInputChange}
+                    size={isMobile ? "small" : "medium"}
+                  />
+                </Grid>
+
+                {/* Main Image */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Main Image
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    name="image_url"
+                    label="Main Image URL"
+                    value={formData.image_url}
+                    onChange={handleInputChange}
+                    placeholder="https://example.com/main-image.jpg"
+                    size={isMobile ? "small" : "medium"}
+                  />
+                </Grid>
+
+                {/* Additional Images */}
+                <Grid item xs={12}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="subtitle2">
+                      Additional Images
+                    </Typography>
+                    <Box>
+                      <Button
+                        size="small"
+                        startIcon={<AddPhotoIcon />}
+                        onClick={handleAddImageUrl}
+                        sx={{ mr: 1 }}
+                      >
+                        Add URL
+                      </Button>
+                      <Button
+                        size="small"
+                        component="label"
+                        startIcon={<UploadIcon />}
+                      >
+                        Upload Files
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          hidden
+                          onChange={handleFileUpload}
+                        />
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  {uploading && <CircularProgress size={20} sx={{ mb: 1 }} />}
+
+                  {imagePreview.length > 0 && (
+                    <Paper variant="outlined" sx={{ p: 1, mt: 1 }}>
+                      <Grid container spacing={1}>
+                        {imagePreview.map((img, idx) => (
+                          <Grid item xs={4} sm={3} md={2} key={idx}>
+                            <Box sx={{ position: "relative" }}>
+                              <Avatar
+                                src={img}
+                                variant="rounded"
+                                sx={{
+                                  width: "100%",
+                                  height: 80,
+                                  objectFit: "cover",
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  position: "absolute",
+                                  top: 0,
+                                  right: 0,
+                                  bgcolor: "rgba(0,0,0,0.5)",
+                                  color: "white",
+                                }}
+                                onClick={() => handleRemoveImage(idx)}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Paper>
+                  )}
+                </Grid>
+
+                {/* Description */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
                     name="description"
-                    label="Description"
+                    label="Product Description"
                     multiline
-                    rows={isMobile ? 2 : 3}
+                    rows={8}
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Product description..."
+                    placeholder="Write a detailed description. You can include specifications, features, and anything else about the product..."
                     size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
@@ -933,6 +1079,7 @@ const Products = () => {
           </form>
         </Dialog>
 
+        {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
