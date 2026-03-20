@@ -311,23 +311,8 @@ const Dashboard = () => {
         }}
       >
         <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
-          <IconButton
-            onClick={() => setMobileMenuOpen(true)}
-            sx={{
-              mr: 2,
-              color: colors.gray,
-              display: { md: "none" },
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
-
-          <Typography
-            variant="h6"
-            sx={{ flexGrow: 1, fontWeight: 600, color: colors.dark }}
-          >
-            Dashboard
-          </Typography>
+     
+        
 
           <Button
             variant="text"
@@ -345,15 +330,8 @@ const Dashboard = () => {
             Logout
           </Button>
 
-          <IconButton
-            onClick={handleLogout}
-            sx={{
-              display: { xs: "flex", sm: "none" },
-              color: colors.gray,
-            }}
-          >
-            <LogoutIcon />
-          </IconButton>
+         
+          
         </Toolbar>
       </AppBar>
 
