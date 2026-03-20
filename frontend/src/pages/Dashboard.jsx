@@ -25,7 +25,8 @@ import {
   Toolbar,
   Container,
   Fab,
-  Badge,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Inventory as ProductsIcon,
@@ -34,6 +35,7 @@ import {
   PointOfSale as SalesIcon,
   TrendingUp as TrendingUpIcon,
   Person as PersonIcon,
+  Add as AddIcon,
   Warning as WarningIcon,
   Schedule as ScheduleIcon,
   Logout as LogoutIcon,
@@ -59,14 +61,13 @@ const colors = {
   info: "#3B82F6",
 };
 
-// Quick action cards - simplified for mobile
+// Quick action cards
 const actions = [
   {
     title: "Products",
     icon: <ProductsIcon />,
     path: "/admin/products",
     color: colors.info,
-    bgColor: alpha(colors.info, 0.1),
     count: "156",
     roles: ["admin", "technician", "sales"],
   },
@@ -75,7 +76,6 @@ const actions = [
     icon: <CustomersIcon />,
     path: "/admin/customers",
     color: colors.warning,
-    bgColor: alpha(colors.warning, 0.1),
     count: "89",
     roles: ["admin", "technician", "sales"],
   },
@@ -84,7 +84,6 @@ const actions = [
     icon: <BuildIcon />,
     path: "/admin/repairs",
     color: colors.error,
-    bgColor: alpha(colors.error, 0.1),
     count: "12",
     roles: ["admin", "technician"],
   },
@@ -93,19 +92,18 @@ const actions = [
     icon: <SalesIcon />,
     path: "/admin/sales",
     color: colors.success,
-    bgColor: alpha(colors.success, 0.1),
     count: "15.2k",
     roles: ["admin", "sales"],
   },
 ];
 
-// Recent activities - simplified
+// Recent activities
 const recentActivities = [
   {
     type: "repair",
     title: "iPhone 13 Repair",
     customer: "Abebe K.",
-    status: "progress",
+    status: "In Progress",
     time: "10m",
     icon: <BuildIcon />,
     color: colors.warning,
@@ -114,7 +112,7 @@ const recentActivities = [
     type: "sale",
     title: "Samsung S22",
     customer: "Almaz T.",
-    amount: "45k",
+    amount: "ETB 45,000",
     time: "25m",
     icon: <SalesIcon />,
     color: colors.success,
@@ -123,13 +121,14 @@ const recentActivities = [
     type: "repair",
     title: "MacBook Pro",
     customer: "Tigist H.",
-    status: "done",
+    status: "Completed",
     time: "1h",
     icon: <BuildIcon />,
     color: colors.success,
   },
 ];
 
+// Low stock items
 const lowStockItems = [
   { name: "iPhone 13 Screen", stock: 3, threshold: 5, percentage: 60 },
   { name: "Samsung Charger", stock: 2, threshold: 10, percentage: 20 },
@@ -138,6 +137,9 @@ const lowStockItems = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -298,7 +300,7 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ bgcolor: "#f8fafc", minHeight: "100vh" }}>
-      {/* Simple Header */}
+      {/* Header */}
       <AppBar
         position="sticky"
         elevation={0}
@@ -308,7 +310,7 @@ const Dashboard = () => {
           borderBottom: `1px solid ${colors.lightGray}`,
         }}
       >
-        <Toolbar sx={{ minHeight: { xs: 64, sm: 70 } }}>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
           <IconButton
             onClick={() => setMobileMenuOpen(true)}
             sx={{
@@ -366,7 +368,10 @@ const Dashboard = () => {
       </Drawer>
 
       {/* Main Content */}
-      <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+      <Container
+        maxWidth="xl"
+        sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3, md: 4 } }}
+      >
         {/* Welcome Section */}
         <Paper
           elevation={0}
@@ -425,7 +430,7 @@ const Dashboard = () => {
           </Grid>
         </Paper>
 
-        {/* Stats Cards - Horizontal scroll on mobile */}
+        {/* Stats Cards */}
         <Box sx={{ mb: { xs: 2, sm: 3 } }}>
           <Typography
             variant="h6"
@@ -572,7 +577,7 @@ const Dashboard = () => {
           </Grid>
         </Box>
 
-        {/* Quick Actions - Clean grid */}
+        {/* Quick Actions */}
         <Box sx={{ mb: { xs: 2, sm: 3 } }}>
           <Typography
             variant="h6"
@@ -600,7 +605,7 @@ const Dashboard = () => {
                     >
                       <Avatar
                         sx={{
-                          bgcolor: action.bgColor,
+                          bgcolor: alpha(action.color, 0.1),
                           color: action.color,
                           width: { xs: 40, sm: 48 },
                           height: { xs: 40, sm: 48 },
@@ -822,6 +827,27 @@ const Dashboard = () => {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Mobile FAB for Quick Actions */}
+      {isMobile && (
+        <Fab
+          variant="extended"
+          onClick={() => navigate("/admin/products")}
+          sx={{
+            position: "fixed",
+            bottom: 16,
+            right: 16,
+            background: colors.gradient,
+            color: colors.white,
+            "&:hover": { background: colors.secondary },
+            zIndex: 100,
+            display: { xs: "flex", sm: "none" },
+          }}
+        >
+          <AddIcon sx={{ mr: 1 }} />
+          New Sale
+        </Fab>
+      )}
     </Box>
   );
 };
