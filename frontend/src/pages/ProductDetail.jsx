@@ -11,44 +11,38 @@ import {
   Rating,
   Stack,
   IconButton,
-  TextField,
   Alert,
   Skeleton,
   Breadcrumbs,
   Link,
-  Avatar,
-  Card,
-  CardContent,
   alpha,
   useMediaQuery,
   useTheme,
   Tab,
   Tabs,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Avatar,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
 } from "@mui/material";
 import {
   ShoppingCart as CartIcon,
   WhatsApp as WhatsAppIcon,
-  FavoriteBorder as FavoriteIcon,
-  Favorite as FavoriteIcon,
   LocalShipping as ShippingIcon,
   Security as SecurityIcon,
   Verified as VerifiedIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon,
-  ExpandMore as ExpandMoreIcon,
   CheckCircle as CheckCircleIcon,
-  Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
-  Phone as PhoneIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { getProducts } from "../services/api";
 
-// Color scheme
 const colors = {
   primary: "#FF8500",
   secondary: "#FFA33C",
@@ -60,74 +54,6 @@ const colors = {
   lightGray: "#E5E7EB",
   success: "#10B981",
   warning: "#F59E0B",
-};
-
-// Mock product data for fallback
-const mockProducts = {
-  1: {
-    id: 1,
-    name: "iPhone 14 Pro",
-    brand: "Apple",
-    model: "iPhone 14 Pro",
-    price: 1299,
-    description:
-      "The iPhone 14 Pro features a stunning Super Retina XDR display, ProMotion technology, and the powerful A16 Bionic chip. With a 48MP main camera, it captures incredible detail. Available in Deep Purple, Space Black, Silver, and Gold.",
-    category: "phone",
-    type: "new",
-    stock_quantity: 5,
-    image_url: "https://i.imgur.com/fRYR2yP.png",
-    rating: 4.8,
-    reviews: 128,
-    warranty_months: 12,
-    features: [
-      "6.1-inch Super Retina XDR display",
-      "A16 Bionic chip",
-      "48MP Main camera",
-      "Up to 23 hours video playback",
-      "Dynamic Island",
-      "Always-On display",
-    ],
-    specifications: {
-      Display: "6.1-inch Super Retina XDR",
-      Processor: "A16 Bionic",
-      Camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto",
-      Battery: "Up to 23 hours video playback",
-      Charging: "MagSafe wireless charging",
-      "Water Resistance": "IP68",
-    },
-  },
-  2: {
-    id: 2,
-    name: "MacBook Pro 14",
-    brand: "Apple",
-    model: "MacBook Pro 14",
-    price: 2499,
-    description:
-      "The MacBook Pro 14-inch delivers groundbreaking performance with the M2 Pro chip, 12-core CPU, and up to 19-core GPU. Perfect for professionals who need maximum power.",
-    category: "laptop",
-    type: "new",
-    stock_quantity: 3,
-    image_url: "https://i.imgur.com/Omysr24.jpeg",
-    rating: 4.9,
-    reviews: 89,
-    warranty_months: 24,
-    features: [
-      "M2 Pro chip with 12-core CPU",
-      "Up to 19-core GPU",
-      "14-inch Liquid Retina XDR display",
-      "Up to 18 hours battery life",
-      "16GB unified memory",
-      "512GB SSD storage",
-    ],
-    specifications: {
-      Processor: "Apple M2 Pro",
-      Memory: "16GB Unified Memory",
-      Storage: "512GB SSD",
-      Display: "14-inch Liquid Retina XDR",
-      Battery: "Up to 18 hours",
-      Ports: "HDMI, SDXC, Thunderbolt 4",
-    },
-  },
 };
 
 const TabPanel = ({ children, value, index, ...other }) => (
@@ -142,14 +68,13 @@ const ProductDetail = () => {
   const { addToCart, isInCart, getItemQuantity } = useCart();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [tabValue, setTabValue] = useState(0);
-  const [favorite, setFavorite] = useState(false);
   const [mainImage, setMainImage] = useState("");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState(null);
 
@@ -164,7 +89,6 @@ const ProductDetail = () => {
       const response = await getProducts();
       const products = response.data.data || [];
 
-      // Find product by slug or id
       const foundProduct = products.find(
         (p) =>
           p.slug === slug ||
@@ -173,24 +97,63 @@ const ProductDetail = () => {
       );
 
       if (foundProduct) {
-        setProduct(foundProduct);
-        setMainImage(foundProduct.image_url);
-      } else {
-        // Use mock data for demo
-        const mockId = parseInt(slug) || 1;
-        if (mockProducts[mockId]) {
-          setProduct(mockProducts[mockId]);
-          setMainImage(mockProducts[mockId].image_url);
-        } else {
-          setError("Product not found");
+        // Parse JSON fields
+        if (foundProduct.images && typeof foundProduct.images === "string") {
+          foundProduct.images = JSON.parse(foundProduct.images);
         }
+        if (
+          foundProduct.features &&
+          typeof foundProduct.features === "string"
+        ) {
+          foundProduct.features = JSON.parse(foundProduct.features);
+        }
+        if (
+          foundProduct.specifications &&
+          typeof foundProduct.specifications === "string"
+        ) {
+          foundProduct.specifications = JSON.parse(foundProduct.specifications);
+        }
+        if (
+          foundProduct.dimensions &&
+          typeof foundProduct.dimensions === "string"
+        ) {
+          foundProduct.dimensions = JSON.parse(foundProduct.dimensions);
+        }
+
+        setProduct(foundProduct);
+        const allImages = [
+          foundProduct.image_url,
+          ...(foundProduct.images || []),
+        ].filter(Boolean);
+        setMainImage(allImages[0] || foundProduct.image_url);
+      } else {
+        setError("Product not found");
       }
     } catch (error) {
       console.error("Failed to load product:", error);
       setError("Failed to load product details");
+      setProduct(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const allImages = product
+    ? [product.image_url, ...(product.images || [])].filter(Boolean)
+    : [];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    setMainImage(allImages[(currentImageIndex + 1) % allImages.length]);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex(
+      (prev) => (prev - 1 + allImages.length) % allImages.length,
+    );
+    setMainImage(
+      allImages[(currentImageIndex - 1 + allImages.length) % allImages.length],
+    );
   };
 
   const handleAddToCart = () => {
@@ -208,7 +171,8 @@ const ProductDetail = () => {
   };
 
   const handleWhatsApp = () => {
-    const msg = `Hello Chala Mobile, I'm interested in:%0A%0A*Product:* ${product?.name}%0A*Brand:* ${product?.brand} ${product?.model}%0A*Price:* ETB ${product?.price}%0A*Condition:* ${product?.type}%0A%0AI would like to know more about this product.`;
+    if (!product) return;
+    const msg = `Hello Chala Mobile, I'm interested in:%0A%0A*Product:* ${product.name}%0A*Brand:* ${product.brand} ${product.model}%0A*Price:* ETB ${product.price}%0A*Condition:* ${product.type}%0A%0AI would like to know more about this product.`;
     window.open(
       `https://wa.me/251982310974?text=${encodeURIComponent(msg)}`,
       "_blank",
@@ -313,8 +277,9 @@ const ProductDetail = () => {
 
         <Grid container spacing={4}>
           {/* Left Column - Images */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, borderRadius: 3, mb: 2 }}>
+          <Grid item xs={12} md={6}>            {/* Images Gallery */}
+            <Paper sx={{ p: 2, borderRadius: 3 }}>
+              {/* Main Image */}
               <Box
                 sx={{
                   height: { xs: 300, sm: 400 },
@@ -323,8 +288,35 @@ const ProductDetail = () => {
                   justifyContent: "center",
                   bgcolor: colors.light,
                   borderRadius: 2,
+                  position: "relative",
                 }}
               >
+                {allImages.length > 1 && (
+                  <>
+                    <IconButton
+                      onClick={prevImage}
+                      sx={{
+                        position: "absolute",
+                        left: 8,
+                        bgcolor: "rgba(255,255,255,0.8)",
+                        "&:hover": { bgcolor: "white" },
+                      }}
+                    >
+                      <ChevronLeftIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={nextImage}
+                      sx={{
+                        position: "absolute",
+                        right: 8,
+                        bgcolor: "rgba(255,255,255,0.8)",
+                        "&:hover": { bgcolor: "white" },
+                      }}
+                    >
+                      <ChevronRightIcon />
+                    </IconButton>
+                  </>
+                )}
                 <Box
                   component="img"
                   src={mainImage || product.image_url}
@@ -334,8 +326,47 @@ const ProductDetail = () => {
                     maxHeight: "100%",
                     objectFit: "contain",
                   }}
+                  onError={(e) => {
+                    e.target.src =
+                      "https://placehold.co/400x400/FF8500/FFFFFF?text=Product";
+                  }}
                 />
               </Box>
+
+              {/* Thumbnails */}
+              {allImages.length > 1 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    mt: 2,
+                    overflowX: "auto",
+                    pb: 1,
+                  }}
+                >
+                  {allImages.map((img, idx) => (
+                    <Avatar
+                      key={idx}
+                      src={img}
+                      onClick={() => {
+                        setCurrentImageIndex(idx);
+                        setMainImage(img);
+                      }}
+                      variant="rounded"
+                      sx={{
+                        width: 60,
+                        height: 60,
+                        cursor: "pointer",
+                        border:
+                          currentImageIndex === idx
+                            ? `2px solid ${colors.primary}`
+                            : "none",
+                        opacity: currentImageIndex === idx ? 1 : 0.6,
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
             </Paper>
           </Grid>
 
@@ -355,7 +386,7 @@ const ProductDetail = () => {
                   {product.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {product.model}
+                  {product.model} {product.sku && `• SKU: ${product.sku}`}
                 </Typography>
               </Box>
 
@@ -364,13 +395,13 @@ const ProductDetail = () => {
                 sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
               >
                 <Rating
-                  value={product.rating || 4.5}
+                  value={product.rating || 0}
                   precision={0.5}
                   readOnly
                   size="small"
                 />
                 <Typography variant="body2" color="text.secondary">
-                  ({product.reviews || 0} reviews)
+                  ({product.reviews_count || 0} reviews)
                 </Typography>
               </Box>
 
@@ -388,7 +419,7 @@ const ProductDetail = () => {
               </Box>
 
               {/* Stock Status */}
-              <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+              <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
                 {outOfStock ? (
                   <Chip label="Out of Stock" color="error" size="small" />
                 ) : lowStock ? (
@@ -417,13 +448,15 @@ const ProductDetail = () => {
                 />
               </Box>
 
-              {/* Description */}
+              {/* Short Description */}
               <Typography
                 variant="body2"
                 color="text.secondary"
                 sx={{ mb: 3, lineHeight: 1.6 }}
               >
-                {product.description || "No description available."}
+                {product.short_description ||
+                  product.description?.substring(0, 150) ||
+                  "No description available."}
               </Typography>
 
               {/* Quantity Selector */}
@@ -568,7 +601,7 @@ const ProductDetail = () => {
           </Grid>
         </Grid>
 
-        {/* Tabs Section - Description, Specs, Reviews */}
+        {/* Tabs Section */}
         <Paper sx={{ mt: 4, borderRadius: 3 }}>
           <Tabs
             value={tabValue}
@@ -583,6 +616,7 @@ const ProductDetail = () => {
           >
             <Tab label="Description" />
             <Tab label="Specifications" />
+            <Tab label="Features" />
             <Tab label="Reviews" />
             <Tab label="Warranty" />
           </Tabs>
@@ -593,32 +627,13 @@ const ProductDetail = () => {
               <Typography variant="h6" gutterBottom>
                 Product Description
               </Typography>
-              <Typography color="text.secondary" sx={{ lineHeight: 1.8 }}>
+              <Typography
+                color="text.secondary"
+                sx={{ lineHeight: 1.8, whiteSpace: "pre-wrap" }}
+              >
                 {product.description ||
                   "No detailed description available for this product."}
               </Typography>
-
-              {product.features && (
-                <>
-                  <Typography variant="h6" sx={{ mt: 3 }} gutterBottom>
-                    Key Features
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {product.features.map((feature, i) => (
-                      <Grid item xs={12} sm={6} key={i}>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <CheckCircleIcon
-                            sx={{ color: colors.success, fontSize: 18 }}
-                          />
-                          <Typography variant="body2">{feature}</Typography>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </>
-              )}
             </Box>
           </TabPanel>
 
@@ -628,36 +643,62 @@ const ProductDetail = () => {
               <Typography variant="h6" gutterBottom>
                 Technical Specifications
               </Typography>
-              <Grid container spacing={2}>
-                {(
-                  product.specifications || {
-                    Brand: product.brand || "N/A",
-                    Model: product.model || "N/A",
-                    Condition: product.type === "new" ? "New" : "Pre-owned",
-                    Warranty: `${product.warranty_months || 12} months`,
-                    Stock:
-                      product.stock_quantity > 0 ? "In Stock" : "Out of Stock",
-                  }
-                ).map((spec, key) => (
-                  <Grid item xs={12} key={key}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        py: 1,
-                        borderBottom: `1px solid ${colors.lightGray}`,
-                      }}
-                    >
-                      <Typography
+              <Table>
+                <TableBody>
+                  {Object.entries(product.specifications || {}).map(
+                    ([key, value]) => (
+                      <TableRow
+                        key={key}
                         sx={{
-                          width: { xs: "40%", sm: "30%" },
-                          fontWeight: 500,
+                          "&:last-child td, &:last-child th": { border: 0 },
                         }}
                       >
-                        {spec.label}
-                      </Typography>
-                      <Typography color="text.secondary">
-                        {spec.value}
-                      </Typography>
+                        <TableCell
+                          component="th"
+                          scope="row"
+                          sx={{ fontWeight: 600, width: "30%" }}
+                        >
+                          {key}
+                        </TableCell>
+                        <TableCell>{value}</TableCell>
+                      </TableRow>
+                    ),
+                  )}
+                  {(!product.specifications ||
+                    Object.keys(product.specifications).length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={2} align="center">
+                        No specifications available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Box>
+          </TabPanel>
+
+          {/* Features Tab */}
+          <TabPanel value={tabValue} index={2}>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Key Features
+              </Typography>
+              <Grid container spacing={2}>
+                {(product.features && product.features.length > 0
+                  ? product.features
+                  : [
+                      "High-quality build",
+                      "Reliable performance",
+                      "Latest technology",
+                      "Energy efficient",
+                    ]
+                ).map((feature, i) => (
+                  <Grid item xs={12} sm={6} key={i}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CheckCircleIcon
+                        sx={{ color: colors.success, fontSize: 18 }}
+                      />
+                      <Typography variant="body2">{feature}</Typography>
                     </Box>
                   </Grid>
                 ))}
@@ -666,7 +707,7 @@ const ProductDetail = () => {
           </TabPanel>
 
           {/* Reviews Tab */}
-          <TabPanel value={tabValue} index={2}>
+          <TabPanel value={tabValue} index={3}>
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Customer Reviews
@@ -678,15 +719,11 @@ const ProductDetail = () => {
                   variant="h2"
                   sx={{ color: colors.primary, fontWeight: 700 }}
                 >
-                  {product.rating || 4.5}
+                  {product.rating || 0}
                 </Typography>
-                <Rating
-                  value={product.rating || 4.5}
-                  precision={0.5}
-                  readOnly
-                />
+                <Rating value={product.rating || 0} precision={0.5} readOnly />
                 <Typography variant="body2" color="text.secondary">
-                  Based on {product.reviews || 0} reviews
+                  Based on {product.reviews_count || 0} reviews
                 </Typography>
               </Box>
               <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
@@ -696,7 +733,7 @@ const ProductDetail = () => {
           </TabPanel>
 
           {/* Warranty Tab */}
-          <TabPanel value={tabValue} index={3}>
+          <TabPanel value={tabValue} index={4}>
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Warranty Information
@@ -725,16 +762,6 @@ const ProductDetail = () => {
             </Box>
           </TabPanel>
         </Paper>
-
-        {/* Related Products Section (Optional) */}
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" fontWeight="600" gutterBottom>
-            You Might Also Like
-          </Typography>
-          <Grid container spacing={2}>
-            {/* Add related products here */}
-          </Grid>
-        </Box>
       </Container>
     </Box>
   );
