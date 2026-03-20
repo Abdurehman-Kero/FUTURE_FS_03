@@ -20,6 +20,10 @@ import {
   useTheme,
   Paper,
   alpha,
+  Badge,
+  Tooltip,
+  useMediaQuery,
+  SwipeableDrawer,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -31,8 +35,10 @@ import {
   Logout as LogoutIcon,
   Person as PersonIcon,
   Settings as SettingsIcon,
-  ChevronLeft as ChevronLeftIcon,
+  ShoppingCart as CartIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
+import { useCart } from "../context/CartContext";
 
 const drawerWidth = 280;
 
@@ -40,9 +46,24 @@ const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const { user, logout } = useAuth();
+  const { cartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
+
+  // Color scheme matching homepage
+  const colors = {
+    primary: "#FF8500",
+    secondary: "#FFA33C",
+    gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
+    dark: "#1E1A3A",
+    light: "#F8F9FF",
+    white: "#FFFFFF",
+    gray: "#6B7280",
+    lightGray: "#E5E7EB",
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -59,7 +80,7 @@ const Layout = ({ children }) => {
   const handleLogout = () => {
     handleMenuClose();
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   // Menu items with correct admin paths
@@ -69,7 +90,7 @@ const Layout = ({ children }) => {
       icon: <DashboardIcon />,
       path: "/dashboard",
       roles: ["admin", "technician", "sales"],
-      color: "#667eea",
+      color: colors.primary,
     },
     {
       text: "Products",
@@ -112,62 +133,84 @@ const Layout = ({ children }) => {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "#ffffff",
+        bgcolor: colors.white,
       }}
     >
-      {/* User Profile Section */}
+      {/* User Profile Section - Mobile Optimized */}
       <Box
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           textAlign: "center",
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-          color: "white",
+          background: colors.gradient,
+          color: colors.white,
         }}
       >
         <Avatar
           sx={{
-            width: 100,
-            height: 100,
+            width: { xs: 60, sm: 70, md: 80 },
+            height: { xs: 60, sm: 70, md: 80 },
             mx: "auto",
-            mb: 2,
-            border: "4px solid white",
+            mb: { xs: 1.5, sm: 2 },
+            border: "3px solid white",
             boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
-            bgcolor: theme.palette.secondary.main,
-            fontSize: "2.5rem",
+            bgcolor: colors.secondary,
+            fontSize: { xs: "1.8rem", sm: "2rem", md: "2.5rem" },
             fontWeight: "bold",
           }}
         >
           {user?.name?.charAt(0).toUpperCase()}
         </Avatar>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 600,
+            mb: 0.5,
+            fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" },
+          }}
+        >
           {user?.name}
         </Typography>
         <Typography
           variant="body2"
-          sx={{ opacity: 0.9, textTransform: "capitalize" }}
+          sx={{
+            opacity: 0.9,
+            textTransform: "capitalize",
+            fontSize: { xs: "0.7rem", sm: "0.75rem", md: "0.875rem" },
+          }}
         >
           {user?.role}
         </Typography>
       </Box>
 
-      {/* Navigation Menu */}
-      <List sx={{ flex: 1, px: 2, py: 3 }}>
+      {/* Navigation Menu - Mobile Optimized */}
+      <List
+        sx={{
+          flex: 1,
+          px: { xs: 1, sm: 1.5, md: 2 },
+          py: { xs: 1.5, sm: 2, md: 3 },
+        }}
+      >
         {filteredMenuItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
+          <ListItem
+            key={item.text}
+            disablePadding
+            sx={{ mb: { xs: 0.5, sm: 0.8 } }}
+          >
             <ListItemButton
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                setMobileOpen(false);
+              }}
               selected={location.pathname === item.path}
               sx={{
                 borderRadius: 2,
-                py: 1.5,
+                py: { xs: 0.8, sm: 1, md: 1.2 },
+                px: { xs: 1.5, sm: 2 },
                 "&.Mui-selected": {
                   bgcolor: alpha(item.color, 0.1),
                   color: item.color,
                   "& .MuiListItemIcon-root": {
                     color: item.color,
-                  },
-                  "&:hover": {
-                    bgcolor: alpha(item.color, 0.15),
                   },
                 },
                 "&:hover": {
@@ -178,10 +221,8 @@ const Layout = ({ children }) => {
               <ListItemIcon
                 sx={{
                   color:
-                    location.pathname === item.path
-                      ? item.color
-                      : "text.secondary",
-                  minWidth: 40,
+                    location.pathname === item.path ? item.color : colors.gray,
+                  minWidth: { xs: 36, sm: 40 },
                 }}
               >
                 {item.icon}
@@ -190,6 +231,7 @@ const Layout = ({ children }) => {
                 primary={item.text}
                 primaryTypographyProps={{
                   fontWeight: location.pathname === item.path ? 600 : 400,
+                  fontSize: { xs: "0.875rem", sm: "0.9rem" },
                 }}
               />
             </ListItemButton>
@@ -199,25 +241,28 @@ const Layout = ({ children }) => {
 
       <Divider />
 
-      {/* Logout Button */}
-      <Box sx={{ p: 2 }}>
+      {/* Logout Button - Mobile Optimized */}
+      <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
         <ListItemButton
           onClick={handleLogout}
           sx={{
             borderRadius: 2,
-            color: theme.palette.error.main,
-            py: 1.5,
+            color: "#f44336",
+            py: { xs: 0.8, sm: 1, md: 1.2 },
             "&:hover": {
-              bgcolor: alpha(theme.palette.error.main, 0.1),
+              bgcolor: alpha("#f44336", 0.1),
             },
           }}
         >
-          <ListItemIcon sx={{ color: "inherit", minWidth: 40 }}>
+          <ListItemIcon sx={{ color: "inherit", minWidth: { xs: 36, sm: 40 } }}>
             <LogoutIcon />
           </ListItemIcon>
           <ListItemText
             primary="Logout"
-            primaryTypographyProps={{ fontWeight: 500 }}
+            primaryTypographyProps={{
+              fontWeight: 500,
+              fontSize: { xs: "0.875rem", sm: "0.9rem" },
+            }}
           />
         </ListItemButton>
       </Box>
@@ -225,25 +270,26 @@ const Layout = ({ children }) => {
   );
 
   return (
-    <Box sx={{ display: "flex" }}>
-      {/* App Bar */}
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: colors.light }}>
+      {/* App Bar - Mobile Optimized */}
       <AppBar
         position="fixed"
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: "background.paper",
-          color: "text.primary",
+          bgcolor: colors.white,
+          color: colors.dark,
           boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          borderBottom: `1px solid ${colors.lightGray}`,
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
           <IconButton
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
             sx={{ mr: 2, display: { sm: "none" } }}
+            size={isMobile ? "small" : "medium"}
           >
             <MenuIcon />
           </IconButton>
@@ -252,25 +298,64 @@ const Layout = ({ children }) => {
             variant="h6"
             noWrap
             component="div"
-            sx={{ flexGrow: 1, fontWeight: 500 }}
+            sx={{
+              flexGrow: 1,
+              fontWeight: 600,
+              fontSize: { xs: "0.95rem", sm: "1.1rem", md: "1.25rem" },
+              color: colors.dark,
+            }}
           >
             {menuItems.find((item) => item.path === location.pathname)?.text ||
               "Dashboard"}
           </Typography>
 
-          <IconButton onClick={handleMenuOpen} size="small">
+          {/* Cart Icon - Mobile Optimized */}
+          <Tooltip title="View Cart">
+            <IconButton
+              onClick={() => navigate("/cart")}
+              sx={{
+                mr: { xs: 0.5, sm: 1 },
+                color: colors.gray,
+                "&:hover": { color: colors.primary },
+              }}
+              size={isMobile ? "small" : "medium"}
+            >
+              <Badge
+                badgeContent={cartCount}
+                color="primary"
+                sx={{
+                  "& .MuiBadge-badge": {
+                    fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                    minWidth: { xs: 16, sm: 20 },
+                    height: { xs: 16, sm: 20 },
+                  },
+                }}
+              >
+                <CartIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
+          {/* User Avatar - Mobile Optimized */}
+          <IconButton
+            onClick={handleMenuOpen}
+            size="small"
+            sx={{ p: { xs: 0.5, sm: 0.8 } }}
+          >
             <Avatar
               sx={{
-                width: 40,
-                height: 40,
-                bgcolor: theme.palette.primary.main,
+                width: { xs: 28, sm: 32, md: 36 },
+                height: { xs: 28, sm: 32, md: 36 },
+                bgcolor: colors.primary,
                 cursor: "pointer",
+                fontSize: { xs: "0.9rem", sm: "1rem" },
               }}
             >
               {user?.name?.charAt(0).toUpperCase()}
             </Avatar>
           </IconButton>
 
+          {/* User Menu - Mobile Optimized */}
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
@@ -280,19 +365,19 @@ const Layout = ({ children }) => {
             PaperProps={{
               sx: {
                 mt: 1,
-                minWidth: 200,
+                minWidth: { xs: 160, sm: 200 },
                 borderRadius: 2,
                 boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
               },
             }}
           >
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={handleMenuClose} sx={{ py: { xs: 1, sm: 1.2 } }}>
               <ListItemIcon>
                 <PersonIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>My Profile</ListItemText>
+              <ListItemText>Profile</ListItemText>
             </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={handleMenuClose} sx={{ py: { xs: 1, sm: 1.2 } }}>
               <ListItemIcon>
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>
@@ -301,7 +386,7 @@ const Layout = ({ children }) => {
             <Divider />
             <MenuItem
               onClick={handleLogout}
-              sx={{ color: theme.palette.error.main }}
+              sx={{ color: "#f44336", py: { xs: 1, sm: 1.2 } }}
             >
               <ListItemIcon>
                 <LogoutIcon fontSize="small" color="error" />
@@ -317,10 +402,11 @@ const Layout = ({ children }) => {
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
       >
-        {/* Mobile Drawer */}
-        <Drawer
+        {/* Mobile Drawer - Swipeable for better mobile experience */}
+        <SwipeableDrawer
           variant="temporary"
           open={mobileOpen}
+          onOpen={() => setMobileOpen(true)}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           sx={{
@@ -333,8 +419,14 @@ const Layout = ({ children }) => {
             },
           }}
         >
+          {/* Close button for mobile */}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", p: 1 }}>
+            <IconButton onClick={handleDrawerToggle} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
           {drawer}
-        </Drawer>
+        </SwipeableDrawer>
 
         {/* Desktop Drawer */}
         <Drawer
@@ -344,7 +436,7 @@ const Layout = ({ children }) => {
             "& .MuiDrawer-paper": {
               width: drawerWidth,
               boxSizing: "border-box",
-              borderRight: `1px solid ${theme.palette.divider}`,
+              borderRight: `1px solid ${colors.lightGray}`,
               boxShadow: "none",
             },
           }}
@@ -354,24 +446,28 @@ const Layout = ({ children }) => {
         </Drawer>
       </Box>
 
-      {/* Main Content */}
+      {/* Main Content - Mobile Optimized */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 1.5, sm: 2, md: 3, lg: 4 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: "100vh",
-          bgcolor: "#f8f9fa",
+          bgcolor: colors.light,
         }}
       >
-        <Toolbar /> {/* Spacing for fixed AppBar */}
+        {/* Spacer for fixed AppBar */}
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }} />
+
+        {/* Content Paper */}
         <Paper
           sx={{
-            p: 3,
-            borderRadius: 3,
+            p: { xs: 1.5, sm: 2, md: 3, lg: 4 },
+            borderRadius: { xs: 2, sm: 2.5, md: 3 },
             boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
             minHeight: "calc(100vh - 120px)",
+            overflowX: "hidden",
           }}
         >
           {children}
