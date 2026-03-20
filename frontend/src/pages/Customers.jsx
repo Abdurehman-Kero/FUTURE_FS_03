@@ -65,7 +65,6 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// Color scheme matching homepage
 const colors = {
   primary: "#FF8500",
   secondary: "#FFA33C",
@@ -78,7 +77,6 @@ const colors = {
   success: "#10B981",
 };
 
-// Tab Panel Component
 const TabPanel = ({ children, value, index, ...other }) => (
   <div role="tabpanel" hidden={value !== index} {...other}>
     {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
@@ -89,7 +87,6 @@ const Customers = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +125,7 @@ const Customers = () => {
       setLoading(true);
       const response = await getCustomers();
       setCustomers(response.data.data);
-    } catch (error) {
+    } catch {
       showSnackbar("Failed to load customers", "error");
     } finally {
       setLoading(false);
@@ -140,34 +137,26 @@ const Customers = () => {
       setIsSearching(false);
       return;
     }
-
     try {
       setIsSearching(true);
       const response = await searchCustomers(searchTerm);
       setSearchResults(response.data.data);
-    } catch (error) {
+    } catch {
       showSnackbar("Search failed", "error");
     }
   };
 
   useEffect(() => {
-    const delaySearch = setTimeout(() => {
-      if (searchTerm) {
-        handleSearch();
-      } else {
-        setIsSearching(false);
-      }
-    }, 500);
-    return () => clearTimeout(delaySearch);
+    const timer = setTimeout(
+      () => (searchTerm ? handleSearch() : setIsSearching(false)),
+      500,
+    );
+    return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const showSnackbar = (message, severity = "success") => {
+  const showSnackbar = (message, severity = "success") =>
     setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
+  const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
   const handleOpenDialog = (customer = null) => {
     if (customer) {
@@ -180,37 +169,24 @@ const Customers = () => {
       });
     } else {
       setEditingCustomer(null);
-      setFormData({
-        name: "",
-        phone: "",
-        email: "",
-        address: "",
-      });
+      setFormData({ name: "", phone: "", email: "", address: "" });
     }
     setOpenDialog(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setEditingCustomer(null);
-  };
+  const handleCloseDialog = () => setOpenDialog(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.name || !formData.phone) {
       showSnackbar("Name and phone are required", "error");
       return;
     }
-
     try {
       if (editingCustomer) {
         await updateCustomer(editingCustomer.id, formData);
@@ -223,38 +199,30 @@ const Customers = () => {
       loadCustomers();
       setSearchTerm("");
       setIsSearching(false);
-    } catch (error) {
-      showSnackbar(
-        error.response?.data?.message || "Operation failed",
-        "error",
-      );
+    } catch {
+      showSnackbar("Operation failed", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this customer?")) {
-      return;
-    }
-
+    if (!window.confirm("Delete this customer?")) return;
     try {
       await deleteCustomer(id);
-      showSnackbar("Customer deleted successfully", "success");
+      showSnackbar("Customer deleted", "success");
       if (selectedCustomer?.id === id) {
         setSelectedCustomer(null);
         setOpenDetailsDrawer(false);
       }
       loadCustomers();
-    } catch (error) {
-      showSnackbar("Failed to delete customer", "error");
+    } catch {
+      showSnackbar("Delete failed", "error");
     }
   };
 
   const handleViewCustomer = (customer) => {
     setSelectedCustomer(customer);
     setTabValue(0);
-    if (isMobile) {
-      setOpenDetailsDrawer(true);
-    }
+    if (isMobile) setOpenDetailsDrawer(true);
   };
 
   const handleCloseDetails = () => {
@@ -262,29 +230,18 @@ const Customers = () => {
     setOpenDetailsDrawer(false);
   };
 
-  const handleWhatsApp = (phone) => {
-    const formattedPhone = phone.replace(/\D/g, "");
-    window.open(`https://wa.me/${formattedPhone}`, "_blank");
-  };
-
-  const handleCall = (phone) => {
-    window.location.href = `tel:${phone}`;
-  };
+  const handleWhatsApp = (phone) =>
+    window.open(`https://wa.me/${phone.replace(/\D/g, "")}`, "_blank");
+  const handleCall = (phone) => (window.location.href = `tel:${phone}`);
 
   const displayedCustomers = isSearching ? searchResults : customers;
   const paginatedCustomers = displayedCustomers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage,
   );
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const handleChangePage = (e, newPage) => setPage(newPage);
+  const handleChangeRowsPerPage = (e) =>
+    setRowsPerPage(parseInt(e.target.value, 10)) || setPage(0);
 
   if (loading) {
     return (
@@ -303,7 +260,7 @@ const Customers = () => {
 
   return (
     <Box sx={{ width: "100%", overflowX: "hidden" }}>
-      <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
         {/* Header */}
         <Box
           sx={{
@@ -311,15 +268,17 @@ const Customers = () => {
             flexDirection: { xs: "column", sm: "row" },
             justifyContent: "space-between",
             alignItems: { xs: "stretch", sm: "center" },
-            gap: { xs: 2, sm: 0 },
+            gap: 2,
             mb: 3,
           }}
         >
           <Typography
-            variant={isMobile ? "h5" : "h5"}
-            fontWeight="600"
-            color={colors.dark}
-            sx={{ textAlign: { xs: "center", sm: "left" } }}
+            sx={{
+              fontSize: { xs: "1.4rem", sm: "1.6rem" },
+              fontWeight: 600,
+              color: colors.dark,
+              textAlign: { xs: "center", sm: "left" },
+            }}
           >
             Customers
           </Typography>
@@ -332,9 +291,7 @@ const Customers = () => {
               sx={{
                 background: colors.gradient,
                 borderRadius: 2,
-                textTransform: "none",
-                px: 3,
-                py: { xs: 1.5, sm: 1 },
+                py: { xs: 1.2, sm: 1 },
                 "&:hover": { background: colors.secondary },
               }}
             >
@@ -345,553 +302,422 @@ const Customers = () => {
 
         {/* Stats Cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={4}>
-            <Card
-              sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-            >
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                  }}
+          {[
+            {
+              icon: <PersonIcon />,
+              label: "Total",
+              value: customers.length,
+              color: colors.primary,
+            },
+            {
+              icon: <SalesIcon />,
+              label: "Purchases",
+              value: customers.filter((c) => c.purchases?.length > 0).length,
+              color: "#4caf50",
+            },
+            {
+              icon: <RepairsIcon />,
+              label: "Repairs",
+              value: customers.filter((c) => c.repairs?.length > 0).length,
+              color: "#ff9800",
+            },
+          ].map((stat, i) => (
+            <Grid item xs={4} key={i}>
+              <Card
+                sx={{
+                  borderRadius: 2,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                }}
+              >
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
                 >
                   <Avatar
                     sx={{
-                      bgcolor: alpha(colors.primary, 0.1),
-                      color: colors.primary,
+                      bgcolor: alpha(stat.color, 0.1),
+                      color: stat.color,
                       width: { xs: 40, sm: 48 },
                       height: { xs: 40, sm: 48 },
+                      mx: "auto",
                       mb: 1,
                     }}
                   >
-                    <PersonIcon fontSize={isMobile ? "small" : "medium"} />
+                    {stat.icon}
                   </Avatar>
-                  <Box>
-                    <Typography
-                      color="text.secondary"
-                      variant="caption"
-                      display="block"
-                    >
-                      Total
-                    </Typography>
-                    <Typography
-                      variant={isMobile ? "subtitle1" : "h6"}
-                      fontWeight="600"
-                    >
-                      {customers.length}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={4}>
-            <Card
-              sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-            >
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                  }}
-                >
-                  <Avatar
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                  >
+                    {stat.label}
+                  </Typography>
+                  <Typography
                     sx={{
-                      bgcolor: alpha("#4caf50", 0.1),
-                      color: "#4caf50",
-                      width: { xs: 40, sm: 48 },
-                      height: { xs: 40, sm: 48 },
-                      mb: 1,
+                      fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                      fontWeight: 600,
                     }}
                   >
-                    <SalesIcon fontSize={isMobile ? "small" : "medium"} />
-                  </Avatar>
-                  <Box>
-                    <Typography
-                      color="text.secondary"
-                      variant="caption"
-                      display="block"
-                    >
-                      Purchases
-                    </Typography>
-                    <Typography
-                      variant={isMobile ? "subtitle1" : "h6"}
-                      fontWeight="600"
-                    >
-                      {customers.filter((c) => c.purchases?.length > 0).length}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={4}>
-            <Card
-              sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-            >
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                  }}
-                >
-                  <Avatar
-                    sx={{
-                      bgcolor: alpha("#ff9800", 0.1),
-                      color: "#ff9800",
-                      width: { xs: 40, sm: 48 },
-                      height: { xs: 40, sm: 48 },
-                      mb: 1,
-                    }}
-                  >
-                    <RepairsIcon fontSize={isMobile ? "small" : "medium"} />
-                  </Avatar>
-                  <Box>
-                    <Typography
-                      color="text.secondary"
-                      variant="caption"
-                      display="block"
-                    >
-                      Repairs
-                    </Typography>
-                    <Typography
-                      variant={isMobile ? "subtitle1" : "h6"}
-                      fontWeight="600"
-                    >
-                      {customers.filter((c) => c.repairs?.length > 0).length}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+                    {stat.value}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
         </Grid>
 
-        {/* Search Bar */}
+        {/* Search */}
         <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }}>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
             <TextField
               fullWidth
-              variant="outlined"
+              size="small"
               placeholder={
-                isMobile ? "Search customers..." : "Search by name or phone..."
+                isMobile ? "Search..." : "Search by name or phone..."
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon
-                      sx={{ color: colors.primary }}
-                      fontSize={isMobile ? "small" : "medium"}
-                    />
+                    <SearchIcon sx={{ color: colors.primary }} />
                   </InputAdornment>
                 ),
                 endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm("")}>
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
+                  <IconButton size="small" onClick={() => setSearchTerm("")}>
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
                 ),
               }}
               sx={{ bgcolor: "#f8f9fa", borderRadius: 1 }}
             />
             <Tooltip title="Refresh">
-              <IconButton onClick={loadCustomers} sx={{ bgcolor: "#f8f9fa" }}>
-                <RefreshIcon fontSize={isMobile ? "small" : "medium"} />
+              <IconButton onClick={loadCustomers}>
+                <RefreshIcon />
               </IconButton>
             </Tooltip>
           </Box>
           {isSearching && (
-            <Box sx={{ mt: 1 }}>
-              <Chip
-                label={`${searchResults.length} results`}
-                size="small"
-                onDelete={() => {
-                  setSearchTerm("");
-                  setIsSearching(false);
-                }}
-                sx={{
-                  bgcolor: alpha(colors.primary, 0.1),
-                  color: colors.primary,
-                }}
-              />
-            </Box>
+            <Chip
+              label={`${searchResults.length} results`}
+              size="small"
+              onDelete={() => {
+                setSearchTerm("");
+                setIsSearching(false);
+              }}
+              sx={{
+                mt: 1,
+                bgcolor: alpha(colors.primary, 0.1),
+                color: colors.primary,
+              }}
+            />
           )}
         </Paper>
 
-        {/* Main Content */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={selectedCustomer && !isMobile ? 5 : 12}>
-            {isMobile ? (
-              // Mobile Card View
-              <Box>
-                {paginatedCustomers.map((customer) => (
-                  <Card
-                    key={customer.id}
+        {/* Customers List */}
+        {isMobile ? (
+          <Box>
+            {paginatedCustomers.map((c) => (
+              <Card
+                key={c.id}
+                sx={{
+                  mb: 2,
+                  borderRadius: 2,
+                  cursor: "pointer",
+                  border:
+                    selectedCustomer?.id === c.id
+                      ? `2px solid ${colors.primary}`
+                      : "none",
+                }}
+                onClick={() => handleViewCustomer(c)}
+              >
+                <CardContent sx={{ p: 2 }}>
+                  <Box
                     sx={{
-                      mb: 2,
-                      borderRadius: 2,
-                      cursor: "pointer",
-                      border:
-                        selectedCustomer?.id === customer.id
-                          ? `2px solid ${colors.primary}`
-                          : "none",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
                     }}
-                    onClick={() => handleViewCustomer(customer)}
                   >
-                    <CardContent sx={{ p: 2 }}>
-                      <Box
+                    <Box sx={{ display: "flex", gap: 2, flex: 1, minWidth: 0 }}>
+                      <Avatar
                         sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
+                          bgcolor: colors.primary,
+                          width: 50,
+                          height: 50,
+                          flexShrink: 0,
                         }}
                       >
-                        <Box
-                          sx={{ display: "flex", gap: 2, flex: 1, minWidth: 0 }}
+                        {c.name?.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="subtitle1" fontWeight="600" noWrap>
+                          {c.name}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          noWrap
                         >
-                          <Avatar
-                            sx={{
-                              bgcolor: colors.primary,
-                              width: 50,
-                              height: 50,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {customer.name?.charAt(0)}
-                          </Avatar>
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography
-                              variant="subtitle1"
-                              fontWeight="600"
-                              noWrap
-                            >
-                              {customer.name}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              noWrap
-                            >
-                              {customer.phone}
-                            </Typography>
-                            {customer.email && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                noWrap
-                              >
-                                {customer.email}
-                              </Typography>
-                            )}
-                            {customer.repairs?.length > 0 && (
-                              <Chip
-                                size="small"
-                                icon={<RepairsIcon />}
-                                label={`${customer.repairs.length} repairs`}
-                                sx={{
-                                  mt: 1,
-                                  bgcolor: alpha(colors.primary, 0.1),
-                                  color: colors.primary,
-                                  height: 20,
-                                  fontSize: "0.65rem",
-                                }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                        <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWhatsApp(customer.phone);
-                            }}
-                            sx={{ color: "#25D366" }}
-                          >
-                            <WhatsAppIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCall(customer.phone);
-                            }}
-                            sx={{ color: colors.primary }}
-                          >
-                            <PhoneIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </Box>
-
-                      {/* Address */}
-                      {customer.address && (
-                        <Box
-                          sx={{
-                            mt: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <LocationIcon
-                            sx={{
-                              fontSize: 16,
-                              color: colors.gray,
-                              flexShrink: 0,
-                            }}
-                          />
+                          {c.phone}
+                        </Typography>
+                        {c.email && (
                           <Typography
                             variant="caption"
                             color="text.secondary"
                             noWrap
                           >
-                            {customer.address}
+                            {c.email}
                           </Typography>
-                        </Box>
-                      )}
-
-                      {/* Action Buttons */}
-                      {(user?.role === "admin" || user?.role === "sales") && (
-                        <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                          <Button
+                        )}
+                        {c.repairs?.length > 0 && (
+                          <Chip
                             size="small"
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDialog(customer);
-                            }}
+                            icon={<RepairsIcon />}
+                            label={`${c.repairs.length} repairs`}
                             sx={{
-                              borderColor: colors.primary,
+                              mt: 1,
+                              bgcolor: alpha(colors.primary, 0.1),
                               color: colors.primary,
-                              flex: 1,
-                              fontSize: "0.7rem",
-                              py: 0.5,
+                              height: 20,
                             }}
-                          >
-                            Edit
-                          </Button>
-                          {user?.role === "admin" && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="error"
-                              startIcon={<DeleteIcon />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(customer.id);
-                              }}
-                              sx={{ flex: 1, fontSize: "0.7rem", py: 0.5 }}
-                            >
-                              Delete
-                            </Button>
-                          )}
-                        </Box>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-                {paginatedCustomers.length === 0 && (
-                  <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2 }}>
-                    <Typography color="text.secondary">
-                      No customers found
-                    </Typography>
-                  </Paper>
-                )}
-              </Box>
-            ) : (
-              // Desktop Table View
-              <TableContainer
-                component={Paper}
-                sx={{ borderRadius: 2, overflowX: "auto" }}
-              >
-                <Table sx={{ minWidth: 500 }}>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: colors.light }}>
-                      <TableCell>Customer</TableCell>
-                      <TableCell>Contact</TableCell>
-                      <TableCell>Address</TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedCustomers.map((customer) => (
-                      <TableRow
-                        key={customer.id}
-                        hover
-                        onClick={() => handleViewCustomer(customer)}
+                          />
+                        )}
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleWhatsApp(c.phone);
+                        }}
+                        sx={{ color: "#25D366" }}
+                      >
+                        <WhatsAppIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCall(c.phone);
+                        }}
+                        sx={{ color: colors.primary }}
+                      >
+                        <PhoneIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                  {c.address && (
+                    <Box
+                      sx={{
+                        mt: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <LocationIcon sx={{ fontSize: 16, color: colors.gray }} />
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                      >
+                        {c.address}
+                      </Typography>
+                    </Box>
+                  )}
+                  {(user?.role === "admin" || user?.role === "sales") && (
+                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<EditIcon />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDialog(c);
+                        }}
                         sx={{
-                          cursor: "pointer",
-                          bgcolor:
-                            selectedCustomer?.id === customer.id
-                              ? alpha(colors.primary, 0.05)
-                              : "inherit",
+                          borderColor: colors.primary,
+                          color: colors.primary,
+                          flex: 1,
                         }}
                       >
-                        <TableCell>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <Avatar
-                              sx={{
-                                mr: 2,
-                                bgcolor: colors.primary,
-                                width: 32,
-                                height: 32,
-                              }}
-                            >
-                              {customer.name?.charAt(0)}
-                            </Avatar>
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                fontWeight="500"
-                                noWrap
-                                sx={{ maxWidth: 150 }}
-                              >
-                                {customer.name}
-                              </Typography>
-                              {customer.repairs?.length > 0 && (
-                                <Chip
-                                  size="small"
-                                  icon={<RepairsIcon />}
-                                  label={`${customer.repairs.length} repairs`}
-                                  sx={{
-                                    bgcolor: alpha(colors.primary, 0.1),
-                                    color: colors.primary,
-                                    height: 20,
-                                    fontSize: "0.65rem",
-                                  }}
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {customer.phone}
-                          </Typography>
-                          {customer.email && (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              noWrap
-                              sx={{ maxWidth: 150 }}
-                            >
-                              {customer.email}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            noWrap
-                            sx={{ maxWidth: 200 }}
-                          >
-                            {customer.address || "—"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell
-                          align="center"
-                          onClick={(e) => e.stopPropagation()}
+                        Edit
+                      </Button>
+                      {user?.role === "admin" && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(c.id);
+                          }}
+                          sx={{ flex: 1 }}
                         >
-                          <Tooltip title="WhatsApp">
+                          Delete
+                        </Button>
+                      )}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+            {paginatedCustomers.length === 0 && (
+              <Paper sx={{ p: 4, textAlign: "center" }}>
+                <Typography color="text.secondary">
+                  No customers found
+                </Typography>
+              </Paper>
+            )}
+          </Box>
+        ) : (
+          <TableContainer
+            component={Paper}
+            sx={{ borderRadius: 2, overflowX: "auto" }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: colors.light }}>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>Contact</TableCell>
+                  <TableCell>Address</TableCell>
+                  <TableCell align="center">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedCustomers.map((c) => (
+                  <TableRow
+                    key={c.id}
+                    hover
+                    onClick={() => handleViewCustomer(c)}
+                    sx={{
+                      cursor: "pointer",
+                      bgcolor:
+                        selectedCustomer?.id === c.id
+                          ? alpha(colors.primary, 0.05)
+                          : "inherit",
+                    }}
+                  >
+                    <TableCell>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Avatar
+                          sx={{
+                            mr: 2,
+                            bgcolor: colors.primary,
+                            width: 40,
+                            height: 40,
+                          }}
+                        >
+                          {c.name?.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight="600">
+                            {c.name}
+                          </Typography>
+                          {c.repairs?.length > 0 && (
+                            <Chip
+                              size="small"
+                              icon={<RepairsIcon />}
+                              label={`${c.repairs.length} repairs`}
+                              sx={{
+                                bgcolor: alpha(colors.primary, 0.1),
+                                color: colors.primary,
+                                height: 20,
+                                mt: 0.5,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{c.phone}</Typography>
+                      {c.email && (
+                        <Typography variant="caption" color="text.secondary">
+                          {c.email}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                        {c.address || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Tooltip title="WhatsApp">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleWhatsApp(c.phone)}
+                          sx={{ color: "#25D366" }}
+                        >
+                          <WhatsAppIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Call">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCall(c.phone)}
+                          sx={{ color: colors.primary }}
+                        >
+                          <PhoneIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {(user?.role === "admin" || user?.role === "sales") && (
+                        <>
+                          <Tooltip title="Edit">
                             <IconButton
                               size="small"
-                              onClick={() => handleWhatsApp(customer.phone)}
-                              sx={{ color: "#25D366" }}
-                            >
-                              <WhatsAppIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Call">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleCall(customer.phone)}
+                              onClick={() => handleOpenDialog(c)}
                               sx={{ color: colors.primary }}
                             >
-                              <PhoneIcon fontSize="small" />
+                              <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          {(user?.role === "admin" ||
-                            user?.role === "sales") && (
-                            <>
-                              <Tooltip title="Edit">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleOpenDialog(customer)}
-                                  sx={{ color: colors.primary }}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              {user?.role === "admin" && (
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleDelete(customer.id)}
-                                    color="error"
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </>
+                          {user?.role === "admin" && (
+                            <Tooltip title="Delete">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDelete(c.id)}
+                                color="error"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {paginatedCustomers.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                          <Typography color="text.secondary">
-                            No customers found
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-                <TablePagination
-                  rowsPerPageOptions={[5, 10, 25]}
-                  component="div"
-                  count={displayedCustomers.length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-              </TableContainer>
-            )}
-          </Grid>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {paginatedCustomers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                      <Typography color="text.secondary">
+                        No customers found
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={displayedCustomers.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </TableContainer>
+        )}
 
-          {/* Customer Details Panel - Desktop */}
-          {selectedCustomer && !isMobile && (
-            <Grid item xs={12} md={7}>
-              <CustomerDetails
-                customer={selectedCustomer}
-                tabValue={tabValue}
-                onTabChange={setTabValue}
-                onClose={handleCloseDetails}
-                colors={colors}
-                alpha={alpha}
-              />
-            </Grid>
-          )}
-        </Grid>
-
-        {/* Customer Details Drawer - Mobile */}
+        {/* Customer Details Drawer */}
         <Drawer
           anchor="bottom"
           open={openDetailsDrawer}
@@ -925,7 +751,6 @@ const Customers = () => {
                 customer={selectedCustomer}
                 tabValue={tabValue}
                 onTabChange={setTabValue}
-                onClose={handleCloseDetails}
                 colors={colors}
                 alpha={alpha}
                 isMobile={isMobile}
@@ -934,7 +759,7 @@ const Customers = () => {
           )}
         </Drawer>
 
-        {/* Add/Edit Customer Dialog */}
+        {/* Dialog */}
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
@@ -948,7 +773,6 @@ const Customers = () => {
               color: "white",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
             }}
           >
             {editingCustomer ? "Edit Customer" : "Add New Customer"}
@@ -963,9 +787,9 @@ const Customers = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField
+                    fullWidth
                     name="name"
                     label="Full Name *"
-                    fullWidth
                     value={formData.name}
                     onChange={handleInputChange}
                     required
@@ -981,9 +805,9 @@ const Customers = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
+                    fullWidth
                     name="phone"
                     label="Phone Number *"
-                    fullWidth
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
@@ -999,10 +823,10 @@ const Customers = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
+                    fullWidth
                     name="email"
                     label="Email Address"
                     type="email"
-                    fullWidth
                     value={formData.email}
                     onChange={handleInputChange}
                     size={isMobile ? "small" : "medium"}
@@ -1017,11 +841,11 @@ const Customers = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
+                    fullWidth
                     name="address"
-                    label="Physical Address"
+                    label="Address"
                     multiline
                     rows={2}
-                    fullWidth
                     value={formData.address}
                     onChange={handleInputChange}
                     size={isMobile ? "small" : "medium"}
@@ -1056,21 +880,16 @@ const Customers = () => {
           </form>
         </Dialog>
 
-        {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
           anchorOrigin={{
             vertical: isMobile ? "top" : "bottom",
-            horizontal: isMobile ? "center" : "right",
+            horizontal: "center",
           }}
         >
-          <Alert
-            onClose={handleCloseSnackbar}
-            severity={snackbar.severity}
-            sx={{ borderRadius: 1, width: "100%" }}
-          >
+          <Alert severity={snackbar.severity} sx={{ borderRadius: 1 }}>
             {snackbar.message}
           </Alert>
         </Snackbar>
@@ -1079,36 +898,15 @@ const Customers = () => {
   );
 };
 
-// Customer Details Component
 const CustomerDetails = ({
   customer,
   tabValue,
   onTabChange,
-  onClose,
   colors,
   alpha,
   isMobile,
 }) => (
   <Paper sx={{ p: isMobile ? 2 : 3, borderRadius: 2 }}>
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        mb: 2,
-      }}
-    >
-      <Typography variant="h6" fontWeight="600">
-        Customer Details
-      </Typography>
-      {!isMobile && (
-        <IconButton onClick={onClose} size="small">
-          <ClearIcon />
-        </IconButton>
-      )}
-    </Box>
-
-    {/* Customer Info */}
     <Box
       sx={{
         display: "flex",
@@ -1145,36 +943,21 @@ const CustomerDetails = ({
         </Box>
       </Box>
     </Box>
-
     <Divider />
-
-    {/* Tabs */}
     <Tabs
       value={tabValue}
       onChange={(e, v) => onTabChange(v)}
       sx={{ mt: 2 }}
       variant={isMobile ? "fullWidth" : "standard"}
     >
-      <Tab
-        label="Repairs"
-        icon={<RepairsIcon />}
-        iconPosition="start"
-        sx={{ minHeight: 48 }}
-      />
-      <Tab
-        label="Purchases"
-        icon={<SalesIcon />}
-        iconPosition="start"
-        sx={{ minHeight: 48 }}
-      />
+      <Tab label="Repairs" icon={<RepairsIcon />} iconPosition="start" />
+      <Tab label="Purchases" icon={<SalesIcon />} iconPosition="start" />
     </Tabs>
-
-    {/* Repair History */}
     <TabPanel value={tabValue} index={0}>
       {customer.repairs?.length > 0 ? (
         <List sx={{ maxHeight: 400, overflow: "auto" }}>
-          {customer.repairs.map((repair) => (
-            <ListItem key={repair.id} divider>
+          {customer.repairs.map((r) => (
+            <ListItem key={r.id} divider>
               <ListItemIcon>
                 <RepairsIcon sx={{ color: colors.primary }} />
               </ListItemIcon>
@@ -1189,20 +972,18 @@ const CustomerDetails = ({
                     }}
                   >
                     <Typography variant="body2" fontWeight="600">
-                      {repair.device_brand} {repair.device_model}
+                      {r.device_brand} {r.device_model}
                     </Typography>
                     <Chip
-                      label={repair.status}
+                      label={r.status}
                       size="small"
                       sx={{
                         bgcolor:
-                          repair.status === "completed"
+                          r.status === "completed"
                             ? alpha("#4caf50", 0.1)
                             : alpha(colors.primary, 0.1),
                         color:
-                          repair.status === "completed"
-                            ? "#4caf50"
-                            : colors.primary,
+                          r.status === "completed" ? "#4caf50" : colors.primary,
                         height: 20,
                       }}
                     />
@@ -1210,16 +991,12 @@ const CustomerDetails = ({
                 }
                 secondary={
                   <>
-                    <Typography
-                      variant="caption"
-                      display="block"
-                      color="text.secondary"
-                    >
-                      {repair.issue_description}
+                    <Typography variant="caption" display="block">
+                      {r.issue_description}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(repair.created_at).toLocaleDateString()}
-                      {repair.final_cost && ` • ETB ${repair.final_cost}`}
+                      {new Date(r.created_at).toLocaleDateString()}
+                      {r.final_cost && ` • ETB ${r.final_cost}`}
                     </Typography>
                   </>
                 }
@@ -1233,40 +1010,31 @@ const CustomerDetails = ({
         </Box>
       )}
     </TabPanel>
-
-    {/* Purchase History */}
     <TabPanel value={tabValue} index={1}>
       {customer.purchases?.length > 0 ? (
         <List sx={{ maxHeight: 400, overflow: "auto" }}>
-          {customer.purchases.map((sale) => (
-            <ListItem key={sale.id} divider>
+          {customer.purchases.map((s) => (
+            <ListItem key={s.id} divider>
               <ListItemIcon>
                 <SalesIcon sx={{ color: "#4caf50" }} />
               </ListItemIcon>
               <ListItemText
                 primary={
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      flexWrap: "wrap",
-                    }}
-                  >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography variant="body2" fontWeight="600">
-                      {sale.product_name}
+                      {s.product_name}
                     </Typography>
-                    <Chip label={`x${sale.quantity}`} size="small" />
+                    <Chip label={`x${s.quantity}`} size="small" />
                   </Box>
                 }
                 secondary={
                   <>
                     <Typography variant="body2">
-                      ETB {sale.total_amount?.toLocaleString()}
+                      ETB {s.total_amount?.toLocaleString()}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(sale.created_at).toLocaleDateString()}
-                      {sale.payment_method && ` • ${sale.payment_method}`}
+                      {new Date(s.created_at).toLocaleDateString()}
+                      {s.payment_method && ` • ${s.payment_method}`}
                     </Typography>
                   </>
                 }
