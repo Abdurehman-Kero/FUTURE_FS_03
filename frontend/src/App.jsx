@@ -15,6 +15,8 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import PublicProducts from "./pages/PublicProducts";
 import PublicRepairRequest from "./pages/PublicRepairRequest";
+// Add import
+import ProductDetail from "./pages/ProductDetail";
 
 // Protected Pages
 import Dashboard from "./pages/Dashboard";
@@ -62,6 +64,8 @@ function AppRoutes() {
 
       <Route path="/checkout/:slug" element={<Checkout />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
+// Add to your public routes
+<Route path="/product/:slug" element={<ProductDetail />} />
       {/* Protected Routes - Note: These are still defined but won't render if not authenticated */}
       <Route
         path="/dashboard"
