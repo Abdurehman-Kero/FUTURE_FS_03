@@ -11,41 +11,22 @@ import {
   Avatar,
   Stack,
   Paper,
-  Divider,
   alpha,
   LinearProgress,
   Chip,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  AppBar,
-  Toolbar,
   Container,
-  Fab,
-  useMediaQuery,
-  useTheme,
   Fade,
   Grow,
 } from "@mui/material";
 import {
   Inventory as ProductsIcon,
   People as CustomersIcon,
-  Build as BuildIcon,
+  Build as RepairIcon,
   PointOfSale as SalesIcon,
   TrendingUp as TrendingUpIcon,
-  Person as PersonIcon,
   Add as AddIcon,
   Warning as WarningIcon,
-  Schedule as ScheduleIcon,
-  Logout as LogoutIcon,
-  Menu as MenuIcon,
-  Dashboard as DashboardIcon,
   ArrowForwardIos as ArrowIcon,
-  NotificationsNone as NotifIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
@@ -64,275 +45,138 @@ const colors = {
   bg: "#F8FAFC",
 };
 
-const actions = [
+// Stats data
+const getStats = (counts = {}) => [
   {
     title: "Products",
     icon: <ProductsIcon />,
     path: "/admin/products",
     color: colors.info,
-    count: "156",
-    roles: ["admin", "technician", "sales"],
+    count: counts.products || "0",
   },
   {
     title: "Customers",
     icon: <CustomersIcon />,
     path: "/admin/customers",
     color: colors.warning,
-    count: "89",
-    roles: ["admin", "technician", "sales"],
+    count: counts.customers || "0",
   },
   {
     title: "Repairs",
-    icon: <BuildIcon />,
+    icon: <RepairIcon />,
     path: "/admin/repairs",
     color: colors.error,
-    count: "12",
-    roles: ["admin", "technician"],
+    count: counts.repairs || "0",
   },
   {
     title: "Sales",
     icon: <SalesIcon />,
     path: "/admin/sales",
     color: colors.success,
-    count: "15.2k",
-    roles: ["admin", "sales"],
+    count: counts.sales || "0",
   },
-];
-
-const recentActivities = [
-  {
-    type: "repair",
-    title: "iPhone 13 Repair",
-    customer: "Abebe K.",
-    status: "In Progress",
-    time: "10m",
-    icon: <BuildIcon />,
-    color: colors.warning,
-  },
-  {
-    type: "sale",
-    title: "Samsung S22",
-    customer: "Almaz T.",
-    amount: "ETB 45,000",
-    time: "25m",
-    icon: <SalesIcon />,
-    color: colors.success,
-  },
-  {
-    type: "repair",
-    title: "MacBook Pro",
-    customer: "Tigist H.",
-    status: "Completed",
-    time: "1h",
-    icon: <BuildIcon />,
-    color: colors.success,
-  },
-];
-
-const lowStockItems = [
-  { name: "iPhone 13 Screen", stock: 3, threshold: 5, percentage: 60 },
-  { name: "Samsung Charger", stock: 2, threshold: 10, percentage: 20 },
-  { name: "Power Bank", stock: 1, threshold: 8, percentage: 12.5 },
 ];
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState({
+    products: 156,
+    customers: 89,
+    repairs: 12,
+    sales: 15200,
+  });
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
+    const loadData = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleNavigation = (path) => {
+    navigate(path);
   };
 
-  const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-    { text: "Products", icon: <ProductsIcon />, path: "/admin/products" },
-    { text: "Customers", icon: <CustomersIcon />, path: "/admin/customers" },
-    { text: "Repairs", icon: <BuildIcon />, path: "/admin/repairs" },
-    { text: "Sales", icon: <SalesIcon />, path: "/admin/sales" },
+  // Recent activities
+  const recentActivities = [
+    {
+      type: "repair",
+      title: "iPhone 13 Screen Repair",
+      customer: "Abebe Kebede",
+      status: "In Progress",
+      time: "10 minutes ago",
+      icon: <RepairIcon />,
+      color: colors.warning,
+      amount: "ETB 3,500",
+    },
+    {
+      type: "sale",
+      title: "Samsung Galaxy S22",
+      customer: "Almaz Tadese",
+      amount: "ETB 45,000",
+      time: "25 minutes ago",
+      icon: <SalesIcon />,
+      color: colors.success,
+    },
+    {
+      type: "repair",
+      title: "MacBook Pro Screen",
+      customer: "Tigist Haile",
+      status: "Completed",
+      time: "1 hour ago",
+      icon: <RepairIcon />,
+      color: colors.success,
+      amount: "ETB 6,500",
+    },
+    {
+      type: "sale",
+      title: "iPhone Charger",
+      customer: "Bekele Alemu",
+      amount: "ETB 2,500",
+      time: "2 hours ago",
+      icon: <SalesIcon />,
+      color: colors.info,
+    },
   ];
 
-  const sidebar = (
-    <Box
-      sx={{
-        width: 280,
-        height: "100%",
-        bgcolor: colors.white,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box
-        sx={{ p: 4, textAlign: "center", bgcolor: alpha(colors.primary, 0.03) }}
-      >
-        <Avatar
-          sx={{
-            width: 80,
-            height: 80,
-            mx: "auto",
-            mb: 2,
-            background: colors.gradient,
-            boxShadow: "0 10px 20px rgba(255,133,0,0.2)",
-          }}
-        >
-          {user?.name?.charAt(0)}
-        </Avatar>
-        <Typography variant="h6" fontWeight="900" color={colors.dark}>
-          {user?.name}
-        </Typography>
-        <Chip
-          label={user?.role}
-          size="small"
-          sx={{
-            mt: 1,
-            fontWeight: 700,
-            bgcolor: alpha(colors.primary, 0.1),
-            color: colors.primary,
-          }}
-        />
-      </Box>
-      <List sx={{ px: 2, flexGrow: 1 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-            <ListItemButton
-              onClick={() => {
-                navigate(item.path);
-                setMobileMenuOpen(false);
-              }}
-              sx={{
-                borderRadius: 3,
-                "&:hover": {
-                  bgcolor: alpha(colors.primary, 0.05),
-                  color: colors.primary,
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: colors.primary, minWidth: 45 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
-                primaryTypographyProps={{ fontWeight: 600 }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <Box sx={{ p: 2 }}>
-        <Button
-          fullWidth
-          startIcon={<LogoutIcon />}
-          onClick={handleLogout}
-          sx={{
-            borderRadius: 3,
-            color: colors.error,
-            bgcolor: alpha(colors.error, 0.05),
-            fontWeight: 700,
-          }}
-        >
-          Logout
-        </Button>
-      </Box>
-    </Box>
-  );
+  // Low stock items
+  const lowStockItems = [
+    { name: "iPhone 13 Screen", stock: 3, threshold: 5, percentage: 60 },
+    { name: "Samsung Fast Charger", stock: 2, threshold: 10, percentage: 20 },
+    { name: "Power Bank 20000mAh", stock: 1, threshold: 8, percentage: 12.5 },
+    { name: "USB-C Cable", stock: 4, threshold: 15, percentage: 26.7 },
+  ];
 
-  if (loading)
+  if (loading) {
     return (
       <Box
         sx={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "100vh",
-          bgcolor: colors.bg,
+          height: "100%",
+          minHeight: "60vh",
         }}
       >
         <CircularProgress sx={{ color: colors.primary }} />
       </Box>
     );
+  }
 
   return (
-    <Box
-      sx={{
-        bgcolor: colors.bg,
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Header */}
-      <AppBar
-        position="sticky"
-        elevation={0}
-        sx={{
-          bgcolor: "rgba(255,255,255,0.8)",
-          backdropFilter: "blur(10px)",
-          borderBottom: `1px solid ${colors.lightGray}`,
-        }}
-      >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <IconButton
-              edge="start"
-              onClick={() => setMobileMenuOpen(true)}
-              sx={{ mr: 2, color: colors.dark }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography
-              variant="h6"
-              fontWeight="900"
-              sx={{ color: colors.dark, display: { xs: "none", sm: "block" } }}
-            >
-              Admin<span style={{ color: colors.primary }}>Hub</span>
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <IconButton sx={{ bgcolor: colors.lightGray }}>
-              <NotifIcon />
-            </IconButton>
-            <Avatar
-              sx={{
-                width: 35,
-                height: 35,
-                bgcolor: colors.primary,
-                cursor: "pointer",
-              }}
-            >
-              {user?.name?.charAt(0)}
-            </Avatar>
-          </Stack>
-        </Toolbar>
-      </AppBar>
-
-      <Drawer
-        anchor="left"
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        PaperProps={{
-          sx: { border: "none", boxShadow: "20px 0 50px rgba(0,0,0,0.05)" },
-        }}
-      >
-        {sidebar}
-      </Drawer>
-
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Fade in timeout={800}>
+    <Box sx={{ bgcolor: colors.bg, minHeight: "100%" }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+        {/* Welcome Banner */}
+        <Fade in timeout={600}>
           <Paper
             elevation={0}
             sx={{
-              p: 4,
-              mb: 4,
-              borderRadius: 6,
+              p: { xs: 3, sm: 4 },
+              mb: { xs: 3, sm: 4 },
+              borderRadius: { xs: 3, sm: 4, md: 5 },
               background: colors.gradient,
               color: colors.white,
               position: "relative",
@@ -340,56 +184,93 @@ const Dashboard = () => {
             }}
           >
             <Box sx={{ position: "relative", zIndex: 2 }}>
-              <Typography variant="h4" fontWeight="900">
-                Welcome back, {user?.name?.split(" ")[0]}! 👋
+              <Typography
+                variant="h4"
+                fontWeight="900"
+                sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" } }}
+              >
+                Welcome back, {user?.name?.split(" ")[0] || "User"}! 👋
               </Typography>
-              <Typography sx={{ opacity: 0.8, mt: 1 }}>
+              <Typography
+                sx={{
+                  opacity: 0.9,
+                  mt: 1,
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                }}
+              >
                 Here's what's happening with your business today.
               </Typography>
             </Box>
             <Box
               sx={{ position: "absolute", right: -20, top: -20, opacity: 0.1 }}
             >
-              <TrendingUpIcon sx={{ fontSize: 200 }} />
+              <TrendingUpIcon sx={{ fontSize: { xs: 150, sm: 200 } }} />
             </Box>
           </Paper>
         </Fade>
 
         {/* Stats Grid */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {actions.map((stat, i) => (
-            <Grid item xs={6} md={3} key={i}>
-              <Grow in timeout={1000 + i * 200}>
+        <Grid
+          container
+          spacing={{ xs: 2, sm: 3 }}
+          sx={{ mb: { xs: 3, sm: 4 } }}
+        >
+          {getStats(stats).map((stat, i) => (
+            <Grid item xs={6} sm={6} md={3} key={i}>
+              <Grow in timeout={800 + i * 100}>
                 <Card
+                  onClick={() => handleNavigation(stat.path)}
                   sx={{
-                    borderRadius: 5,
-                    border: "1px solid #fff",
-                    boxShadow: "0 10px 30px rgba(0,0,0,0.03)",
-                    transition: "0.3s",
-                    "&:hover": { transform: "translateY(-5px)" },
+                    borderRadius: { xs: 2, sm: 3, md: 4 },
+                    border: "1px solid rgba(255,255,255,0.5)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: "0 12px 24px rgba(0,0,0,0.08)",
+                    },
                   }}
                 >
-                  <CardContent sx={{ textAlign: "center", p: 3 }}>
+                  <CardContent
+                    sx={{ p: { xs: 2, sm: 3 }, textAlign: "center" }}
+                  >
                     <Avatar
                       sx={{
                         bgcolor: alpha(stat.color, 0.1),
                         color: stat.color,
                         mx: "auto",
-                        mb: 2,
-                        width: 50,
-                        height: 50,
+                        mb: { xs: 1.5, sm: 2 },
+                        width: { xs: 40, sm: 45, md: 50 },
+                        height: { xs: 40, sm: 45, md: 50 },
                       }}
                     >
                       {stat.icon}
                     </Avatar>
-                    <Typography variant="h5" fontWeight="900">
-                      {stat.count}
+                    <Typography
+                      variant="h5"
+                      fontWeight="900"
+                      sx={{
+                        fontSize: {
+                          xs: "1.25rem",
+                          sm: "1.5rem",
+                          md: "1.75rem",
+                        },
+                      }}
+                    >
+                      {typeof stat.count === "number" && stat.count > 1000
+                        ? `${(stat.count / 1000).toFixed(1)}k`
+                        : stat.count}
                     </Typography>
                     <Typography
                       variant="caption"
                       color="text.secondary"
                       fontWeight="700"
-                      sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+                      sx={{
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        fontSize: { xs: "0.65rem", sm: "0.7rem" },
+                      }}
                     >
                       {stat.title}
                     </Typography>
@@ -400,29 +281,39 @@ const Dashboard = () => {
           ))}
         </Grid>
 
-        <Grid container spacing={3}>
+        {/* Recent Activity & Stock Alerts */}
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           {/* Recent Activity */}
           <Grid item xs={12} md={8}>
             <Card
               sx={{
-                borderRadius: 6,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.02)",
-                p: 1,
+                borderRadius: { xs: 2, sm: 3, md: 4 },
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                height: "100%",
               }}
             >
-              <CardContent>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 <Stack
                   direction="row"
                   justifyContent="space-between"
                   alignItems="center"
-                  sx={{ mb: 3 }}
+                  sx={{ mb: { xs: 2, sm: 3 } }}
                 >
-                  <Typography variant="h6" fontWeight="900">
+                  <Typography
+                    variant="h6"
+                    fontWeight="900"
+                    sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem" } }}
+                  >
                     Recent Activity
                   </Typography>
                   <Button
                     endIcon={<ArrowIcon sx={{ fontSize: 12 }} />}
-                    sx={{ color: colors.primary, fontWeight: 700 }}
+                    sx={{
+                      color: colors.primary,
+                      fontWeight: 700,
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                    }}
+                    onClick={() => handleNavigation("/admin/repairs")}
                   >
                     View All
                   </Button>
@@ -434,32 +325,53 @@ const Dashboard = () => {
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        p: 2,
-                        borderRadius: 4,
+                        p: { xs: 1.5, sm: 2 },
+                        borderRadius: { xs: 2, sm: 2.5 },
                         bgcolor: colors.bg,
                         transition: "0.2s",
                         "&:hover": { bgcolor: alpha(colors.primary, 0.03) },
+                        flexWrap: { xs: "wrap", sm: "nowrap" },
+                        gap: { xs: 1, sm: 0 },
                       }}
                     >
                       <Avatar
                         sx={{
                           bgcolor: alpha(act.color, 0.1),
                           color: act.color,
-                          mr: 2,
+                          mr: { xs: 1.5, sm: 2 },
+                          width: { xs: 35, sm: 40 },
+                          height: { xs: 35, sm: 40 },
                         }}
                       >
                         {act.icon}
                       </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography fontWeight="800" variant="body2">
+                      <Box
+                        sx={{
+                          flexGrow: 1,
+                          minWidth: { xs: "calc(100% - 80px)", sm: "auto" },
+                        }}
+                      >
+                        <Typography
+                          fontWeight="800"
+                          variant="body2"
+                          sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+                        >
                           {act.title}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {act.customer} • {act.time} ago
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
+                        >
+                          {act.customer} • {act.time}
                         </Typography>
                       </Box>
                       {act.amount ? (
-                        <Typography fontWeight="900" color={colors.success}>
+                        <Typography
+                          fontWeight="900"
+                          color={colors.success}
+                          sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                        >
                           {act.amount}
                         </Typography>
                       ) : (
@@ -468,7 +380,7 @@ const Dashboard = () => {
                           size="small"
                           sx={{
                             fontWeight: 800,
-                            fontSize: "0.65rem",
+                            fontSize: { xs: "0.6rem", sm: "0.65rem" },
                             bgcolor: alpha(act.color, 0.1),
                             color: act.color,
                           }}
@@ -481,24 +393,33 @@ const Dashboard = () => {
             </Card>
           </Grid>
 
-          {/* Inventory Alerts */}
+          {/* Stock Alerts */}
           <Grid item xs={12} md={4}>
             <Card
               sx={{
-                borderRadius: 6,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.02)",
-                p: 1,
+                borderRadius: { xs: 2, sm: 3, md: 4 },
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                height: "100%",
               }}
             >
-              <CardContent>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 <Typography
                   variant="h6"
                   fontWeight="900"
-                  sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1 }}
+                  sx={{
+                    mb: { xs: 2, sm: 3 },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    fontSize: { xs: "1.1rem", sm: "1.25rem" },
+                  }}
                 >
-                  <WarningIcon sx={{ color: colors.warning }} /> Stock Alerts
+                  <WarningIcon
+                    sx={{ color: colors.warning, fontSize: { xs: 20, sm: 24 } }}
+                  />
+                  Stock Alerts
                 </Typography>
-                <Stack spacing={3}>
+                <Stack spacing={{ xs: 2, sm: 2.5 }}>
                   {lowStockItems.map((item, i) => (
                     <Box key={i}>
                       <Stack
@@ -506,13 +427,18 @@ const Dashboard = () => {
                         justifyContent="space-between"
                         sx={{ mb: 1 }}
                       >
-                        <Typography variant="body2" fontWeight="700">
+                        <Typography
+                          variant="body2"
+                          fontWeight="700"
+                          sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                        >
                           {item.name}
                         </Typography>
                         <Typography
                           variant="caption"
                           fontWeight="900"
                           color={item.stock < 3 ? colors.error : colors.warning}
+                          sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
                         >
                           {item.stock} left
                         </Typography>
@@ -521,7 +447,7 @@ const Dashboard = () => {
                         variant="determinate"
                         value={item.percentage}
                         sx={{
-                          height: 8,
+                          height: { xs: 6, sm: 8 },
                           borderRadius: 5,
                           bgcolor: alpha(colors.gray, 0.1),
                           "& .MuiLinearProgress-bar": {
@@ -537,12 +463,14 @@ const Dashboard = () => {
                 <Button
                   fullWidth
                   variant="contained"
+                  onClick={() => handleNavigation("/admin/products")}
                   sx={{
-                    mt: 4,
+                    mt: { xs: 3, sm: 4 },
                     borderRadius: 3,
-                    py: 1.5,
+                    py: { xs: 1, sm: 1.2 },
                     background: colors.dark,
                     fontWeight: 700,
+                    fontSize: { xs: "0.8rem", sm: "0.875rem" },
                     "&:hover": { background: "#000" },
                   }}
                 >
@@ -553,22 +481,6 @@ const Dashboard = () => {
           </Grid>
         </Grid>
       </Container>
-
-      {isMobile && (
-        <Fab
-          onClick={() => navigate("/admin/products")}
-          sx={{
-            position: "fixed",
-            bottom: 20,
-            right: 20,
-            background: colors.gradient,
-            color: "#fff",
-            boxShadow: "0 10px 20px rgba(255,133,0,0.3)",
-          }}
-        >
-          <AddIcon />
-        </Fab>
-      )}
     </Box>
   );
 };
