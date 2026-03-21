@@ -28,6 +28,12 @@ import {
   FormControl,
   InputLabel,
   InputAdornment,
+  Stepper,
+  Step,
+  StepLabel,
+  IconButton,
+  Tab,
+  Tabs,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -38,13 +44,20 @@ import {
   Laptop as LaptopIcon,
   TabletMac as TabletIcon,
   Call as CallIcon,
+  Check as CheckIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon,
+  Close as CloseIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import {
   getRepairs,
   createRepair,
   updateRepairStatus,
   getRepairsByStatus,
-  searchCustomers, // Ensure this is exported in your api.js
+  searchCustomers,
+  createCustomer,
+  getCustomers,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -55,15 +68,20 @@ const UI_COLORS = {
   bg: "#F0F2F5",
   border: "rgba(30, 26, 58, 0.08)",
   gray: "#6B7280",
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
 };
 
 const statusConfig = {
-  received: { label: "Received", color: "#3B82F6" },
-  diagnosing: { label: "Diagnosing", color: "#F59E0B" },
-  in_progress: { label: "In Progress", color: "#9c27b0" },
-  completed: { label: "Completed", color: "#10B981" },
-  delivered: { label: "Delivered", color: "#6B7280" },
+  received: { label: "Received", color: "#3B82F6", icon: "📥" },
+  diagnosing: { label: "Diagnosing", color: "#F59E0B", icon: "🔍" },
+  in_progress: { label: "In Progress", color: "#9c27b0", icon: "⚙️" },
+  completed: { label: "Completed", color: "#10B981", icon: "✅" },
+  delivered: { label: "Delivered", color: "#6B7280", icon: "📦" },
 };
+
+const steps = ["Customer Information", "Device Details"];
 
 const Repairs = () => {
   const { user } = useAuth();
@@ -78,17 +96,25 @@ const Repairs = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
   const [selectedRepair, setSelectedRepair] = useState(null);
-  const [searchResults, setSearchResults] = useState([]); // For customer search
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+  const [activeStep, setActiveStep] = useState(0);
+  const [tabValue, setTabValue] = useState(0);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
 
-  const [formData, setFormData] = useState({
-    customer_id: null, // null means New Customer
-    customer_name: "",
-    customer_phone: "",
+  const [customerForm, setCustomerForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+  });
+
+  const [repairForm, setRepairForm] = useState({
     device_type: "phone",
     device_brand: "",
     device_model: "",
@@ -98,6 +124,7 @@ const Repairs = () => {
 
   const [statusData, setStatusData] = useState({ status: "", final_cost: "" });
 
+  // --- API Calls ---
   const loadRepairs = async () => {
     setLoading(true);
     try {
@@ -113,91 +140,121 @@ const Repairs = () => {
     }
   };
 
+  const loadCustomers = async () => {
+    setLoadingCustomers(true);
+    try {
+      const res = await getCustomers();
+      setCustomers(res.data.data);
+    } catch (error) {
+      console.error("Error loading customers:", error);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
   useEffect(() => {
     loadRepairs();
+    loadCustomers();
   }, [statusFilter]);
 
   const showSnackbar = (message, severity = "success") =>
     setSnackbar({ open: true, message, severity });
 
-  // Handle name typing + searching
-  const handleNameChange = async (e) => {
-    const val = e.target.value;
-    setFormData({ ...formData, customer_name: val, customer_id: null }); // Reset to New Customer while typing
+  // Search customers locally
+  const filteredCustomers = customers.filter(
+    (customer) =>
+      customer.name.toLowerCase().includes(customerForm.name.toLowerCase()) ||
+      customer.phone.includes(customerForm.name),
+  );
 
-    if (val.length > 2) {
-      try {
-        const res = await searchCustomers(val);
-        setSearchResults(res.data.data);
-      } catch (err) {
-        console.error("Search failed", err);
+  // Create new customer
+  const handleCreateCustomer = async () => {
+    if (!customerForm.name || !customerForm.phone) {
+      showSnackbar("Name and Phone are required!", "error");
+      return;
+    }
+
+    try {
+      const response = await createCustomer(customerForm);
+      setSelectedCustomer(response.data.data);
+      // Refresh customer list
+      await loadCustomers();
+      showSnackbar("Customer created successfully!", "success");
+      setActiveStep(1);
+    } catch (error) {
+      console.error("Create customer error:", error);
+      if (error.response?.data?.message?.includes("duplicate")) {
+        showSnackbar(
+          "Phone number already exists! Please use a different phone number or search for existing customer.",
+          "error",
+        );
+      } else {
+        showSnackbar(
+          error.response?.data?.message || "Failed to create customer",
+          "error",
+        );
       }
-    } else {
-      setSearchResults([]);
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  // 1. Internal Validation
-  if (!formData.customer_name || !formData.customer_phone) {
-    return showSnackbar("Customer Name and Phone are required!", "error");
-  }
-  if (
-    !formData.device_type ||
-    !formData.device_brand ||
-    !formData.device_model
-  ) {
-    return showSnackbar("Please fill in all device details!", "error");
-  }
-
-  try {
-    // 2. Prepare the Data
-    // We create a clean object. If customer_id is null/0, we don't send it at all
-    // so the backend knows to create a NEW customer record.
-    const repairData = {
-      customer_name: formData.customer_name,
-      customer_phone: formData.customer_phone,
-      device_type: formData.device_type,
-      device_brand: formData.device_brand,
-      device_model: formData.device_model,
-      issue_description: formData.issue_description,
-      estimated_cost: formData.estimated_cost || 0,
-    };
-
-    // Only add customer_id if we actually picked an existing one
-    if (formData.customer_id && formData.customer_id !== 0) {
-      repairData.customer_id = formData.customer_id;
+  // Create repair ticket
+  const handleCreateRepair = async () => {
+    if (
+      !repairForm.device_brand ||
+      !repairForm.device_model ||
+      !repairForm.issue_description
+    ) {
+      showSnackbar("Please fill all required device fields!", "error");
+      return;
     }
 
-    console.log("Submitting to backend:", repairData);
+    try {
+      const payload = {
+        customer_id: selectedCustomer.id,
+        device_type: repairForm.device_type,
+        device_brand: repairForm.device_brand,
+        device_model: repairForm.device_model,
+        issue_description: repairForm.issue_description,
+        estimated_cost: repairForm.estimated_cost || 0,
+        status: "received",
+      };
 
-    const response = await createRepair(repairData);
+      console.log("Creating repair with payload:", payload);
 
-    showSnackbar("Repair ticket created successfully!");
-    setOpenDialog(false);
+      await createRepair(payload);
+      showSnackbar("Repair ticket created successfully!");
 
-    // 3. Reset form to defaults
-    setFormData({
-      customer_id: null,
-      customer_name: "",
-      customer_phone: "",
+      // Reset and close
+      resetForm();
+      setOpenDialog(false);
+      loadRepairs();
+    } catch (error) {
+      console.error("Create repair error:", error);
+      showSnackbar(
+        error.response?.data?.message || "Failed to create repair",
+        "error",
+      );
+    }
+  };
+
+  const resetForm = () => {
+    setActiveStep(0);
+    setTabValue(0);
+    setSelectedCustomer(null);
+    setCustomerForm({
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+    });
+    setRepairForm({
       device_type: "phone",
       device_brand: "",
       device_model: "",
       issue_description: "",
       estimated_cost: "",
     });
-
-    loadRepairs();
-  } catch (e) {
-    console.error("Backend Error:", e.response?.data);
-    const errorMsg =
-      e.response?.data?.message || "Check required fields and try again.";
-    showSnackbar(errorMsg, "error");
-  }
-};
+  };
 
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
@@ -218,6 +275,21 @@ const handleSubmit = async (e) => {
       r.device_model?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress sx={{ color: UI_COLORS.primary }} />
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -232,205 +304,345 @@ const handleSubmit = async (e) => {
         direction="row"
         justifyContent="space-between"
         alignItems="center"
-        sx={{ mb: 3 }}
+        sx={{ mb: 3, flexWrap: "wrap", gap: 2 }}
       >
         <Typography
           variant={isMobile ? "h5" : "h4"}
           fontWeight="900"
           color={UI_COLORS.dark}
         >
-          Repair Tickets
+          🔧 Repair Tickets
         </Typography>
-        {!isMobile && (
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setOpenDialog(true)}
+          sx={{
+            background: UI_COLORS.primary,
+            borderRadius: "12px",
+            px: 3,
+            py: 1,
+            fontWeight: "bold",
+            "&:hover": { background: UI_COLORS.secondary },
+          }}
+        >
+          New Ticket
+        </Button>
+      </Stack>
+
+      {/* Search and Stats */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search by customer, phone or model..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{
+              bgcolor: "white",
+              borderRadius: "12px",
+              "& .MuiOutlinedInput-root": { borderRadius: "12px" },
+            }}
+            InputProps={{
+              startAdornment: (
+                <SearchIcon sx={{ color: UI_COLORS.primary, mr: 1 }} />
+              ),
+              endAdornment: searchTerm && (
+                <IconButton size="small" onClick={() => setSearchTerm("")}>
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={4} md={2}>
+          <Paper sx={{ p: 1.5, textAlign: "center", borderRadius: "16px" }}>
+            <Typography variant="caption" color="text.secondary">
+              Total
+            </Typography>
+            <Typography variant="h6" fontWeight="bold">
+              {repairs.length}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={4} md={2}>
+          <Paper
+            sx={{
+              p: 1.5,
+              textAlign: "center",
+              borderRadius: "16px",
+              bgcolor: alpha(UI_COLORS.warning, 0.05),
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Active
+            </Typography>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              color={UI_COLORS.warning}
+            >
+              {
+                repairs.filter(
+                  (r) =>
+                    r.status === "in_progress" ||
+                    r.status === "diagnosing" ||
+                    r.status === "received",
+                ).length
+              }
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={4} md={2}>
+          <Paper
+            sx={{
+              p: 1.5,
+              textAlign: "center",
+              borderRadius: "16px",
+              bgcolor: alpha(UI_COLORS.success, 0.05),
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Completed
+            </Typography>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              color={UI_COLORS.success}
+            >
+              {
+                repairs.filter(
+                  (r) => r.status === "completed" || r.status === "delivered",
+                ).length
+              }
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Status Filter Tabs */}
+      <Box sx={{ display: "flex", gap: 1, mb: 3, overflowX: "auto", pb: 1 }}>
+        {[
+          "all",
+          "received",
+          "diagnosing",
+          "in_progress",
+          "completed",
+          "delivered",
+        ].map((status) => (
+          <Chip
+            key={status}
+            label={
+              status === "all"
+                ? "All"
+                : `${statusConfig[status]?.icon || ""} ${statusConfig[status]?.label || status}`
+            }
+            onClick={() => setStatusFilter(status)}
+            sx={{
+              bgcolor: statusFilter === status ? UI_COLORS.primary : "white",
+              color: statusFilter === status ? "white" : UI_COLORS.dark,
+              fontWeight: 600,
+              px: 1,
+              "&:hover": {
+                bgcolor:
+                  statusFilter === status
+                    ? UI_COLORS.secondary
+                    : alpha(UI_COLORS.primary, 0.1),
+              },
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* Repair Cards */}
+      {filteredRepairs.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: "center", borderRadius: "20px" }}>
+          <BuildIcon
+            sx={{ fontSize: 48, color: UI_COLORS.gray, mb: 1, opacity: 0.5 }}
+          />
+          <Typography color="text.secondary">
+            No repair tickets found
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setOpenDialog(true)}
-            sx={{
-              background: UI_COLORS.primary,
-              borderRadius: "12px",
-              px: 3,
-              py: 1,
-              fontWeight: "bold",
-            }}
+            sx={{ mt: 2, bgcolor: UI_COLORS.primary }}
           >
-            New Ticket
+            Create New Ticket
           </Button>
-        )}
-      </Stack>
+        </Paper>
+      ) : (
+        <Grid container spacing={2}>
+          {filteredRepairs.map((repair) => (
+            <Grid item xs={12} sm={6} md={4} key={repair.id}>
+              <Card
+                sx={{
+                  borderRadius: "20px",
+                  border: `1px solid ${UI_COLORS.border}`,
+                  boxShadow: "none",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 2.5 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
+                    sx={{ mb: 1.5 }}
+                  >
+                    <Avatar
+                      sx={{
+                        bgcolor: alpha(UI_COLORS.primary, 0.1),
+                        color: UI_COLORS.primary,
+                        width: 44,
+                        height: 44,
+                      }}
+                    >
+                      {repair.device_type === "phone" ? (
+                        <PhoneIcon />
+                      ) : repair.device_type === "laptop" ? (
+                        <LaptopIcon />
+                      ) : (
+                        <TabletIcon />
+                      )}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1, overflow: "hidden" }}>
+                      <Typography noWrap variant="subtitle1" fontWeight="800">
+                        {repair.device_brand} {repair.device_model}
+                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <PersonIcon
+                          sx={{ fontSize: 12, color: "text.secondary" }}
+                        />
+                        <Typography
+                          noWrap
+                          variant="caption"
+                          fontWeight="600"
+                          color="text.secondary"
+                        >
+                          {repair.customer_name}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                    <Chip
+                      label={
+                        statusConfig[repair.status]?.label || repair.status
+                      }
+                      size="small"
+                      sx={{
+                        fontSize: "0.65rem",
+                        height: 24,
+                        fontWeight: 700,
+                        bgcolor: alpha(
+                          statusConfig[repair.status]?.color || "#ccc",
+                          0.1,
+                        ),
+                        color: statusConfig[repair.status]?.color,
+                      }}
+                    />
+                  </Stack>
 
-      {/* Global Search */}
-      <TextField
-        fullWidth
-        size="small"
-        placeholder="Search by customer, phone or model..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        sx={{
-          mb: 3,
-          bgcolor: "white",
-          borderRadius: "12px",
-          "& .MuiOutlinedInput-root": { borderRadius: "12px" },
-        }}
-        InputProps={{
-          startAdornment: (
-            <SearchIcon sx={{ color: UI_COLORS.primary, mr: 1 }} />
-          ),
-        }}
-      />
-
-      {/* Repair Cards */}
-      <Grid container spacing={2}>
-        {filteredRepairs.map((repair) => (
-          <Grid item xs={12} sm={6} md={4} key={repair.id}>
-            <Card
-              sx={{
-                borderRadius: "20px",
-                border: `1px solid ${UI_COLORS.border}`,
-                boxShadow: "none",
-              }}
-            >
-              <CardContent sx={{ p: 2.5 }}>
-                <Stack
-                  direction="row"
-                  spacing={1.5}
-                  alignItems="center"
-                  sx={{ mb: 1.5 }}
-                >
-                  <Avatar
+                  <Box
                     sx={{
-                      bgcolor: alpha(UI_COLORS.primary, 0.1),
-                      color: UI_COLORS.primary,
-                      width: 44,
-                      height: 44,
+                      mb: 1.5,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      bgcolor: alpha(UI_COLORS.primary, 0.05),
+                      p: 1,
+                      borderRadius: "12px",
                     }}
                   >
-                    {repair.device_type === "phone" ? (
-                      <PhoneIcon />
-                    ) : (
-                      <LaptopIcon />
-                    )}
-                  </Avatar>
-                  <Box sx={{ flexGrow: 1, overflow: "hidden" }}>
-                    <Typography noWrap variant="subtitle1" fontWeight="800">
-                      {repair.device_brand} {repair.device_model}
-                    </Typography>
+                    <CallIcon sx={{ fontSize: 14, color: UI_COLORS.primary }} />
                     <Typography
-                      noWrap
-                      variant="caption"
-                      fontWeight="600"
-                      color="text.secondary"
+                      variant="body2"
+                      fontWeight="700"
+                      sx={{ fontSize: "0.85rem" }}
                     >
-                      {repair.customer_name}
+                      {repair.customer_phone || "No Phone"}
                     </Typography>
                   </Box>
-                  <Chip
-                    label={statusConfig[repair.status]?.label || repair.status}
-                    size="small"
-                    sx={{
-                      fontWeight: 700,
-                      bgcolor: alpha(
-                        statusConfig[repair.status]?.color || "#ccc",
-                        0.1,
-                      ),
-                      color: statusConfig[repair.status]?.color,
-                    }}
-                  />
-                </Stack>
 
-                {/* DISPLAY PHONE NUMBER ON CARD */}
-                <Box
-                  sx={{
-                    mb: 1.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    bgcolor: alpha(UI_COLORS.primary, 0.05),
-                    p: 1,
-                    borderRadius: "12px",
-                  }}
-                >
-                  <CallIcon sx={{ fontSize: 14, color: UI_COLORS.primary }} />
-                  <Typography
-                    variant="body2"
-                    fontWeight="700"
-                    sx={{ fontSize: "0.85rem", color: UI_COLORS.dark }}
-                  >
-                    {repair.customer_phone || "No Phone"}
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    p: 1.2,
-                    bgcolor: alpha(UI_COLORS.bg, 0.5),
-                    borderRadius: "12px",
-                    mb: 1.5,
-                  }}
-                >
-                  <Typography
-                    variant="body2"
+                  <Box
                     sx={{
-                      fontSize: "0.75rem",
-                      color: "text.secondary",
-                      minHeight: "2.4em",
+                      p: 1.2,
+                      bgcolor: alpha(UI_COLORS.bg, 0.5),
+                      borderRadius: "12px",
+                      mb: 1.5,
                     }}
                   >
-                    {repair.issue_description}
-                  </Typography>
-                </Box>
-
-                <Divider sx={{ mb: 1.5 }} />
-
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box>
                     <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontSize: "0.65rem" }}
+                      variant="body2"
+                      sx={{
+                        fontSize: "0.75rem",
+                        color: "text.secondary",
+                        lineHeight: 1.4,
+                      }}
                     >
-                      TICKET TOTAL
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      fontWeight="800"
-                      sx={{ fontSize: "0.9rem", color: UI_COLORS.primary }}
-                    >
-                      ETB {repair.final_cost || repair.estimated_cost || "0"}
+                      {repair.issue_description?.substring(0, 80) ||
+                        "No issue description"}
+                      {repair.issue_description?.length > 80 && "..."}
                     </Typography>
                   </Box>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => {
-                      setSelectedRepair(repair);
-                      setStatusData({
-                        status: repair.status,
-                        final_cost: repair.final_cost || "",
-                      });
-                      setOpenStatusDialog(true);
-                    }}
-                    sx={{
-                      borderRadius: "10px",
-                      textTransform: "none",
-                      bgcolor: UI_COLORS.dark,
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Update
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
 
-      {/* FAB */}
+                  <Divider sx={{ mb: 1.5 }} />
+
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontSize: "0.65rem" }}
+                      >
+                        TOTAL
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        fontWeight="800"
+                        sx={{ fontSize: "0.9rem", color: UI_COLORS.primary }}
+                      >
+                        ETB{" "}
+                        {repair.final_cost || repair.estimated_cost || "TBD"}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => {
+                        setSelectedRepair(repair);
+                        setStatusData({
+                          status: repair.status,
+                          final_cost: repair.final_cost || "",
+                        });
+                        setOpenStatusDialog(true);
+                      }}
+                      sx={{
+                        borderRadius: "10px",
+                        textTransform: "none",
+                        bgcolor: UI_COLORS.dark,
+                      }}
+                    >
+                      Update
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Mobile FAB */}
       {isMobile && (
         <Fab
           onClick={() => setOpenDialog(true)}
@@ -441,113 +653,251 @@ const handleSubmit = async (e) => {
             zIndex: 9999,
             bgcolor: UI_COLORS.primary,
             color: "white",
+            "&:hover": { bgcolor: UI_COLORS.secondary },
           }}
         >
           <AddIcon />
         </Fab>
       )}
 
-      {/* Hybrid New Repair Dialog */}
+      {/* Create New Ticket Dialog */}
       <Dialog
         open={openDialog}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          resetForm();
+          setOpenDialog(false);
+        }}
         fullWidth
-        maxWidth="sm"
-        PaperProps={{ sx: { borderRadius: "24px" } }}
+        maxWidth="md"
+        PaperProps={{ sx: { borderRadius: "24px", minHeight: "550px" } }}
       >
-        <form onSubmit={handleSubmit}>
-          <DialogTitle sx={{ fontWeight: "bold", color: UI_COLORS.dark }}>
-            New Repair Ticket
-          </DialogTitle>
-          <DialogContent dividers>
-            <Stack spacing={2}>
-              <Box sx={{ position: "relative" }}>
-                <TextField
-                  fullWidth
-                  label="Customer Name *"
-                  placeholder="Type to search or add new..."
-                  value={formData.customer_name}
-                  onChange={handleNameChange}
-                  required
-                />
+        <DialogTitle
+          sx={{
+            fontWeight: "bold",
+            fontSize: "1.5rem",
+            color: UI_COLORS.dark,
+            pb: 1,
+          }}
+        >
+          New Repair Ticket
+        </DialogTitle>
 
-                {searchResults.length > 0 && (
-                  <Paper
-                    sx={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      zIndex: 10,
-                      mt: 0.5,
-                      border: `1px solid ${UI_COLORS.border}`,
-                    }}
-                  >
-                    {searchResults.map((c) => (
-                      <MenuItem
-                        key={c.id}
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            customer_id: c.id,
-                            customer_name: c.name,
-                            customer_phone: c.phone,
-                          });
-                          setSearchResults([]);
-                        }}
-                      >
-                        <Typography variant="body2">
-                          {c.name} ({c.phone})
-                        </Typography>
-                      </MenuItem>
-                    ))}
-                  </Paper>
+        {/* Stepper */}
+        <Box sx={{ px: 3, pt: 1 }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        </Box>
+
+        <DialogContent dividers sx={{ pt: 3 }}>
+          {/* Step 1: Customer Information */}
+          {activeStep === 0 && (
+            <Stack spacing={3}>
+              <Paper sx={{ borderRadius: "16px" }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={(e, v) => setTabValue(v)}
+                  sx={{ borderBottom: 1, borderColor: UI_COLORS.border }}
+                >
+                  <Tab label="🔍 Select Existing" />
+                  <Tab label="➕ Create New" />
+                </Tabs>
+
+                {/* Select Existing Customer Tab */}
+                {tabValue === 0 && (
+                  <Box sx={{ p: 2 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Search by name or phone"
+                      value={customerForm.name}
+                      onChange={(e) =>
+                        setCustomerForm({
+                          ...customerForm,
+                          name: e.target.value,
+                        })
+                      }
+                      placeholder="Type to search..."
+                      sx={{ mb: 2 }}
+                      InputProps={{
+                        endAdornment: loadingCustomers && (
+                          <CircularProgress size={20} />
+                        ),
+                      }}
+                    />
+
+                    {filteredCustomers.length > 0 ? (
+                      <Grid container spacing={1}>
+                        {filteredCustomers.map((customer) => (
+                          <Grid item xs={12} key={customer.id}>
+                            <Paper
+                              sx={{
+                                p: 1.5,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                cursor: "pointer",
+                                "&:hover": {
+                                  bgcolor: alpha(UI_COLORS.primary, 0.05),
+                                },
+                                border:
+                                  selectedCustomer?.id === customer.id
+                                    ? `2px solid ${UI_COLORS.primary}`
+                                    : "none",
+                              }}
+                              onClick={() => setSelectedCustomer(customer)}
+                            >
+                              <Box>
+                                <Typography fontWeight="600">
+                                  {customer.name}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {customer.phone}
+                                </Typography>
+                                {customer.email && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    {customer.email}
+                                  </Typography>
+                                )}
+                              </Box>
+                              {selectedCustomer?.id === customer.id ? (
+                                <CheckIcon sx={{ color: UI_COLORS.success }} />
+                              ) : (
+                                <Button size="small" variant="outlined">
+                                  Select
+                                </Button>
+                              )}
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    ) : (
+                      customerForm.name && (
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          No customers found. Switch to "Create New" tab to add
+                          a new customer.
+                        </Alert>
+                      )
+                    )}
+                  </Box>
                 )}
-              </Box>
 
-              <TextField
-                fullWidth
-                label="Phone Number *"
-                value={formData.customer_phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, customer_phone: e.target.value })
-                }
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CallIcon
-                        sx={{ fontSize: 18, color: UI_COLORS.primary }}
-                      />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+                {/* Create New Customer Tab */}
+                {tabValue === 1 && (
+                  <Box sx={{ p: 2 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Full Name *"
+                          value={customerForm.name}
+                          onChange={(e) =>
+                            setCustomerForm({
+                              ...customerForm,
+                              name: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Phone Number *"
+                          value={customerForm.phone}
+                          onChange={(e) =>
+                            setCustomerForm({
+                              ...customerForm,
+                              phone: e.target.value,
+                            })
+                          }
+                          required
+                          helperText="Unique phone number"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                +251
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Email (Optional)"
+                          value={customerForm.email}
+                          onChange={(e) =>
+                            setCustomerForm({
+                              ...customerForm,
+                              email: e.target.value,
+                            })
+                          }
+                          type="email"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Address (Optional)"
+                          value={customerForm.address}
+                          onChange={(e) =>
+                            setCustomerForm({
+                              ...customerForm,
+                              address: e.target.value,
+                            })
+                          }
+                          multiline
+                          rows={2}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+              </Paper>
 
-              {formData.customer_id ? (
-                <Alert severity="info" sx={{ py: 0, fontSize: "0.75rem" }}>
-                  Picking existing customer
+              {selectedCustomer && tabValue === 0 && (
+                <Alert severity="success" sx={{ borderRadius: "12px" }}>
+                  Selected: <strong>{selectedCustomer.name}</strong> (
+                  {selectedCustomer.phone})
                 </Alert>
-              ) : (
-                formData.customer_name.length > 2 && (
-                  <Alert severity="warning" sx={{ py: 0, fontSize: "0.75rem" }}>
-                    Creating NEW customer
-                  </Alert>
-                )
               )}
+            </Stack>
+          )}
 
-              <Divider sx={{ my: 1 }}>Device Information</Divider>
+          {/* Step 2: Device Details */}
+          {activeStep === 1 && selectedCustomer && (
+            <Stack spacing={3}>
+              <Alert severity="success" sx={{ borderRadius: "12px" }}>
+                Customer: <strong>{selectedCustomer.name}</strong> (
+                {selectedCustomer.phone})
+              </Alert>
 
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel>Device Type *</InputLabel>
                     <Select
-                      value={formData.device_type}
+                      value={repairForm.device_type}
                       label="Device Type *"
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setRepairForm({
+                          ...repairForm,
                           device_type: e.target.value,
                         })
                       }
@@ -563,10 +913,14 @@ const handleSubmit = async (e) => {
                   <TextField
                     fullWidth
                     label="Brand *"
-                    value={formData.device_brand}
+                    value={repairForm.device_brand}
                     onChange={(e) =>
-                      setFormData({ ...formData, device_brand: e.target.value })
+                      setRepairForm({
+                        ...repairForm,
+                        device_brand: e.target.value,
+                      })
                     }
+                    placeholder="e.g., Samsung, Apple, Dell"
                     required
                   />
                 </Grid>
@@ -574,10 +928,14 @@ const handleSubmit = async (e) => {
                   <TextField
                     fullWidth
                     label="Model *"
-                    value={formData.device_model}
+                    value={repairForm.device_model}
                     onChange={(e) =>
-                      setFormData({ ...formData, device_model: e.target.value })
+                      setRepairForm({
+                        ...repairForm,
+                        device_model: e.target.value,
+                      })
                     }
+                    placeholder="e.g., Galaxy S22, iPhone 14"
                     required
                   />
                 </Grid>
@@ -586,54 +944,165 @@ const handleSubmit = async (e) => {
                     fullWidth
                     label="Issue Description *"
                     multiline
-                    rows={2}
-                    value={formData.issue_description}
+                    rows={4}
+                    value={repairForm.issue_description}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setRepairForm({
+                        ...repairForm,
                         issue_description: e.target.value,
                       })
                     }
+                    placeholder="Describe the problem in detail..."
                     required
                   />
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Est. Cost (ETB)"
+                    label="Estimated Cost (ETB)"
                     type="number"
-                    value={formData.estimated_cost}
+                    value={repairForm.estimated_cost}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setRepairForm({
+                        ...repairForm,
                         estimated_cost: e.target.value,
                       })
                     }
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">ETB</InputAdornment>
+                      ),
+                    }}
                   />
                 </Grid>
               </Grid>
             </Stack>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => {
+              if (activeStep === 0) {
+                resetForm();
+                setOpenDialog(false);
+              } else {
+                setActiveStep(0);
+              }
+            }}
+          >
+            {activeStep === 0 ? "Cancel" : "Back"}
+          </Button>
+
+          {activeStep === 0 ? (
+            tabValue === 0 ? (
+              <Button
+                variant="contained"
+                onClick={() => {
+                  if (!selectedCustomer) {
+                    showSnackbar("Please select a customer!", "warning");
+                  } else {
+                    setActiveStep(1);
+                  }
+                }}
+                endIcon={<ArrowForwardIcon />}
+                sx={{ bgcolor: UI_COLORS.primary }}
+                disabled={!selectedCustomer}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleCreateCustomer}
+                endIcon={<ArrowForwardIcon />}
+                sx={{ bgcolor: UI_COLORS.success }}
+              >
+                Create & Continue
+              </Button>
+            )
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleCreateRepair}
+              startIcon={<CheckIcon />}
+              sx={{ bgcolor: UI_COLORS.success }}
+            >
+              Create Ticket
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Status Update Dialog */}
+      <Dialog
+        open={openStatusDialog}
+        onClose={() => setOpenStatusDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "20px" } }}
+      >
+        <form onSubmit={handleUpdateStatus}>
+          <DialogTitle sx={{ fontWeight: "bold" }}>Update Status</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusData.status}
+                  label="Status"
+                  onChange={(e) =>
+                    setStatusData({ ...statusData, status: e.target.value })
+                  }
+                >
+                  {Object.entries(statusConfig).map(([k, v]) => (
+                    <MenuItem key={k} value={k}>
+                      {v.icon} {v.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                label="Final Cost (ETB)"
+                type="number"
+                placeholder="Enter final repair cost"
+                value={statusData.final_cost}
+                onChange={(e) =>
+                  setStatusData({ ...statusData, final_cost: e.target.value })
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">ETB</InputAdornment>
+                  ),
+                }}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions sx={{ p: 2.5 }}>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setOpenStatusDialog(false)}>Cancel</Button>
             <Button
               type="submit"
               variant="contained"
-              sx={{ bgcolor: UI_COLORS.primary }}
+              sx={{ bgcolor: UI_COLORS.dark }}
             >
-              Create Ticket
+              Update
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Status Dialog & Snackbar (Keep your existing versions) */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity={snackbar.severity} variant="filled">
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ borderRadius: "12px" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
