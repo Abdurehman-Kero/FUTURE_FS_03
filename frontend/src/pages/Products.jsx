@@ -43,14 +43,10 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   Warning as WarningIcon,
-  PhoneIphone as PhoneIcon,
-  Laptop as LaptopIcon,
-  Tablet as TabletIcon,
-  Headset as AccessoryIcon,
+  Inventory as InventoryIcon,
   Close as CloseIcon,
   CloudUpload as UploadIcon,
   Link as LinkIcon,
-  Inventory as InventoryIcon,
   DeleteOutline as DeleteOutlineIcon,
   AddPhotoAlternate as AddPhotoIcon,
   Image as ImageIcon,
@@ -74,6 +70,8 @@ const colors = {
   gray: "#6B7280",
   lightGray: "#E5E7EB",
   success: "#10B981",
+  danger: "#EF4444",
+  warning: "#F59E0B",
 };
 
 const categoryColors = {
@@ -83,35 +81,29 @@ const categoryColors = {
   accessory: "#9c27b0",
 };
 
-const categoryIcons = {
-  phone: <PhoneIcon />,
-  laptop: <LaptopIcon />,
-  tablet: <TabletIcon />,
-  accessory: <AccessoryIcon />,
-};
-
 const DEFAULT_PRODUCT_IMAGE =
   "https://placehold.co/400x400/FF8500/FFFFFF?text=No+Image";
 
 const Products = () => {
   const { user } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [imageList, setImageList] = useState([]);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
-  const [imageList, setImageList] = useState([]);
+  const [tempImageUrl, setTempImageUrl] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -127,10 +119,6 @@ const Products = () => {
   });
 
   useEffect(() => {
-    setRowsPerPage(isMobile ? 5 : 10);
-  }, [isMobile]);
-
-  useEffect(() => {
     loadProducts();
   }, []);
 
@@ -138,11 +126,8 @@ const Products = () => {
     try {
       setLoading(true);
       const response = await getProducts();
-      let productsData = response.data.data || [];
-
-      productsData = productsData.map((p) => {
+      const productsData = (response.data.data || []).map((p) => {
         let imagesArray = [];
-
         if (p.images) {
           if (typeof p.images === "string") {
             try {
@@ -154,14 +139,11 @@ const Products = () => {
             imagesArray = p.images;
           }
         }
-
         if (imagesArray.length === 0 && p.image_url) {
           imagesArray = [p.image_url];
         }
-
         return { ...p, images: imagesArray };
       });
-
       setProducts(productsData);
     } catch (error) {
       showSnackbar("Failed to load products", "error");
@@ -170,31 +152,14 @@ const Products = () => {
     }
   };
 
-  const showSnackbar = (message, severity = "success") => {
+  const showSnackbar = (message, severity = "success") =>
     setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
 
   const handleOpenDialog = (product = null) => {
     if (product) {
       setEditingProduct(product);
-      const productImages = product.images || [];
-      setImageList([...productImages]);
-      setFormData({
-        name: product.name || "",
-        category: product.category || "phone",
-        type: product.type || "new",
-        brand: product.brand || "",
-        model: product.model || "",
-        price: product.price || "",
-        stock_quantity: product.stock_quantity || "",
-        description: product.description || "",
-        images: productImages,
-        warranty_months: product.warranty_months || 12,
-      });
+      setImageList(product.images || []);
+      setFormData({ ...product });
     } else {
       setEditingProduct(null);
       setImageList([]);
@@ -211,6 +176,7 @@ const Products = () => {
         warranty_months: 12,
       });
     }
+    setTempImageUrl("");
     setOpenDialog(true);
   };
 
@@ -218,6 +184,7 @@ const Products = () => {
     setOpenDialog(false);
     setEditingProduct(null);
     setImageList([]);
+    setTempImageUrl("");
   };
 
   const handleInputChange = (e) => {
@@ -226,11 +193,11 @@ const Products = () => {
   };
 
   const handleAddImageUrl = () => {
-    const url = prompt("Enter image URL:");
-    if (url && url.trim()) {
-      const newList = [...imageList, url.trim()];
+    if (tempImageUrl && tempImageUrl.trim()) {
+      const newList = [...imageList, tempImageUrl.trim()];
       setImageList(newList);
       setFormData((prev) => ({ ...prev, images: newList }));
+      setTempImageUrl("");
       showSnackbar("Image URL added", "success");
     }
   };
@@ -283,9 +250,7 @@ const Products = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (!formData.name || !formData.price || !formData.stock_quantity) {
       showSnackbar("Please fill all required fields", "error");
       return;
@@ -300,14 +265,8 @@ const Products = () => {
       const payload = {
         ...formData,
         images: JSON.stringify(imageList),
-        image_url: imageList[0], // CRITICAL: First image as main
+        image_url: imageList[0],
       };
-
-      console.log("SAVING PRODUCT:", {
-        name: payload.name,
-        total_images: imageList.length,
-        images: imageList,
-      });
 
       if (editingProduct) {
         await updateProduct(editingProduct.id, payload);
@@ -345,14 +304,12 @@ const Products = () => {
     }
   };
 
-  const filteredProducts = products.filter((product) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      product.name?.toLowerCase().includes(searchLower) ||
-      product.brand?.toLowerCase().includes(searchLower) ||
-      product.model?.toLowerCase().includes(searchLower)
-    );
-  });
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.model?.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   const paginatedProducts = filteredProducts.slice(
     page * rowsPerPage,
@@ -379,45 +336,65 @@ const Products = () => {
           height: "50vh",
         }}
       >
-        <CircularProgress />
+        <CircularProgress sx={{ color: colors.primary }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ width: "100%", overflowX: "hidden" }}>
-      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-            flexWrap: "wrap",
-            gap: 2,
-          }}
-        >
-          <Typography variant="h4" sx={{ fontWeight: 600, color: colors.dark }}>
-            Products
-          </Typography>
-          {(user?.role === "admin" || user?.role === "sales") && (
+    <Box sx={{ minHeight: "100vh", bgcolor: "#F4F6F8", pb: 8 }}>
+      {/* Header */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 3, md: 5 },
+          background: colors.dark,
+          color: "white",
+          borderRadius: "0 0 32px 32px",
+          mb: 4,
+        }}
+      >
+        <Grid container alignItems="center" spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Typography variant={isMobile ? "h4" : "h3"} fontWeight="800">
+              Product <span style={{ color: colors.primary }}>Catalog</span>
+            </Typography>
+            <Typography sx={{ opacity: 0.7 }}>
+              Manage your inventory and stock levels
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={6} sx={{ textAlign: { md: "right" } }}>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
-              sx={{ background: colors.gradient }}
+              sx={{
+                background: colors.gradient,
+                borderRadius: "12px",
+                px: 4,
+                py: 1.5,
+                fontWeight: "bold",
+                boxShadow: `0 8px 20px ${alpha(colors.primary, 0.4)}`,
+              }}
             >
-              Add Product
+              Add New Product
             </Button>
-          )}
-        </Box>
+          </Grid>
+        </Grid>
+      </Paper>
 
+      <Box sx={{ px: { xs: 2, md: 4 } }}>
         {/* Stats Cards */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 4 }}>
           <Grid item xs={4}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
+            <Card
+              sx={{
+                borderRadius: "20px",
+                textAlign: "center",
+                bgcolor: alpha(colors.white, 0.9),
+              }}
+            >
+              <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
                 <Avatar
                   sx={{
                     bgcolor: alpha(colors.primary, 0.1),
@@ -426,50 +403,80 @@ const Products = () => {
                     mb: 1,
                   }}
                 >
-                  <PhoneIcon />
+                  <InventoryIcon />
                 </Avatar>
-                <Typography variant="caption">Total</Typography>
-                <Typography sx={{ fontWeight: 600 }}>
+                <Typography
+                  variant="caption"
+                  fontWeight="bold"
+                  color="text.secondary"
+                >
+                  Total Items
+                </Typography>
+                <Typography variant="h6" fontWeight="800">
                   {products.length}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={4}>
-            <Card sx={{ bgcolor: alpha("#ff9800", 0.05) }}>
-              <CardContent sx={{ textAlign: "center" }}>
+            <Card
+              sx={{
+                borderRadius: "20px",
+                textAlign: "center",
+                bgcolor: alpha(colors.warning, 0.05),
+              }}
+            >
+              <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
                 <Avatar
                   sx={{
-                    bgcolor: alpha("#ff9800", 0.1),
-                    color: "#ff9800",
+                    bgcolor: alpha(colors.warning, 0.1),
+                    color: colors.warning,
                     mx: "auto",
                     mb: 1,
                   }}
                 >
                   <WarningIcon />
                 </Avatar>
-                <Typography variant="caption">Low Stock</Typography>
-                <Typography sx={{ fontWeight: 600, color: "#ff9800" }}>
+                <Typography
+                  variant="caption"
+                  fontWeight="bold"
+                  color="text.secondary"
+                >
+                  Low Stock
+                </Typography>
+                <Typography variant="h6" fontWeight="800">
                   {lowStockCount}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={4}>
-            <Card sx={{ bgcolor: alpha("#f44336", 0.05) }}>
-              <CardContent sx={{ textAlign: "center" }}>
+            <Card
+              sx={{
+                borderRadius: "20px",
+                textAlign: "center",
+                bgcolor: alpha(colors.danger, 0.05),
+              }}
+            >
+              <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
                 <Avatar
                   sx={{
-                    bgcolor: alpha("#f44336", 0.1),
-                    color: "#f44336",
+                    bgcolor: alpha(colors.danger, 0.1),
+                    color: colors.danger,
                     mx: "auto",
                     mb: 1,
                   }}
                 >
                   <DeleteIcon />
                 </Avatar>
-                <Typography variant="caption">Out of Stock</Typography>
-                <Typography sx={{ fontWeight: 600, color: "#f44336" }}>
+                <Typography
+                  variant="caption"
+                  fontWeight="bold"
+                  color="text.secondary"
+                >
+                  Out of Stock
+                </Typography>
+                <Typography variant="h6" fontWeight="800">
                   {outOfStockCount}
                 </Typography>
               </CardContent>
@@ -478,424 +485,613 @@ const Products = () => {
         </Grid>
 
         {/* Search */}
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: colors.primary }} />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
+        <TextField
+          fullWidth
+          placeholder="Search products by name, brand or model..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{
+            mb: 4,
+            bgcolor: "white",
+            borderRadius: "12px",
+            "& fieldset": { border: "none" },
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: colors.primary }} />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <>
+                {searchTerm && (
                   <IconButton size="small" onClick={() => setSearchTerm("")}>
-                    <CloseIcon />
+                    <CloseIcon fontSize="small" />
                   </IconButton>
-                ),
-              }}
-            />
-            <IconButton onClick={loadProducts}>
-              <RefreshIcon />
-            </IconButton>
-          </Box>
-        </Paper>
+                )}
+                <IconButton onClick={loadProducts}>
+                  <RefreshIcon />
+                </IconButton>
+              </>
+            ),
+          }}
+        />
 
-        {/* Products Table */}
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: colors.light }}>
-                <TableCell>Product</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Condition</TableCell>
-                <TableCell>Price</TableCell>
-                <TableCell>Stock</TableCell>
-                <TableCell>Images</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedProducts.map((product) => (
-                <TableRow key={product.id} hover>
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <Avatar
-                        src={product.images?.[0] || DEFAULT_PRODUCT_IMAGE}
-                        sx={{ width: 50, height: 50, borderRadius: 1 }}
-                        variant="rounded"
-                        onError={(e) => {
-                          e.target.src = DEFAULT_PRODUCT_IMAGE;
-                        }}
-                      />
-                      <Box>
-                        <Typography fontWeight="600">{product.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {product.brand} {product.model}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={product.category}
-                      size="small"
-                      sx={{
-                        bgcolor: categoryColors[product.category],
-                        color: "white",
+        {/* Products Display */}
+        {isMobile ? (
+          /* MOBILE VIEW */
+          <Grid container spacing={2}>
+            {paginatedProducts.map((product) => (
+              <Grid item xs={12} key={product.id}>
+                <Card sx={{ borderRadius: "16px", overflow: "hidden" }}>
+                  <Box sx={{ display: "flex", p: 2, gap: 2 }}>
+                    <Avatar
+                      src={product.images?.[0] || DEFAULT_PRODUCT_IMAGE}
+                      variant="rounded"
+                      sx={{ width: 80, height: 80, borderRadius: 2 }}
+                      onError={(e) => {
+                        e.target.src = DEFAULT_PRODUCT_IMAGE;
                       }}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={product.type}
-                      size="small"
-                      variant="outlined"
-                      color={product.type === "new" ? "success" : "warning"}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography fontWeight="600" color={colors.primary}>
-                      ETB {product.price?.toLocaleString()}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={product.stock_quantity}
-                      size="small"
-                      color={product.stock_quantity === 0 ? "error" : "success"}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title={`${product.images?.length || 0} image(s)`}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography fontWeight="bold" noWrap>
+                        {product.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {product.brand} {product.model}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color={colors.primary}
+                        fontWeight="800"
+                        sx={{ mt: 0.5 }}
+                      >
+                        ETB {product.price?.toLocaleString()}
+                      </Typography>
                       <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mt: 1,
+                        }}
                       >
-                        <AddPhotoIcon fontSize="small" />
-                        <Typography fontWeight="bold">
-                          {product.images?.length || 0}
-                        </Typography>
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenDialog(product)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    {user?.role === "admin" && (
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {paginatedProducts.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <Typography>No products found</Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredProducts.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </TableContainer>
-
-        {/* Add/Edit Dialog */}
-        <Dialog
-          open={openDialog}
-          onClose={handleCloseDialog}
-          maxWidth="md"
-          fullWidth
-          fullScreen={isMobile}
-        >
-          <DialogTitle sx={{ background: colors.gradient, color: "white" }}>
-            {editingProduct ? "Edit Product" : "Add Product"}
-          </DialogTitle>
-          <form onSubmit={handleSubmit}>
-            <DialogContent sx={{ pt: 3, maxHeight: "70vh", overflowY: "auto" }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    name="name"
-                    label="Product Name *"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Category *</InputLabel>
-                    <Select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <MenuItem value="phone">Phone</MenuItem>
-                      <MenuItem value="laptop">Laptop</MenuItem>
-                      <MenuItem value="tablet">Tablet</MenuItem>
-                      <MenuItem value="accessory">Accessory</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Condition *</InputLabel>
-                    <Select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <MenuItem value="new">New</MenuItem>
-                      <MenuItem value="used">Used</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    name="brand"
-                    label="Brand"
-                    value={formData.brand}
-                    onChange={handleInputChange}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    name="model"
-                    label="Model"
-                    value={formData.model}
-                    onChange={handleInputChange}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    name="price"
-                    label="Price *"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">ETB</InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    name="stock_quantity"
-                    label="Stock *"
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    name="warranty_months"
-                    label="Warranty (months)"
-                    type="number"
-                    value={formData.warranty_months}
-                    onChange={handleInputChange}
-                  />
-                </Grid>
-
-                {/* IMAGES SECTION */}
-                <Grid item xs={12}>
-                  <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-                    Product Images ({imageList.length})
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mb: 2, display: "block" }}
-                  >
-                    Upload images one by one or add URLs. First image is the
-                    main product image.
-                  </Typography>
-
-                  <Button
-                    variant="contained"
-                    component="label"
-                    startIcon={<UploadIcon />}
-                    disabled={uploading}
-                    sx={{ mr: 2, mb: 2, background: colors.gradient }}
-                  >
-                    {uploading ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      "Upload Image"
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={handleFileUpload}
-                    />
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    startIcon={<LinkIcon />}
-                    onClick={handleAddImageUrl}
-                    sx={{ mb: 2 }}
-                  >
-                    Add Image URL
-                  </Button>
-
-                  {imageList.length > 0 && (
-                    <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                      <Grid container spacing={2}>
-                        {imageList.map((url, idx) => (
-                          <Grid item xs={4} sm={3} md={2} key={idx}>
-                            <Box sx={{ position: "relative" }}>
-                              <img
-                                src={url}
-                                alt={`img-${idx}`}
-                                style={{
-                                  width: "100%",
-                                  height: 100,
-                                  objectFit: "cover",
-                                  borderRadius: 8,
-                                  border:
-                                    idx === 0
-                                      ? `3px solid ${colors.primary}`
-                                      : "1px solid #ddd",
-                                }}
-                                onError={(e) => {
-                                  e.target.src = DEFAULT_PRODUCT_IMAGE;
-                                }}
-                              />
-                              {idx === 0 && (
-                                <Typography
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 4,
-                                    left: 4,
-                                    bgcolor: colors.primary,
-                                    color: "white",
-                                    px: 0.5,
-                                    borderRadius: 0.5,
-                                    fontSize: 10,
-                                  }}
-                                >
-                                  MAIN
-                                </Typography>
-                              )}
-                              <Box
+                        <Chip
+                          label={`Stock: ${product.stock_quantity}`}
+                          size="small"
+                          color={
+                            product.stock_quantity === 0
+                              ? "error"
+                              : product.stock_quantity < 5
+                                ? "warning"
+                                : "success"
+                          }
+                        />
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0.5,
+                          }}
+                        >
+                          <Tooltip title="Edit Product" placement="left">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDialog(product)}
+                              sx={{
+                                bgcolor: alpha(colors.primary, 0.1),
+                                color: colors.primary,
+                                "&:hover": {
+                                  bgcolor: colors.primary,
+                                  color: "white",
+                                },
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {user?.role === "admin" && (
+                            <Tooltip title="Delete Product" placement="left">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDelete(product.id)}
                                 sx={{
-                                  position: "absolute",
-                                  top: 0,
-                                  right: 0,
-                                  left: 0,
-                                  bottom: 0,
-                                  bgcolor: "rgba(0,0,0,0.5)",
-                                  opacity: 0,
-                                  "&:hover": { opacity: 1 },
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: 1,
-                                  borderRadius: 1,
+                                  bgcolor: alpha(colors.danger, 0.1),
+                                  "&:hover": {
+                                    bgcolor: colors.danger,
+                                    color: "white",
+                                  },
                                 }}
                               >
-                                {idx !== 0 && (
-                                  <IconButton
-                                    size="small"
-                                    sx={{
-                                      bgcolor: "rgba(0,0,0,0.6)",
-                                      color: "white",
-                                    }}
-                                    onClick={() => handleSetMainImage(idx)}
-                                  >
-                                    <ImageIcon fontSize="small" />
-                                  </IconButton>
-                                )}
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+                  {product.images?.length > 1 && (
+                    <Box sx={{ px: 2, pb: 2 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        +{product.images.length - 1} more image(s)
+                      </Typography>
+                    </Box>
+                  )}
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          /* DESKTOP VIEW */
+          <TableContainer
+            component={Paper}
+            sx={{ borderRadius: "20px", overflow: "hidden" }}
+          >
+            <Table>
+              <TableHead sx={{ bgcolor: alpha(colors.dark, 0.03) }}>
+                <TableRow>
+                  <TableCell>PRODUCT</TableCell>
+                  <TableCell>CATEGORY</TableCell>
+                  <TableCell>CONDITION</TableCell>
+                  <TableCell>PRICE</TableCell>
+                  <TableCell>STOCK</TableCell>
+                  <TableCell>IMAGES</TableCell>
+                  <TableCell align="center">ACTIONS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedProducts.map((product) => (
+                  <TableRow key={product.id} hover>
+                    <TableCell>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                      >
+                        <Avatar
+                          src={product.images?.[0] || DEFAULT_PRODUCT_IMAGE}
+                          variant="rounded"
+                          sx={{ width: 50, height: 50, borderRadius: 1 }}
+                          onError={(e) => {
+                            e.target.src = DEFAULT_PRODUCT_IMAGE;
+                          }}
+                        />
+                        <Box>
+                          <Typography fontWeight="700">
+                            {product.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {product.brand} {product.model}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={product.category}
+                        size="small"
+                        sx={{
+                          bgcolor: categoryColors[product.category],
+                          color: "white",
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={product.type === "new" ? "New" : "Used"}
+                        size="small"
+                        color={product.type === "new" ? "success" : "warning"}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography fontWeight="800" color={colors.primary}>
+                        ETB {product.price?.toLocaleString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={`${product.stock_quantity} pcs`}
+                        size="small"
+                        color={
+                          product.stock_quantity === 0
+                            ? "error"
+                            : product.stock_quantity < 5
+                              ? "warning"
+                              : "success"
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip
+                        title={`${product.images?.length || 0} image(s)`}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <AddPhotoIcon
+                            fontSize="small"
+                            sx={{ color: colors.gray }}
+                          />
+                          <Typography variant="caption" fontWeight="bold">
+                            {product.images?.length || 0}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 0.5,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Tooltip title="Edit Product" placement="left">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenDialog(product)}
+                            sx={{
+                              bgcolor: alpha(colors.primary, 0.1),
+                              color: colors.primary,
+                              "&:hover": {
+                                bgcolor: colors.primary,
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        {user?.role === "admin" && (
+                          <Tooltip title="Delete Product" placement="left">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDelete(product.id)}
+                              sx={{
+                                bgcolor: alpha(colors.danger, 0.1),
+                                "&:hover": {
+                                  bgcolor: colors.danger,
+                                  color: "white",
+                                },
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={filteredProducts.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </TableContainer>
+        )}
+
+        {/* Pagination for mobile */}
+        {isMobile && filteredProducts.length > rowsPerPage && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+            <TablePagination
+              component="div"
+              count={filteredProducts.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10]}
+            />
+          </Box>
+        )}
+      </Box>
+
+      {/* Add/Edit Product Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="md"
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ bgcolor: colors.dark, color: "white" }}>
+          {editingProduct ? "Edit Product" : "New Product"}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, maxHeight: "70vh", overflowY: "auto" }}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Product Name *"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Category *</InputLabel>
+                <Select
+                  value={formData.category}
+                  label="Category *"
+                  name="category"
+                  onChange={handleInputChange}
+                >
+                  <MenuItem value="phone">Phone</MenuItem>
+                  <MenuItem value="laptop">Laptop</MenuItem>
+                  <MenuItem value="tablet">Tablet</MenuItem>
+                  <MenuItem value="accessory">Accessory</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Condition *</InputLabel>
+                <Select
+                  value={formData.type}
+                  label="Condition *"
+                  name="type"
+                  onChange={handleInputChange}
+                >
+                  <MenuItem value="new">New</MenuItem>
+                  <MenuItem value="used">Used</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Brand"
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Model"
+                name="model"
+                value={formData.model}
+                onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Price *"
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleInputChange}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">ETB</InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Stock Quantity *"
+                type="number"
+                name="stock_quantity"
+                value={formData.stock_quantity}
+                onChange={handleInputChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Warranty (months)"
+                type="number"
+                name="warranty_months"
+                value={formData.warranty_months}
+                onChange={handleInputChange}
+              />
+            </Grid>
+
+            {/* IMAGES SECTION */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                Product Images ({imageList.length})
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mb: 2, display: "block" }}
+              >
+                Upload images one by one or add URLs. First image is the main
+                product image.
+              </Typography>
+
+              <Button
+                variant="contained"
+                component="label"
+                startIcon={<UploadIcon />}
+                disabled={uploading}
+                sx={{ mr: 2, mb: 2, background: colors.gradient }}
+              >
+                {uploading ? <CircularProgress size={24} /> : "Upload Image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleFileUpload}
+                />
+              </Button>
+
+              <Button
+                variant="outlined"
+                startIcon={<LinkIcon />}
+                onClick={handleAddImageUrl}
+                sx={{ mb: 2 }}
+              >
+                Add Image URL
+              </Button>
+
+              {/* URL Input */}
+              <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                <TextField
+                  size="small"
+                  placeholder="Enter image URL"
+                  value={tempImageUrl}
+                  onChange={(e) => setTempImageUrl(e.target.value)}
+                  fullWidth
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleAddImageUrl}
+                  disabled={!tempImageUrl.trim()}
+                >
+                  Add
+                </Button>
+              </Box>
+
+              {/* Images Gallery */}
+              {imageList.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Grid container spacing={2}>
+                    {imageList.map((url, idx) => (
+                      <Grid item xs={4} sm={3} md={2} key={idx}>
+                        <Box sx={{ position: "relative" }}>
+                          <img
+                            src={url}
+                            alt={`img-${idx}`}
+                            style={{
+                              width: "100%",
+                              height: 100,
+                              objectFit: "cover",
+                              borderRadius: 8,
+                              border:
+                                idx === 0
+                                  ? `3px solid ${colors.primary}`
+                                  : "1px solid #ddd",
+                            }}
+                            onError={(e) => {
+                              e.target.src = DEFAULT_PRODUCT_IMAGE;
+                            }}
+                          />
+                          {idx === 0 && (
+                            <Typography
+                              sx={{
+                                position: "absolute",
+                                bottom: 4,
+                                left: 4,
+                                bgcolor: colors.primary,
+                                color: "white",
+                                px: 0.5,
+                                borderRadius: 0.5,
+                                fontSize: 10,
+                              }}
+                            >
+                              MAIN
+                            </Typography>
+                          )}
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              top: 0,
+                              right: 0,
+                              left: 0,
+                              bottom: 0,
+                              bgcolor: "rgba(0,0,0,0.5)",
+                              opacity: 0,
+                              "&:hover": { opacity: 1 },
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 1,
+                              borderRadius: 1,
+                            }}
+                          >
+                            {idx !== 0 && (
+                              <Tooltip title="Set as main image">
                                 <IconButton
                                   size="small"
                                   sx={{
                                     bgcolor: "rgba(0,0,0,0.6)",
                                     color: "white",
                                   }}
-                                  onClick={() => handleRemoveImage(idx)}
+                                  onClick={() => handleSetMainImage(idx)}
                                 >
-                                  <DeleteOutlineIcon fontSize="small" />
+                                  <ImageIcon fontSize="small" />
                                 </IconButton>
-                              </Box>
-                            </Box>
-                          </Grid>
-                        ))}
+                              </Tooltip>
+                            )}
+                            <Tooltip title="Remove image">
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  bgcolor: "rgba(0,0,0,0.6)",
+                                  color: "white",
+                                }}
+                                onClick={() => handleRemoveImage(idx)}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </Box>
                       </Grid>
-                    </Paper>
-                  )}
-                </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
+              )}
+            </Grid>
 
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    name="description"
-                    label="Product Description"
-                    multiline
-                    rows={4}
-                    value={formData.description}
-                    onChange={handleInputChange}
-                  />
-                </Grid>
-              </Grid>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Cancel</Button>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={uploading}
-                sx={{ background: colors.gradient }}
-              >
-                {editingProduct ? "Update" : "Create"}
-              </Button>
-            </DialogActions>
-          </form>
-        </Dialog>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button
+            variant="contained"
+            sx={{ background: colors.gradient }}
+            onClick={handleSubmit}
+            disabled={uploading}
+          >
+            {editingProduct ? "Update Product" : "Create Product"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={handleCloseSnackbar}
-        >
-          <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
-        </Snackbar>
-      </Box>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
+      </Snackbar>
     </Box>
   );
 };
