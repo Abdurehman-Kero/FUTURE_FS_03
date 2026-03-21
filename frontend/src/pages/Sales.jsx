@@ -39,6 +39,10 @@ import {
   TableCell,
   TableContainer,
   TableRow,
+  Fade,
+  Grow,
+  Zoom,
+  Slide,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -56,12 +60,13 @@ import {
   Verified as VerifiedIcon,
   Close as CloseIcon,
   FilterList as FilterIcon,
-  Home as HomeIcon,
   Email as EmailIcon,
   LocationOn as LocationIcon,
   Download as DownloadIcon,
   WhatsApp as WhatsAppIcon,
   CheckCircle as CheckCircleIcon,
+  TrendingUp as TrendingUpIcon,
+  Store as StoreIcon,
 } from "@mui/icons-material";
 import { getSales, createSale, getTodaysSales } from "../services/api";
 import { getProducts } from "../services/api";
@@ -69,7 +74,6 @@ import { getCustomers, searchCustomers } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import jsPDF from "jspdf";
 
-// Color scheme matching homepage
 const colors = {
   primary: "#FF8500",
   secondary: "#FFA33C",
@@ -80,18 +84,38 @@ const colors = {
   gray: "#6B7280",
   lightGray: "#E5E7EB",
   success: "#10B981",
+  warning: "#F59E0B",
+  info: "#3B82F6",
+  purple: "#8B5CF6",
+  pink: "#EC4899",
 };
 
 const paymentMethods = {
-  cash: { label: "Cash", color: "#4caf50", icon: <MoneyIcon /> },
-  mpesa: { label: "M-Pesa", color: "#2196f3", icon: <PhoneIcon /> },
-  telebirr: { label: "Telebirr", color: "#9c27b0", icon: <PhoneIcon /> },
+  cash: {
+    label: "Cash",
+    color: colors.success,
+    icon: <MoneyIcon />,
+    bg: alpha(colors.success, 0.1),
+  },
+  mpesa: {
+    label: "M-Pesa",
+    color: colors.info,
+    icon: <PhoneIcon />,
+    bg: alpha(colors.info, 0.1),
+  },
+  telebirr: {
+    label: "Telebirr",
+    color: colors.purple,
+    icon: <PhoneIcon />,
+    bg: alpha(colors.purple, 0.1),
+  },
 };
 
 const Sales = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -274,7 +298,6 @@ const Sales = () => {
       const primaryColor = [255, 133, 0];
       const textColor = [50, 50, 50];
 
-      // Header
       doc.setFontSize(22);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text("CHALA MOBILE", 105, 20, { align: "center" });
@@ -313,7 +336,7 @@ const Sales = () => {
       doc.setFont("helvetica", "bold");
       doc.text("Payment:", 20, yPos);
       doc.setFont("helvetica", "normal");
-      doc.text(sale.payment_method || "Chapa", 80, yPos);
+      doc.text(sale.payment_method || "Cash", 80, yPos);
 
       yPos += lineHeight * 2;
 
@@ -327,12 +350,6 @@ const Sales = () => {
       doc.text("Name:", 20, yPos);
       doc.setFont("helvetica", "normal");
       doc.text(sale.customer_name || "Walk-in Customer", 80, yPos);
-
-      yPos += lineHeight;
-      doc.setFont("helvetica", "bold");
-      doc.text("Email:", 20, yPos);
-      doc.setFont("helvetica", "normal");
-      doc.text(sale.customer_email || "Not provided", 80, yPos);
 
       yPos += lineHeight;
       doc.setFont("helvetica", "bold");
@@ -416,6 +433,12 @@ const Sales = () => {
     }
   };
 
+  const todaySales = sales.filter(
+    (s) => new Date(s.created_at).toDateString() === new Date().toDateString(),
+  ).length;
+  const totalRevenue = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const totalTransactions = sales.length;
+
   if (loading) {
     return (
       <Box
@@ -432,1079 +455,1266 @@ const Sales = () => {
   }
 
   return (
-    <Box
-      sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "100%", overflow: "hidden" }}
-    >
-      {/* Header */}
-      <Box
+    <Box sx={{ minHeight: "100vh", bgcolor: "#F4F6F8", pb: 8 }}>
+      {/* Vivid Header */}
+      <Paper
+        elevation={0}
         sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "stretch", sm: "center" },
-          gap: { xs: 2, sm: 0 },
-          mb: 3,
+          p: { xs: 2.5, sm: 3, md: 5 },
+          background: colors.gradient,
+          color: "white",
+          borderRadius: "0 0 32px 32px",
+          mb: { xs: 3, sm: 4 },
         }}
       >
-        <Typography
-          variant={isMobile ? "h5" : "h5"}
-          fontWeight="600"
-          color={colors.dark}
-          sx={{ textAlign: { xs: "center", sm: "left" } }}
-        >
-          Sales
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setCart([]);
-            setFormData({
-              customer_id: "",
-              customer_name: "",
-              customer_phone: "",
-              payment_method: "cash",
-            });
-            setOpenDialog(true);
-          }}
-          fullWidth={isMobile}
-          sx={{
-            background: colors.gradient,
-            borderRadius: 2,
-            textTransform: "none",
-            px: 3,
-            py: { xs: 1.5, sm: 1 },
-            "&:hover": { background: colors.secondary },
-          }}
-        >
-          New Sale
-        </Button>
-      </Box>
+        <Grid container alignItems="center" spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Typography
+              variant={isMobile ? "h5" : isTablet ? "h4" : "h3"}
+              fontWeight="800"
+              sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" } }}
+            >
+              Sales <span style={{ opacity: 0.9 }}>Dashboard</span>
+            </Typography>
+            <Typography
+              sx={{
+                opacity: 0.9,
+                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
+              }}
+            >
+              Track and manage all your sales transactions
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={6} sx={{ textAlign: { md: "right" } }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setCart([]);
+                setFormData({
+                  customer_id: "",
+                  customer_name: "",
+                  customer_phone: "",
+                  payment_method: "cash",
+                });
+                setOpenDialog(true);
+              }}
+              sx={{
+                bgcolor: "white",
+                color: colors.primary,
+                borderRadius: "12px",
+                px: { xs: 2, sm: 3, md: 4 },
+                py: { xs: 1, sm: 1.2, md: 1.5 },
+                fontWeight: "bold",
+                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
+                "&:hover": { bgcolor: alpha("#ffffff", 0.9) },
+              }}
+            >
+              New Sale
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
-      {/* Stats Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={4}>
-          <Card
-            sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-          >
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-              <Box
+      <Box sx={{ px: { xs: 1.5, sm: 2, md: 4 } }}>
+        {/* Vivid Stats Cards */}
+        <Grid container spacing={2} sx={{ mb: { xs: 3, sm: 4 } }}>
+          <Grid item xs={4}>
+            <Zoom in timeout={500}>
+              <Card
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  textAlign: "center",
+                  borderRadius: "20px",
+                  background: `linear-gradient(135deg, ${colors.white} 0%, ${alpha(colors.primary, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(colors.primary, 0.2)}`,
                 }}
               >
-                <Avatar
-                  sx={{
-                    bgcolor: alpha(colors.primary, 0.1),
-                    color: colors.primary,
-                    width: { xs: 40, sm: 48 },
-                    height: { xs: 40, sm: 48 },
-                    mb: 1,
-                  }}
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
                 >
-                  <TodayIcon fontSize={isMobile ? "small" : "medium"} />
-                </Avatar>
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="caption"
-                    display="block"
+                  <Avatar
+                    sx={{
+                      bgcolor: alpha(colors.primary, 0.1),
+                      color: colors.primary,
+                      width: { xs: 40, sm: 45, md: 55 },
+                      height: { xs: 40, sm: 45, md: 55 },
+                      mx: "auto",
+                      mb: 1,
+                    }}
                   >
-                    Today
+                    <TodayIcon
+                      sx={{
+                        fontSize: { xs: "1.2rem", sm: "1.4rem", md: "1.6rem" },
+                      }}
+                    />
+                  </Avatar>
+                  <Typography
+                    variant="h5"
+                    fontWeight="800"
+                    sx={{
+                      fontSize: { xs: "1.2rem", sm: "1.4rem", md: "1.8rem" },
+                    }}
+                  >
+                    {todaySales}
                   </Typography>
                   <Typography
-                    variant={isMobile ? "subtitle2" : "h6"}
+                    variant="caption"
+                    color="text.secondary"
                     fontWeight="600"
+                    sx={{
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.75rem" },
+                    }}
                   >
-                    {
-                      sales.filter(
-                        (s) =>
-                          new Date(s.created_at).toDateString() ===
-                          new Date().toDateString(),
-                      ).length
-                    }
+                    Today's Sales
                   </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={4}>
-          <Card
-            sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-          >
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-              <Box
+                </CardContent>
+              </Card>
+            </Zoom>
+          </Grid>
+          <Grid item xs={4}>
+            <Zoom in timeout={600}>
+              <Card
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  textAlign: "center",
+                  borderRadius: "20px",
+                  background: `linear-gradient(135deg, ${colors.white} 0%, ${alpha(colors.success, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(colors.success, 0.2)}`,
                 }}
               >
-                <Avatar
-                  sx={{
-                    bgcolor: alpha("#2196f3", 0.1),
-                    color: "#2196f3",
-                    width: { xs: 40, sm: 48 },
-                    height: { xs: 40, sm: 48 },
-                    mb: 1,
-                  }}
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
                 >
-                  <MoneyIcon fontSize={isMobile ? "small" : "medium"} />
-                </Avatar>
-                <Box>
-                  <Typography
-                    color="text.secondary"
-                    variant="caption"
-                    display="block"
+                  <Avatar
+                    sx={{
+                      bgcolor: alpha(colors.success, 0.1),
+                      color: colors.success,
+                      width: { xs: 40, sm: 45, md: 55 },
+                      height: { xs: 40, sm: 45, md: 55 },
+                      mx: "auto",
+                      mb: 1,
+                    }}
                   >
-                    Total
+                    <MoneyIcon
+                      sx={{
+                        fontSize: { xs: "1.2rem", sm: "1.4rem", md: "1.6rem" },
+                      }}
+                    />
+                  </Avatar>
+                  <Typography
+                    variant="h5"
+                    fontWeight="800"
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1.2rem", md: "1.5rem" },
+                    }}
+                  >
+                    ETB {totalRevenue.toLocaleString()}
                   </Typography>
                   <Typography
-                    variant={isMobile ? "subtitle2" : "h6"}
+                    variant="caption"
+                    color="text.secondary"
                     fontWeight="600"
+                    sx={{
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.75rem" },
+                    }}
                   >
-                    ETB{" "}
-                    {sales
-                      .reduce((sum, s) => sum + (s.total_amount || 0), 0)
-                      .toLocaleString()}
+                    Total Revenue
                   </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={4}>
-          <Card
-            sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-          >
-            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-              <Box
+                </CardContent>
+              </Card>
+            </Zoom>
+          </Grid>
+          <Grid item xs={4}>
+            <Zoom in timeout={700}>
+              <Card
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  textAlign: "center",
+                  borderRadius: "20px",
+                  background: `linear-gradient(135deg, ${colors.white} 0%, ${alpha(colors.purple, 0.05)} 100%)`,
+                  border: `1px solid ${alpha(colors.purple, 0.2)}`,
                 }}
               >
-                <Avatar
-                  sx={{
-                    bgcolor: alpha("#ff9800", 0.1),
-                    color: "#ff9800",
-                    width: { xs: 40, sm: 48 },
-                    height: { xs: 40, sm: 48 },
-                    mb: 1,
-                  }}
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
                 >
-                  <ReceiptIcon fontSize={isMobile ? "small" : "medium"} />
-                </Avatar>
-                <Box>
+                  <Avatar
+                    sx={{
+                      bgcolor: alpha(colors.purple, 0.1),
+                      color: colors.purple,
+                      width: { xs: 40, sm: 45, md: 55 },
+                      height: { xs: 40, sm: 45, md: 55 },
+                      mx: "auto",
+                      mb: 1,
+                    }}
+                  >
+                    <ReceiptIcon
+                      sx={{
+                        fontSize: { xs: "1.2rem", sm: "1.4rem", md: "1.6rem" },
+                      }}
+                    />
+                  </Avatar>
                   <Typography
-                    color="text.secondary"
+                    variant="h5"
+                    fontWeight="800"
+                    sx={{
+                      fontSize: { xs: "1.2rem", sm: "1.4rem", md: "1.8rem" },
+                    }}
+                  >
+                    {totalTransactions}
+                  </Typography>
+                  <Typography
                     variant="caption"
-                    display="block"
+                    color="text.secondary"
+                    fontWeight="600"
+                    sx={{
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.75rem" },
+                    }}
                   >
                     Transactions
                   </Typography>
-                  <Typography
-                    variant={isMobile ? "subtitle2" : "h6"}
-                    fontWeight="600"
-                  >
-                    {sales.length}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </Zoom>
+          </Grid>
         </Grid>
-      </Grid>
 
-      {/* Search & Filters */}
-      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }}>
-        <Box
+        {/* Search & Filters */}
+        <Paper
           sx={{
-            display: "flex",
-            gap: 1,
-            alignItems: "center",
-            mb: showFilters ? 2 : 0,
+            p: { xs: 1.5, sm: 2 },
+            mb: { xs: 3, sm: 4 },
+            borderRadius: "20px",
+            bgcolor: colors.white,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.05)",
           }}
         >
-          <TextField
-            fullWidth
-            placeholder={
-              isMobile ? "Search sales..." : "Search by customer or product..."
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon
-                    sx={{ color: colors.primary }}
-                    fontSize={isMobile ? "small" : "medium"}
-                  />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <InputAdornment position="end">
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <TextField
+              fullWidth
+              placeholder={
+                isMobile
+                  ? "Search sales..."
+                  : "Search by customer or product..."
+              }
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "12px",
+                  bgcolor: colors.light,
+                },
+                "& .MuiInputBase-input": {
+                  fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon
+                      sx={{
+                        color: colors.primary,
+                        fontSize: { xs: "1.2rem", sm: "1.3rem" },
+                      }}
+                    />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
                   <IconButton size="small" onClick={() => setSearchTerm("")}>
                     <ClearIcon fontSize="small" />
                   </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ bgcolor: colors.light, borderRadius: 1 }}
-          />
-          <Tooltip title="Refresh">
-            <IconButton onClick={loadSales} sx={{ bgcolor: colors.light }}>
-              <RefreshIcon fontSize={isMobile ? "small" : "medium"} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Filter">
-            <IconButton
-              onClick={() => setShowFilters(!showFilters)}
-              sx={{
-                bgcolor: dateFilter !== "today" ? colors.primary : colors.light,
-                color: dateFilter !== "today" ? colors.white : colors.gray,
-              }}
-            >
-              <FilterIcon fontSize={isMobile ? "small" : "medium"} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        {showFilters && (
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-            <Chip
-              label="Today"
-              onClick={() => setDateFilter("today")}
-              size="small"
-              sx={{
-                bgcolor:
-                  dateFilter === "today" ? colors.primary : "transparent",
-                color: dateFilter === "today" ? "white" : colors.gray,
-                border:
-                  dateFilter === "today"
-                    ? "none"
-                    : `1px solid ${colors.lightGray}`,
+                ),
               }}
             />
-            <Chip
-              label="All"
-              onClick={() => setDateFilter("all")}
-              size="small"
-              sx={{
-                bgcolor: dateFilter === "all" ? colors.primary : "transparent",
-                color: dateFilter === "all" ? "white" : colors.gray,
-                border:
-                  dateFilter === "all"
-                    ? "none"
-                    : `1px solid ${colors.lightGray}`,
-              }}
-            />
-            {(searchTerm || dateFilter !== "today") && (
-              <Chip
-                label="Clear"
-                onClick={handleClearFilters}
-                size="small"
-                icon={<ClearIcon />}
-                sx={{ bgcolor: colors.light, color: colors.gray }}
-              />
-            )}
+            <Tooltip title="Refresh">
+              <IconButton
+                onClick={loadSales}
+                sx={{
+                  bgcolor: colors.light,
+                  borderRadius: "12px",
+                  "&:hover": { bgcolor: colors.primary, color: "white" },
+                }}
+              >
+                <RefreshIcon
+                  sx={{ fontSize: { xs: "1.2rem", sm: "1.3rem" } }}
+                />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Filter">
+              <IconButton
+                onClick={() => setShowFilters(!showFilters)}
+                sx={{
+                  bgcolor:
+                    dateFilter !== "today" ? colors.primary : colors.light,
+                  color: dateFilter !== "today" ? colors.white : colors.gray,
+                  borderRadius: "12px",
+                  "&:hover": { bgcolor: colors.primary, color: "white" },
+                }}
+              >
+                <FilterIcon sx={{ fontSize: { xs: "1.2rem", sm: "1.3rem" } }} />
+              </IconButton>
+            </Tooltip>
           </Box>
-        )}
-      </Paper>
 
-      {/* Sales List */}
-      {paginatedSales.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2 }}>
-          <ReceiptIcon sx={{ fontSize: 48, color: colors.gray, mb: 2 }} />
-          <Typography color={colors.gray}>No sales found</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
-            fullWidth={isMobile}
-            sx={{
-              mt: 2,
-              bgcolor: colors.primary,
-              "&:hover": { bgcolor: colors.secondary },
-            }}
-          >
-            Create First Sale
-          </Button>
-        </Paper>
-      ) : (
-        <Stack spacing={2}>
-          {paginatedSales.map((sale) => (
-            <Card key={sale.id} sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-                <Box
+          {showFilters && (
+            <Fade in>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 2 }}>
+                <Chip
+                  label="Today"
+                  onClick={() => setDateFilter("today")}
+                  size="small"
                   sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    mb: 1.5,
+                    bgcolor:
+                      dateFilter === "today" ? colors.primary : "transparent",
+                    color: dateFilter === "today" ? "white" : colors.gray,
+                    fontWeight: 600,
+                    "&:hover": {
+                      bgcolor:
+                        dateFilter === "today"
+                          ? colors.secondary
+                          : colors.lightGray,
+                    },
                   }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: alpha(
-                          paymentMethods[sale.payment_method]?.color ||
-                            colors.gray,
-                          0.1,
-                        ),
-                        color:
-                          paymentMethods[sale.payment_method]?.color ||
-                          colors.gray,
-                        width: { xs: 40, sm: 48 },
-                        height: { xs: 40, sm: 48 },
-                      }}
-                    >
-                      {paymentMethods[sale.payment_method]?.icon || (
-                        <ReceiptIcon />
-                      )}
-                    </Avatar>
-                    <Box>
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight="600"
-                        sx={{ fontSize: { xs: "0.95rem", sm: "1rem" } }}
-                      >
-                        {sale.product_name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(sale.created_at).toLocaleDateString()} •{" "}
-                        {new Date(sale.created_at).toLocaleTimeString()}
-                      </Typography>
-                    </Box>
-                  </Box>
+                />
+                <Chip
+                  label="All Time"
+                  onClick={() => setDateFilter("all")}
+                  size="small"
+                  sx={{
+                    bgcolor:
+                      dateFilter === "all" ? colors.primary : "transparent",
+                    color: dateFilter === "all" ? "white" : colors.gray,
+                    fontWeight: 600,
+                    "&:hover": {
+                      bgcolor:
+                        dateFilter === "all"
+                          ? colors.secondary
+                          : colors.lightGray,
+                    },
+                  }}
+                />
+                {(searchTerm || dateFilter !== "today") && (
                   <Chip
-                    label={sale.payment_method}
+                    label="Clear Filters"
+                    onClick={handleClearFilters}
                     size="small"
+                    icon={<ClearIcon />}
                     sx={{
-                      bgcolor: alpha(
-                        paymentMethods[sale.payment_method]?.color ||
-                          colors.gray,
-                        0.1,
-                      ),
-                      color:
-                        paymentMethods[sale.payment_method]?.color ||
-                        colors.gray,
-                      height: 24,
+                      bgcolor: colors.light,
+                      color: colors.gray,
+                      fontWeight: 600,
                     }}
                   />
-                </Box>
+                )}
+              </Box>
+            </Fade>
+          )}
+        </Paper>
 
-                <Divider sx={{ my: 1.5 }} />
-
-                <Grid container spacing={1.5}>
-                  <Grid item xs={6}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <PersonIcon sx={{ fontSize: 16, color: colors.gray }} />
-                      <Typography variant="body2" noWrap>
-                        {sale.customer_name || "Walk-in"}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        Qty: {sale.quantity}
-                      </Typography>
-                      {sale.warranty_months && (
-                        <Chip
-                          label={`${sale.warranty_months}m`}
-                          size="small"
-                          sx={{
-                            bgcolor: alpha(colors.primary, 0.1),
-                            color: colors.primary,
-                            height: 20,
-                          }}
-                        />
-                      )}
-                    </Box>
-                  </Grid>
-                </Grid>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 1.5,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    sx={{ color: colors.primary, fontWeight: 600 }}
-                  >
-                    ETB {sale.total_amount?.toLocaleString()}
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<ReceiptIcon />}
+        {/* Sales List */}
+        {paginatedSales.length === 0 ? (
+          <Paper sx={{ p: 6, textAlign: "center", borderRadius: "20px" }}>
+            <ReceiptIcon
+              sx={{ fontSize: 64, color: colors.gray, mb: 2, opacity: 0.5 }}
+            />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No sales found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Start by creating your first sale transaction
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenDialog(true)}
+              sx={{
+                bgcolor: colors.primary,
+                "&:hover": { bgcolor: colors.secondary },
+              }}
+            >
+              Create First Sale
+            </Button>
+          </Paper>
+        ) : (
+          <Grid container spacing={2}>
+            {paginatedSales.map((sale, idx) => (
+              <Grow in timeout={idx * 100} key={sale.id}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Card
+                    sx={{
+                      borderRadius: "20px",
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: "0 12px 28px rgba(0,0,0,0.1)",
+                      },
+                    }}
                     onClick={() => {
                       setSelectedSale(sale);
                       setOpenReceiptDialog(true);
                     }}
-                    sx={{ borderColor: colors.primary, color: colors.primary }}
                   >
-                    Receipt
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
-      )}
-
-      {/* Pagination */}
-      {paginatedSales.length > 0 && (
-        <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-          <TablePagination
-            component="div"
-            count={filteredSales.length}
-            page={page}
-            onPageChange={(e, p) => setPage(p)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
-            labelRowsPerPage={isMobile ? "Rows:" : "Rows per page:"}
-          />
-        </Box>
-      )}
-
-      {/* New Sale Dialog */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="md"
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle
-          sx={{
-            background: colors.gradient,
-            color: "white",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          New Sale
-          {isMobile && (
-            <IconButton
-              onClick={() => setOpenDialog(false)}
-              sx={{ color: "white" }}
-            >
-              <CloseIcon />
-            </IconButton>
-          )}
-        </DialogTitle>
-        <form onSubmit={handleSubmit}>
-          <DialogContent sx={{ pt: 3, pb: isMobile ? 2 : 3 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Search Customer (Optional)"
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                  size={isMobile ? "small" : "medium"}
-                  placeholder="Type name or phone..."
-                />
-                {searchResults.length > 0 && (
-                  <Paper sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
-                    {searchResults.map((c) => (
-                      <ListItem
-                        key={c.id}
-                        button
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            customer_id: c.id,
-                            customer_name: c.name,
-                            customer_phone: c.phone,
-                          });
-                          setCustomerSearch("");
-                          setSearchResults([]);
-                        }}
-                      >
-                        <ListItemIcon>
-                          <PersonIcon sx={{ color: colors.primary }} />
-                        </ListItemIcon>
-                        <ListItemText primary={c.name} secondary={c.phone} />
-                      </ListItem>
-                    ))}
-                  </Paper>
-                )}
-              </Grid>
-
-              {formData.customer_id && (
-                <Grid item xs={12}>
-                  <Alert severity="success" sx={{ borderRadius: 1 }}>
-                    Customer: {formData.customer_name} (
-                    {formData.customer_phone})
-                  </Alert>
-                </Grid>
-              )}
-
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Select Products
-                </Typography>
-                <Paper sx={{ maxHeight: 200, overflow: "auto", p: 1 }}>
-                  {products.length === 0 ? (
-                    <Typography
-                      color="text.secondary"
-                      align="center"
-                      sx={{ py: 2 }}
-                    >
-                      No products in stock
-                    </Typography>
-                  ) : (
-                    products.map((p) => (
-                      <ListItem key={p.id} button onClick={() => addToCart(p)}>
-                        <ListItemIcon>
-                          <InventoryIcon sx={{ color: colors.primary }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={p.name}
-                          secondary={`ETB ${p.price} • Stock: ${p.stock_quantity}`}
-                        />
-                        <Chip
-                          label="Add"
-                          size="small"
-                          sx={{
-                            bgcolor: alpha(colors.primary, 0.1),
-                            color: colors.primary,
-                          }}
-                        />
-                      </ListItem>
-                    ))
-                  )}
-                </Paper>
-              </Grid>
-
-              {cart.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Cart
-                  </Typography>
-                  <Paper sx={{ p: 2 }}>
-                    {cart.map((item) => (
+                    <CardContent sx={{ p: 2.5 }}>
                       <Box
-                        key={item.product_id}
                         sx={{
                           display: "flex",
-                          alignItems: "center",
                           justifyContent: "space-between",
-                          mb: 1,
+                          alignItems: "flex-start",
+                          mb: 2,
                         }}
                       >
-                        <Typography
-                          variant="body2"
-                          noWrap
-                          sx={{ maxWidth: "40%" }}
+                        <Avatar
+                          sx={{
+                            bgcolor:
+                              paymentMethods[sale.payment_method]?.bg ||
+                              alpha(colors.gray, 0.1),
+                            color:
+                              paymentMethods[sale.payment_method]?.color ||
+                              colors.gray,
+                            width: 48,
+                            height: 48,
+                          }}
                         >
-                          {item.name}
-                        </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              updateQuantity(item.product_id, item.quantity - 1)
-                            }
-                          >
-                            -
-                          </IconButton>
-                          <Typography
-                            sx={{ mx: 1, minWidth: 20, textAlign: "center" }}
-                          >
-                            {item.quantity}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              updateQuantity(item.product_id, item.quantity + 1)
-                            }
-                            disabled={item.quantity >= item.stock}
-                          >
-                            +
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => removeFromCart(item.product_id)}
-                            sx={{ ml: 0.5, color: "#f44336" }}
-                          >
-                            <ClearIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                    ))}
-                    <Divider sx={{ my: 2 }} />
-                    <Box
-                      sx={{ display: "flex", justifyContent: "space-between" }}
-                    >
-                      <Typography variant="subtitle1">Total:</Typography>
-                      <Typography variant="h6" sx={{ color: colors.primary }}>
-                        ETB {calculateTotal().toLocaleString()}
-                      </Typography>
-                    </Box>
-                  </Paper>
-                </Grid>
-              )}
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Warranty (months)"
-                  type="number"
-                  value={warrantyPeriod}
-                  onChange={(e) => setWarrantyPeriod(e.target.value)}
-                  size={isMobile ? "small" : "medium"}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">months</InputAdornment>
-                    ),
-                  }}
-                  helperText="e.g., 6, 12, 24"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
-                  <InputLabel>Payment Method</InputLabel>
-                  <Select
-                    value={formData.payment_method}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        payment_method: e.target.value,
-                      })
-                    }
-                    label="Payment Method"
-                  >
-                    <MenuItem value="cash">Cash</MenuItem>
-                    <MenuItem value="mpesa">M-Pesa</MenuItem>
-                    <MenuItem value="telebirr">Telebirr</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions
-            sx={{ p: 2, flexDirection: isMobile ? "column" : "row", gap: 1 }}
-          >
-            {!isMobile && (
-              <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-            )}
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth={isMobile}
-              disabled={cart.length === 0}
-              sx={{
-                background: colors.gradient,
-                "&:hover": { background: colors.secondary },
-                py: isMobile ? 1.5 : 1,
-              }}
-            >
-              Complete Sale
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      {/* Receipt Dialog */}
-      <Dialog
-        open={openReceiptDialog}
-        onClose={() => setOpenReceiptDialog(false)}
-        maxWidth="md"
-        fullWidth
-        fullScreen={isMobile}
-        PaperProps={{ sx: { borderRadius: isMobile ? 0 : 3 } }}
-      >
-        <DialogTitle
-          sx={{
-            background: colors.gradient,
-            color: "white",
-            textAlign: "center",
-            py: 3,
-          }}
-        >
-          <VerifiedIcon sx={{ fontSize: 40, mb: 1 }} />
-          <Typography
-            component="div"
-            sx={{ fontSize: "1.5rem", fontWeight: 700 }}
-          >
-            OFFICIAL RECEIPT
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: { xs: 2, sm: 4 } }}>
-          {selectedSale && (
-            <Box>
-              <Box sx={{ textAlign: "center", mb: 4 }}>
-                <Typography
-                  variant="h4"
-                  sx={{ color: colors.primary, fontWeight: 700 }}
-                >
-                  CHALA MOBILE
-                </Typography>
-                <Typography variant="subtitle1" color="text.secondary">
-                  Solutions Hub
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 1 }}
-                >
-                  Abosto, Shashemene, Ethiopia
-                </Typography>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: 2,
-                    mt: 1,
-                  }}
-                >
-                  <Chip
-                    icon={<PhoneIcon />}
-                    label="+251 98 231 0974"
-                    size="small"
-                    variant="outlined"
-                  />
-                  <Chip
-                    icon={<EmailIcon />}
-                    label="info@chalamobile.com"
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-              </Box>
-
-              <Divider sx={{ mb: 4 }} />
-
-              <Box sx={{ textAlign: "center", mb: 4 }}>
-                <CheckCircleIcon sx={{ fontSize: 60, color: colors.success }} />
-                <Typography variant="h5" fontWeight="600" gutterBottom>
-                  Payment Successful! 🎉
-                </Typography>
-                <Typography color="text.secondary">
-                  Transaction completed successfully
-                </Typography>
-              </Box>
-
-              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
-                Official Receipt
-              </Typography>
-
-              <TableContainer
-                component={Paper}
-                variant="outlined"
-                sx={{ mb: 4 }}
-              >
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                        width="40%"
-                      >
-                        Receipt Number
-                      </TableCell>
-                      <TableCell>
-                        #{selectedSale.id?.toString().padStart(6, "0")}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Date & Time
-                      </TableCell>
-                      <TableCell>
-                        {new Date(selectedSale.created_at).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Payment Method
-                      </TableCell>
-                      <TableCell>
+                          {paymentMethods[sale.payment_method]?.icon || (
+                            <ReceiptIcon />
+                          )}
+                        </Avatar>
                         <Chip
-                          label={selectedSale.payment_method}
+                          label={sale.payment_method}
                           size="small"
                           sx={{
-                            bgcolor: colors.primary,
-                            color: "white",
+                            bgcolor: paymentMethods[sale.payment_method]?.bg,
+                            color: paymentMethods[sale.payment_method]?.color,
+                            fontWeight: 600,
                             textTransform: "capitalize",
                           }}
                         />
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      </Box>
 
-              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
-                Customer Information
-              </Typography>
+                      <Typography
+                        variant="h6"
+                        fontWeight="800"
+                        sx={{ mb: 0.5 }}
+                      >
+                        {sale.product_name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(sale.created_at).toLocaleString()}
+                      </Typography>
 
-              <TableContainer
-                component={Paper}
-                variant="outlined"
-                sx={{ mb: 4 }}
-              >
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                        width="40%"
-                      >
-                        Full Name
-                      </TableCell>
-                      <TableCell>
-                        {selectedSale.customer_name || "Walk-in Customer"}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Email Address
-                      </TableCell>
-                      <TableCell>
-                        {selectedSale.customer_email || "Not provided"}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Phone Number
-                      </TableCell>
-                      <TableCell>
-                        {selectedSale.customer_phone || "Not provided"}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      <Divider sx={{ my: 1.5 }} />
 
-              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
-                Product Details
-              </Typography>
-
-              <TableContainer
-                component={Paper}
-                variant="outlined"
-                sx={{ mb: 4 }}
-              >
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                        width="40%"
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                        }}
                       >
-                        Product Name
-                      </TableCell>
-                      <TableCell>{selectedSale.product_name}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Quantity
-                      </TableCell>
-                      <TableCell>{selectedSale.quantity}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Unit Price
-                      </TableCell>
-                      <TableCell>
-                        ETB {selectedSale.unit_price?.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{ fontWeight: 600, bgcolor: colors.lightGray }}
-                      >
-                        Total Amount
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="h6" sx={{ color: colors.primary }}>
-                          ETB {selectedSale.total_amount?.toLocaleString()}
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <PersonIcon
+                            sx={{ fontSize: 14, color: colors.gray }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {sale.customer_name || "Walk-in"}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" fontWeight="600">
+                          Qty: {sale.quantity}
                         </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      </Box>
 
-              <Typography variant="h6" gutterBottom sx={{ color: colors.dark }}>
-                Warranty Information
-              </Typography>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 3,
-                  mb: 4,
-                  borderColor: colors.primary,
-                  bgcolor: colors.lightGray,
-                }}
-              >
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                    >
-                      Warranty Period
-                    </Typography>
-                    <Typography variant="h6" sx={{ color: colors.primary }}>
-                      {selectedSale.warranty_months || 12} Months
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                    >
-                      Purchase Date
-                    </Typography>
-                    <Typography variant="body1">
-                      {new Date(selectedSale.created_at).toLocaleDateString()}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                    >
-                      Valid Until
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{ color: colors.primary, fontWeight: 600 }}
-                    >
-                      {calculateWarrantyUntil(selectedSale)}
-                    </Typography>
-                  </Grid>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mt: 1.5,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          sx={{ color: colors.primary, fontWeight: 800 }}
+                        >
+                          ETB {sale.total_amount?.toLocaleString()}
+                        </Typography>
+                        {sale.warranty_months && (
+                          <Chip
+                            label={`${sale.warranty_months}m warranty`}
+                            size="small"
+                            sx={{
+                              bgcolor: alpha(colors.primary, 0.1),
+                              color: colors.primary,
+                              height: 24,
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
                 </Grid>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mt: 2 }}
-                >
-                  ⓘ This receipt serves as your official warranty proof. Please
-                  keep it for future reference.
-                </Typography>
-              </Paper>
+              </Grow>
+            ))}
+          </Grid>
+        )}
 
-              <Box sx={{ textAlign: "center", mt: 4 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Thank you for choosing Chala Mobile!
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  For any inquiries, please contact us at +251 98 231 0974
-                </Typography>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions
-          sx={{
-            p: 3,
-            justifyContent: "center",
-            flexDirection: isMobile ? "column" : "row",
-            gap: 2,
-            borderTop: `1px solid ${colors.lightGray}`,
+        {/* Pagination */}
+        {paginatedSales.length > 0 && (
+          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
+            <TablePagination
+              component="div"
+              count={filteredSales.length}
+              page={page}
+              onPageChange={(e, p) => setPage(p)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
+              labelRowsPerPage={isMobile ? "Rows:" : "Rows per page:"}
+              sx={{
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows, & .MuiTablePagination-select":
+                  { fontSize: { xs: "0.75rem", sm: "0.85rem" } },
+              }}
+            />
+          </Box>
+        )}
+
+        {/* New Sale Dialog */}
+        <Dialog
+          open={openDialog}
+          onClose={() => setOpenDialog(false)}
+          maxWidth="md"
+          fullWidth
+          fullScreen={isMobile}
+          PaperProps={{
+            sx: { borderRadius: isMobile ? 0 : "24px", overflow: "hidden" },
           }}
         >
-          <Button
-            onClick={() => setOpenReceiptDialog(false)}
-            variant="outlined"
-            fullWidth={isMobile}
-            sx={{ minWidth: 120 }}
-          >
-            Close
-          </Button>
-          <Button
-            startIcon={<PrintIcon />}
-            variant="contained"
-            fullWidth={isMobile}
+          <DialogTitle
             sx={{
-              bgcolor: colors.primary,
-              "&:hover": { bgcolor: colors.secondary },
-              minWidth: 120,
+              background: colors.gradient,
+              color: "white",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              p: { xs: 2, sm: 3 },
             }}
-            onClick={() => window.print()}
           >
-            Print Receipt
-          </Button>
-          <Button
-            startIcon={<DownloadIcon />}
-            variant="outlined"
-            fullWidth={isMobile}
-            sx={{ borderColor: colors.gray, color: colors.gray, minWidth: 120 }}
-            onClick={() => handleDownloadPDF(selectedSale)}
-          >
-            Download PDF
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Typography variant="h6" fontWeight="800">
+              New Sale Transaction
+            </Typography>
+            {isMobile && (
+              <IconButton
+                onClick={() => setOpenDialog(false)}
+                sx={{ color: "white" }}
+              >
+                <CloseIcon />
+              </IconButton>
+            )}
+          </DialogTitle>
+          <form onSubmit={handleSubmit}>
+            <DialogContent sx={{ pt: 3, maxHeight: "70vh", overflowY: "auto" }}>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Search Customer (Optional)"
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    size={isMobile ? "small" : "medium"}
+                    placeholder="Type name or phone..."
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonIcon sx={{ color: colors.primary }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiInputBase-input": {
+                        fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                      },
+                    }}
+                  />
+                  {searchResults.length > 0 && (
+                    <Paper
+                      sx={{
+                        mt: 1,
+                        maxHeight: 200,
+                        overflow: "auto",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      {searchResults.map((c) => (
+                        <ListItem
+                          key={c.id}
+                          button
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              customer_id: c.id,
+                              customer_name: c.name,
+                              customer_phone: c.phone,
+                            });
+                            setCustomerSearch("");
+                            setSearchResults([]);
+                          }}
+                          sx={{
+                            "&:hover": { bgcolor: alpha(colors.primary, 0.05) },
+                          }}
+                        >
+                          <ListItemIcon>
+                            <PersonIcon sx={{ color: colors.primary }} />
+                          </ListItemIcon>
+                          <ListItemText primary={c.name} secondary={c.phone} />
+                        </ListItem>
+                      ))}
+                    </Paper>
+                  )}
+                </Grid>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{
-          vertical: isMobile ? "top" : "bottom",
-          horizontal: isMobile ? "center" : "right",
-        }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          sx={{ borderRadius: 1, width: "100%" }}
+                {formData.customer_id && (
+                  <Grid item xs={12}>
+                    <Alert severity="success" sx={{ borderRadius: "12px" }}>
+                      Customer selected:{" "}
+                      <strong>{formData.customer_name}</strong> (
+                      {formData.customer_phone})
+                    </Alert>
+                  </Grid>
+                )}
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" fontWeight="600" gutterBottom>
+                    Select Products
+                  </Typography>
+                  <Paper
+                    sx={{
+                      maxHeight: 250,
+                      overflow: "auto",
+                      p: 1,
+                      borderRadius: "12px",
+                    }}
+                  >
+                    {products.length === 0 ? (
+                      <Typography
+                        color="text.secondary"
+                        align="center"
+                        sx={{ py: 3 }}
+                      >
+                        No products in stock
+                      </Typography>
+                    ) : (
+                      products.map((p) => (
+                        <ListItem
+                          key={p.id}
+                          button
+                          onClick={() => addToCart(p)}
+                          sx={{
+                            borderRadius: "8px",
+                            mb: 0.5,
+                            "&:hover": { bgcolor: alpha(colors.primary, 0.05) },
+                          }}
+                        >
+                          <ListItemIcon>
+                            <InventoryIcon sx={{ color: colors.primary }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={p.name}
+                            secondary={`ETB ${p.price} • Stock: ${p.stock_quantity}`}
+                            primaryTypographyProps={{ fontSize: "0.9rem" }}
+                            secondaryTypographyProps={{ fontSize: "0.75rem" }}
+                          />
+                          <Chip
+                            label="Add"
+                            size="small"
+                            sx={{
+                              bgcolor: alpha(colors.primary, 0.1),
+                              color: colors.primary,
+                              fontWeight: 600,
+                            }}
+                          />
+                        </ListItem>
+                      ))
+                    )}
+                  </Paper>
+                </Grid>
+
+                {cart.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="600"
+                      gutterBottom
+                    >
+                      Cart ({cart.length} items)
+                    </Typography>
+                    <Paper sx={{ p: 2, borderRadius: "12px" }}>
+                      {cart.map((item) => (
+                        <Box
+                          key={item.product_id}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            mb: 1.5,
+                            pb: 1,
+                            borderBottom: `1px solid ${colors.lightGray}`,
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{ flex: 2, fontSize: "0.85rem" }}
+                          >
+                            {item.name}
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                            }}
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                updateQuantity(
+                                  item.product_id,
+                                  item.quantity - 1,
+                                )
+                              }
+                              sx={{
+                                bgcolor: colors.light,
+                                width: 28,
+                                height: 28,
+                              }}
+                            >
+                              -
+                            </IconButton>
+                            <Typography
+                              sx={{
+                                minWidth: 30,
+                                textAlign: "center",
+                                fontSize: "0.9rem",
+                              }}
+                            >
+                              {item.quantity}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                updateQuantity(
+                                  item.product_id,
+                                  item.quantity + 1,
+                                )
+                              }
+                              disabled={item.quantity >= item.stock}
+                              sx={{
+                                bgcolor: colors.light,
+                                width: 28,
+                                height: 28,
+                              }}
+                            >
+                              +
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => removeFromCart(item.product_id)}
+                              sx={{ color: colors.warning, ml: 0.5 }}
+                            >
+                              <ClearIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                      ))}
+                      <Divider sx={{ my: 1.5 }} />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography variant="subtitle1" fontWeight="600">
+                          Total:
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          sx={{ color: colors.primary, fontWeight: 800 }}
+                        >
+                          ETB {calculateTotal().toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                )}
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Warranty (months)"
+                    type="number"
+                    value={warrantyPeriod}
+                    onChange={(e) => setWarrantyPeriod(e.target.value)}
+                    size={isMobile ? "small" : "medium"}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">months</InputAdornment>
+                      ),
+                    }}
+                    helperText="e.g., 6, 12, 24 months warranty"
+                    sx={{
+                      "& .MuiInputBase-input": {
+                        fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                    <InputLabel>Payment Method</InputLabel>
+                    <Select
+                      value={formData.payment_method}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          payment_method: e.target.value,
+                        })
+                      }
+                      label="Payment Method"
+                    >
+                      <MenuItem value="cash">💵 Cash</MenuItem>
+                      <MenuItem value="mpesa">📱 M-Pesa</MenuItem>
+                      <MenuItem value="telebirr">📱 Telebirr</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions
+              sx={{ p: 3, gap: 1, flexDirection: isMobile ? "column" : "row" }}
+            >
+              <Button
+                onClick={() => setOpenDialog(false)}
+                fullWidth={isMobile}
+                variant="outlined"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth={isMobile}
+                disabled={cart.length === 0}
+                sx={{
+                  background: colors.gradient,
+                  "&:hover": { background: colors.secondary },
+                  py: { xs: 1.2, sm: 1 },
+                }}
+              >
+                Complete Sale
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+
+        {/* Receipt Dialog */}
+        <Dialog
+          open={openReceiptDialog}
+          onClose={() => setOpenReceiptDialog(false)}
+          maxWidth="md"
+          fullWidth
+          fullScreen={isMobile}
+          PaperProps={{
+            sx: { borderRadius: isMobile ? 0 : "24px", overflow: "hidden" },
+          }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          <DialogTitle
+            sx={{
+              background: colors.gradient,
+              color: "white",
+              textAlign: "center",
+              py: { xs: 3, sm: 4 },
+            }}
+          >
+            <VerifiedIcon sx={{ fontSize: { xs: 40, sm: 48 }, mb: 1 }} />
+            <Typography variant="h5" fontWeight="800">
+              OFFICIAL RECEIPT
+            </Typography>
+          </DialogTitle>
+          <DialogContent sx={{ p: { xs: 2, sm: 4 } }}>
+            {selectedSale && (
+              <Box>
+                <Box sx={{ textAlign: "center", mb: 4 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ color: colors.primary, fontWeight: 800 }}
+                  >
+                    CHALA MOBILE
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.secondary">
+                    Solutions Hub
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Abosto, Shashemene, Ethiopia
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 1,
+                      mt: 1,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Chip
+                      icon={<PhoneIcon />}
+                      label="+251 98 231 0974"
+                      size="small"
+                      variant="outlined"
+                    />
+                    <Chip
+                      icon={<EmailIcon />}
+                      label="info@chalamobile.com"
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
+                </Box>
+
+                <Divider sx={{ mb: 4 }} />
+
+                <Box sx={{ textAlign: "center", mb: 4 }}>
+                  <CheckCircleIcon
+                    sx={{ fontSize: { xs: 48, sm: 60 }, color: colors.success }}
+                  />
+                  <Typography variant="h5" fontWeight="600" sx={{ mt: 1 }}>
+                    Payment Successful! 🎉
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Transaction completed successfully
+                  </Typography>
+                </Box>
+
+                <Typography
+                  variant="h6"
+                  fontWeight="800"
+                  sx={{ mb: 2, color: colors.dark }}
+                >
+                  Transaction Details
+                </Typography>
+
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{ mb: 3, borderRadius: "12px" }}
+                >
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell
+                          sx={{
+                            fontWeight: 600,
+                            bgcolor: colors.light,
+                            width: "40%",
+                          }}
+                        >
+                          Receipt Number
+                        </TableCell>
+                        <TableCell>
+                          #{selectedSale.id?.toString().padStart(6, "0")}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          sx={{ fontWeight: 600, bgcolor: colors.light }}
+                        >
+                          Date & Time
+                        </TableCell>
+                        <TableCell>
+                          {new Date(selectedSale.created_at).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          sx={{ fontWeight: 600, bgcolor: colors.light }}
+                        >
+                          Payment Method
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={selectedSale.payment_method}
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                paymentMethods[selectedSale.payment_method]?.bg,
+                              color:
+                                paymentMethods[selectedSale.payment_method]
+                                  ?.color,
+                              textTransform: "capitalize",
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Typography
+                  variant="h6"
+                  fontWeight="800"
+                  sx={{ mb: 2, color: colors.dark }}
+                >
+                  Customer Information
+                </Typography>
+
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{ mb: 3, borderRadius: "12px" }}
+                >
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell
+                          sx={{
+                            fontWeight: 600,
+                            bgcolor: colors.light,
+                            width: "40%",
+                          }}
+                        >
+                          Full Name
+                        </TableCell>
+                        <TableCell>
+                          {selectedSale.customer_name || "Walk-in Customer"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          sx={{ fontWeight: 600, bgcolor: colors.light }}
+                        >
+                          Phone Number
+                        </TableCell>
+                        <TableCell>
+                          {selectedSale.customer_phone || "Not provided"}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Typography
+                  variant="h6"
+                  fontWeight="800"
+                  sx={{ mb: 2, color: colors.dark }}
+                >
+                  Product Details
+                </Typography>
+
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{ mb: 3, borderRadius: "12px" }}
+                >
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell
+                          sx={{
+                            fontWeight: 600,
+                            bgcolor: colors.light,
+                            width: "40%",
+                          }}
+                        >
+                          Product Name
+                        </TableCell>
+                        <TableCell>{selectedSale.product_name}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          sx={{ fontWeight: 600, bgcolor: colors.light }}
+                        >
+                          Quantity
+                        </TableCell>
+                        <TableCell>{selectedSale.quantity}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          sx={{ fontWeight: 600, bgcolor: colors.light }}
+                        >
+                          Unit Price
+                        </TableCell>
+                        <TableCell>
+                          ETB {selectedSale.unit_price?.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          sx={{ fontWeight: 600, bgcolor: colors.light }}
+                        >
+                          Total Amount
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="h6"
+                            sx={{ color: colors.primary, fontWeight: 800 }}
+                          >
+                            ETB {selectedSale.total_amount?.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Typography
+                  variant="h6"
+                  fontWeight="800"
+                  sx={{ mb: 2, color: colors.dark }}
+                >
+                  Warranty Information
+                </Typography>
+
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 3,
+                    mb: 4,
+                    borderColor: colors.primary,
+                    bgcolor: alpha(colors.primary, 0.05),
+                    borderRadius: "12px",
+                  }}
+                >
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Warranty Period
+                      </Typography>
+                      <Typography variant="h6" sx={{ color: colors.primary }}>
+                        {selectedSale.warranty_months || 12} Months
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Purchase Date
+                      </Typography>
+                      <Typography variant="body1">
+                        {new Date(selectedSale.created_at).toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Valid Until
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        sx={{ color: colors.primary, fontWeight: 600 }}
+                      >
+                        {calculateWarrantyUntil(selectedSale)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 2 }}
+                  >
+                    ⓘ This receipt serves as your official warranty proof.
+                    Please keep it for future reference.
+                  </Typography>
+                </Paper>
+
+                <Box sx={{ textAlign: "center", mt: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Thank you for choosing Chala Mobile!
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                  >
+                    For any inquiries, please contact us at +251 98 231 0974
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions
+            sx={{
+              p: { xs: 2, sm: 3 },
+              justifyContent: "center",
+              flexDirection: isMobile ? "column" : "row",
+              gap: 2,
+              borderTop: `1px solid ${colors.lightGray}`,
+            }}
+          >
+            <Button
+              onClick={() => setOpenReceiptDialog(false)}
+              variant="outlined"
+              fullWidth={isMobile}
+            >
+              Close
+            </Button>
+            <Button
+              startIcon={<PrintIcon />}
+              variant="contained"
+              fullWidth={isMobile}
+              sx={{
+                bgcolor: colors.primary,
+                "&:hover": { bgcolor: colors.secondary },
+              }}
+              onClick={() => window.print()}
+            >
+              Print Receipt
+            </Button>
+            <Button
+              startIcon={<DownloadIcon />}
+              variant="outlined"
+              fullWidth={isMobile}
+              onClick={() => handleDownloadPDF(selectedSale)}
+            >
+              Download PDF
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{
+            vertical: isMobile ? "top" : "bottom",
+            horizontal: "center",
+          }}
+        >
+          <Alert
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ borderRadius: "12px" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
     </Box>
   );
 };
