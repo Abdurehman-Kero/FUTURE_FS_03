@@ -35,8 +35,6 @@ import {
   useMediaQuery,
   useTheme,
   Fab,
-  ImageList,
-  ImageListItem,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -55,6 +53,7 @@ import {
   Inventory as InventoryIcon,
   DeleteOutline as DeleteOutlineIcon,
   AddPhotoAlternate as AddPhotoIcon,
+  Image as ImageIcon,
 } from "@mui/icons-material";
 import {
   getProducts,
@@ -92,13 +91,12 @@ const categoryIcons = {
 };
 
 const DEFAULT_PRODUCT_IMAGE =
-  "https://placehold.co/300x200/FF8500/FFFFFF?text=Product";
+  "https://placehold.co/400x400/FF8500/FFFFFF?text=No+Image";
 
 const Products = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,13 +105,13 @@ const Products = () => {
   const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [imagePreview, setImagePreview] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+  const [imageList, setImageList] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -124,7 +122,6 @@ const Products = () => {
     price: "",
     stock_quantity: "",
     description: "",
-    image_url: "",
     images: [],
     warranty_months: 12,
   });
@@ -143,14 +140,27 @@ const Products = () => {
       const response = await getProducts();
       let productsData = response.data.data || [];
 
-      // Parse images JSON for each product
-      productsData = productsData.map((p) => ({
-        ...p,
-        images:
-          typeof p.images === "string"
-            ? JSON.parse(p.images || "[]")
-            : p.images || [],
-      }));
+      productsData = productsData.map((p) => {
+        let imagesArray = [];
+
+        if (p.images) {
+          if (typeof p.images === "string") {
+            try {
+              imagesArray = JSON.parse(p.images);
+            } catch (e) {
+              imagesArray = [];
+            }
+          } else if (Array.isArray(p.images)) {
+            imagesArray = p.images;
+          }
+        }
+
+        if (imagesArray.length === 0 && p.image_url) {
+          imagesArray = [p.image_url];
+        }
+
+        return { ...p, images: imagesArray };
+      });
 
       setProducts(productsData);
     } catch (error) {
@@ -171,6 +181,8 @@ const Products = () => {
   const handleOpenDialog = (product = null) => {
     if (product) {
       setEditingProduct(product);
+      const productImages = product.images || [];
+      setImageList([...productImages]);
       setFormData({
         name: product.name || "",
         category: product.category || "phone",
@@ -180,13 +192,12 @@ const Products = () => {
         price: product.price || "",
         stock_quantity: product.stock_quantity || "",
         description: product.description || "",
-        image_url: product.image_url || "",
-        images: product.images || [],
+        images: productImages,
         warranty_months: product.warranty_months || 12,
       });
-      setImagePreview(product.images || []);
     } else {
       setEditingProduct(null);
+      setImageList([]);
       setFormData({
         name: "",
         category: "phone",
@@ -196,11 +207,9 @@ const Products = () => {
         price: "",
         stock_quantity: "",
         description: "",
-        image_url: "",
         images: [],
         warranty_months: 12,
       });
-      setImagePreview([]);
     }
     setOpenDialog(true);
   };
@@ -208,7 +217,7 @@ const Products = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
-    setImagePreview([]);
+    setImageList([]);
   };
 
   const handleInputChange = (e) => {
@@ -219,51 +228,58 @@ const Products = () => {
   const handleAddImageUrl = () => {
     const url = prompt("Enter image URL:");
     if (url && url.trim()) {
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, url.trim()],
-      }));
-      setImagePreview((prev) => [...prev, url.trim()]);
+      const newList = [...imageList, url.trim()];
+      setImageList(newList);
+      setFormData((prev) => ({ ...prev, images: newList }));
+      showSnackbar("Image URL added", "success");
     }
   };
 
   const handleRemoveImage = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
-    setImagePreview((prev) => prev.filter((_, i) => i !== index));
+    const newList = imageList.filter((_, i) => i !== index);
+    setImageList(newList);
+    setFormData((prev) => ({ ...prev, images: newList }));
+    showSnackbar("Image removed", "success");
+  };
+
+  const handleSetMainImage = (index) => {
+    if (index === 0) return;
+    const newList = [...imageList];
+    const [selected] = newList.splice(index, 1);
+    newList.unshift(selected);
+    setImageList(newList);
+    setFormData((prev) => ({ ...prev, images: newList }));
+    showSnackbar("Image set as main", "success");
   };
 
   const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
     setUploading(true);
     try {
-      const uploadedUrls = [];
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("image", file);
-        const response = await uploadProductImage(formData);
-        if (response.data.imageUrl) {
-          uploadedUrls.push(response.data.imageUrl);
-        }
-      }
+      const uploadData = new FormData();
+      uploadData.append("image", file);
+      const response = await uploadProductImage(uploadData);
 
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...uploadedUrls],
-      }));
-      setImagePreview((prev) => [...prev, ...uploadedUrls]);
-      showSnackbar(
-        `${uploadedUrls.length} image(s) uploaded successfully`,
-        "success",
-      );
+      const uploadedUrl = response.data?.imageUrl || response.data?.url;
+      if (uploadedUrl) {
+        const newList = [...imageList, uploadedUrl];
+        setImageList(newList);
+        setFormData((prev) => ({ ...prev, images: newList }));
+        showSnackbar(
+          `Image uploaded. Total: ${newList.length} images`,
+          "success",
+        );
+      } else {
+        showSnackbar("Upload failed - no URL returned", "error");
+      }
     } catch (error) {
-      showSnackbar("Failed to upload images", "error");
+      console.error("Upload error:", error);
+      showSnackbar("Failed to upload image", "error");
     } finally {
       setUploading(false);
+      e.target.value = null;
     }
   };
 
@@ -271,26 +287,45 @@ const Products = () => {
     e.preventDefault();
 
     if (!formData.name || !formData.price || !formData.stock_quantity) {
-      showSnackbar("Please fill in all required fields", "error");
+      showSnackbar("Please fill all required fields", "error");
+      return;
+    }
+
+    if (imageList.length === 0) {
+      showSnackbar("Please add at least one image", "error");
       return;
     }
 
     try {
-      const productData = {
+      const payload = {
         ...formData,
-        images: JSON.stringify(formData.images),
+        images: JSON.stringify(imageList),
+        image_url: imageList[0], // CRITICAL: First image as main
       };
 
+      console.log("SAVING PRODUCT:", {
+        name: payload.name,
+        total_images: imageList.length,
+        images: imageList,
+      });
+
       if (editingProduct) {
-        await updateProduct(editingProduct.id, productData);
-        showSnackbar("Product updated successfully", "success");
+        await updateProduct(editingProduct.id, payload);
+        showSnackbar(
+          `Product updated with ${imageList.length} images`,
+          "success",
+        );
       } else {
-        await createProduct(productData);
-        showSnackbar("Product created successfully", "success");
+        await createProduct(payload);
+        showSnackbar(
+          `Product created with ${imageList.length} images`,
+          "success",
+        );
       }
       handleCloseDialog();
       loadProducts();
     } catch (error) {
+      console.error("Submit error:", error);
       showSnackbar(
         error.response?.data?.message || "Operation failed",
         "error",
@@ -315,8 +350,7 @@ const Products = () => {
     return (
       product.name?.toLowerCase().includes(searchLower) ||
       product.brand?.toLowerCase().includes(searchLower) ||
-      product.model?.toLowerCase().includes(searchLower) ||
-      product.category?.toLowerCase().includes(searchLower)
+      product.model?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -325,8 +359,10 @@ const Products = () => {
     page * rowsPerPage + rowsPerPage,
   );
   const handleChangePage = (e, newPage) => setPage(newPage);
-  const handleChangeRowsPerPage = (e) =>
-    setRowsPerPage(parseInt(e.target.value, 10)) || setPage(0);
+  const handleChangeRowsPerPage = (e) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
+    setPage(0);
+  };
 
   const lowStockCount = products.filter(
     (p) => p.stock_quantity < 5 && p.stock_quantity > 0,
@@ -355,21 +391,14 @@ const Products = () => {
         <Box
           sx={{
             display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
             justifyContent: "space-between",
-            alignItems: { xs: "stretch", sm: "center" },
-            gap: 2,
+            alignItems: "center",
             mb: 3,
+            flexWrap: "wrap",
+            gap: 2,
           }}
         >
-          <Typography
-            sx={{
-              fontSize: { xs: "1.4rem", sm: "1.6rem" },
-              fontWeight: 600,
-              color: colors.dark,
-              textAlign: { xs: "center", sm: "left" },
-            }}
-          >
+          <Typography variant="h4" sx={{ fontWeight: 600, color: colors.dark }}>
             Products
           </Typography>
           {(user?.role === "admin" || user?.role === "sales") && (
@@ -377,13 +406,7 @@ const Products = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
-              fullWidth={isMobile}
-              sx={{
-                background: colors.gradient,
-                borderRadius: 2,
-                py: { xs: 1.2, sm: 1 },
-                "&:hover": { background: colors.secondary },
-              }}
+              sx={{ background: colors.gradient }}
             >
               Add Product
             </Button>
@@ -393,103 +416,60 @@ const Products = () => {
         {/* Stats Cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={4}>
-            <Card
-              sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
-            >
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}>
+            <Card>
+              <CardContent sx={{ textAlign: "center" }}>
                 <Avatar
                   sx={{
                     bgcolor: alpha(colors.primary, 0.1),
                     color: colors.primary,
-                    width: { xs: 40, sm: 48 },
-                    height: { xs: 40, sm: 48 },
                     mx: "auto",
                     mb: 1,
                   }}
                 >
-                  <PhoneIcon fontSize={isMobile ? "small" : "medium"} />
+                  <PhoneIcon />
                 </Avatar>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  Total
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
-                    fontWeight: 600,
-                  }}
-                >
+                <Typography variant="caption">Total</Typography>
+                <Typography sx={{ fontWeight: 600 }}>
                   {products.length}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={4}>
-            <Card sx={{ borderRadius: 2, bgcolor: alpha("#ff9800", 0.05) }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}>
+            <Card sx={{ bgcolor: alpha("#ff9800", 0.05) }}>
+              <CardContent sx={{ textAlign: "center" }}>
                 <Avatar
                   sx={{
                     bgcolor: alpha("#ff9800", 0.1),
                     color: "#ff9800",
-                    width: { xs: 40, sm: 48 },
-                    height: { xs: 40, sm: 48 },
                     mx: "auto",
                     mb: 1,
                   }}
                 >
-                  <WarningIcon fontSize={isMobile ? "small" : "medium"} />
+                  <WarningIcon />
                 </Avatar>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  Low Stock
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
-                    fontWeight: 600,
-                    color: "#ff9800",
-                  }}
-                >
+                <Typography variant="caption">Low Stock</Typography>
+                <Typography sx={{ fontWeight: 600, color: "#ff9800" }}>
                   {lowStockCount}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={4}>
-            <Card sx={{ borderRadius: 2, bgcolor: alpha("#f44336", 0.05) }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}>
+            <Card sx={{ bgcolor: alpha("#f44336", 0.05) }}>
+              <CardContent sx={{ textAlign: "center" }}>
                 <Avatar
                   sx={{
                     bgcolor: alpha("#f44336", 0.1),
                     color: "#f44336",
-                    width: { xs: 40, sm: 48 },
-                    height: { xs: 40, sm: 48 },
                     mx: "auto",
                     mb: 1,
                   }}
                 >
-                  <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
+                  <DeleteIcon />
                 </Avatar>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  Out of Stock
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
-                    fontWeight: 600,
-                    color: "#f44336",
-                  }}
-                >
+                <Typography variant="caption">Out of Stock</Typography>
+                <Typography sx={{ fontWeight: 600, color: "#f44336" }}>
                   {outOfStockCount}
                 </Typography>
               </CardContent>
@@ -498,14 +478,12 @@ const Products = () => {
         </Grid>
 
         {/* Search */}
-        <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }}>
+        <Paper sx={{ p: 2, mb: 3 }}>
           <Box sx={{ display: "flex", gap: 1 }}>
             <TextField
               fullWidth
               size="small"
-              placeholder={
-                isMobile ? "Search..." : "Search by name, brand, or model..."
-              }
+              placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -516,317 +494,147 @@ const Products = () => {
                 ),
                 endAdornment: searchTerm && (
                   <IconButton size="small" onClick={() => setSearchTerm("")}>
-                    <CloseIcon fontSize="small" />
+                    <CloseIcon />
                   </IconButton>
                 ),
               }}
-              sx={{ bgcolor: "#f8f9fa", borderRadius: 1 }}
             />
-            <Tooltip title="Refresh">
-              <IconButton onClick={loadProducts}>
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
+            <IconButton onClick={loadProducts}>
+              <RefreshIcon />
+            </IconButton>
           </Box>
         </Paper>
 
-        {/* Products List */}
-        {isMobile ? (
-          <Box>
-            {paginatedProducts.map((product) => (
-              <Card key={product.id} sx={{ mb: 2, borderRadius: 2 }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <Avatar
-                      src={product.image_url || DEFAULT_PRODUCT_IMAGE}
-                      alt={product.name}
-                      sx={{
-                        width: 70,
-                        height: 70,
-                        bgcolor:
-                          categoryColors[product.category] || colors.primary,
-                        borderRadius: 2,
-                        flexShrink: 0,
-                      }}
-                      variant="rounded"
-                    >
-                      {categoryIcons[product.category]}
-                    </Avatar>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography fontWeight={600} noWrap>
-                        {product.name}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                      >
-                        {product.brand} {product.model}
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 0.5,
-                          mt: 1,
+        {/* Products Table */}
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: colors.light }}>
+                <TableCell>Product</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Condition</TableCell>
+                <TableCell>Price</TableCell>
+                <TableCell>Stock</TableCell>
+                <TableCell>Images</TableCell>
+                <TableCell align="center">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedProducts.map((product) => (
+                <TableRow key={product.id} hover>
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Avatar
+                        src={product.images?.[0] || DEFAULT_PRODUCT_IMAGE}
+                        sx={{ width: 50, height: 50, borderRadius: 1 }}
+                        variant="rounded"
+                        onError={(e) => {
+                          e.target.src = DEFAULT_PRODUCT_IMAGE;
                         }}
-                      >
-                        <Chip
-                          label={product.type}
-                          size="small"
-                          color={product.type === "new" ? "success" : "warning"}
-                          variant="outlined"
-                          sx={{ height: 20 }}
-                        />
-                        <Chip
-                          label={`Stock: ${product.stock_quantity}`}
-                          size="small"
-                          color={
-                            product.stock_quantity === 0
-                              ? "error"
-                              : product.stock_quantity < 5
-                                ? "warning"
-                                : "success"
-                          }
-                          sx={{ height: 20 }}
-                        />
-                      </Box>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          mt: 1,
-                        }}
-                      >
-                        <Typography fontWeight={600} color={colors.primary}>
-                          ETB {product.price?.toLocaleString()}
+                      />
+                      <Box>
+                        <Typography fontWeight="600">{product.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {product.brand} {product.model}
                         </Typography>
-                        <Box>
-                          {(user?.role === "admin" ||
-                            user?.role === "sales") && (
-                            <>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenDialog(product)}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              {user?.role === "admin" && (
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleDelete(product.id)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              )}
-                            </>
-                          )}
-                        </Box>
                       </Box>
                     </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-            {paginatedProducts.length === 0 && (
-              <Paper sx={{ p: 4, textAlign: "center" }}>
-                <InventoryIcon
-                  sx={{ fontSize: 40, color: colors.gray, mb: 1 }}
-                />
-                <Typography color="text.secondary">
-                  No products found
-                </Typography>
-              </Paper>
-            )}
-          </Box>
-        ) : (
-          <TableContainer
-            component={Paper}
-            sx={{ borderRadius: 2, overflowX: "auto" }}
-          >
-            <Table>
-              <TableHead>
-                <TableRow sx={{ bgcolor: colors.light }}>
-                  <TableCell>Product</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Condition</TableCell>
-                  <TableCell>Price</TableCell>
-                  <TableCell>Stock</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedProducts.map((product) => (
-                  <TableRow key={product.id} hover>
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <Avatar
-                          src={product.image_url || DEFAULT_PRODUCT_IMAGE}
-                          alt={product.name}
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            mr: 2,
-                            bgcolor:
-                              categoryColors[product.category] ||
-                              colors.primary,
-                          }}
-                          variant="rounded"
-                        >
-                          {categoryIcons[product.category]}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" fontWeight="600">
-                            {product.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {product.brand} {product.model}
-                          </Typography>
-                        </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={product.category}
+                      size="small"
+                      sx={{
+                        bgcolor: categoryColors[product.category],
+                        color: "white",
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={product.type}
+                      size="small"
+                      variant="outlined"
+                      color={product.type === "new" ? "success" : "warning"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography fontWeight="600" color={colors.primary}>
+                      ETB {product.price?.toLocaleString()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={product.stock_quantity}
+                      size="small"
+                      color={product.stock_quantity === 0 ? "error" : "success"}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip title={`${product.images?.length || 0} image(s)`}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
+                        <AddPhotoIcon fontSize="small" />
+                        <Typography fontWeight="bold">
+                          {product.images?.length || 0}
+                        </Typography>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={product.category}
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenDialog(product)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    {user?.role === "admin" && (
+                      <IconButton
                         size="small"
-                        sx={{
-                          bgcolor: categoryColors[product.category],
-                          color: "white",
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={product.type}
-                        size="small"
-                        color={product.type === "new" ? "success" : "warning"}
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontWeight={600} color={colors.primary}>
-                        ETB {product.price?.toLocaleString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={product.stock_quantity}
-                        size="small"
-                        color={
-                          product.stock_quantity === 0
-                            ? "error"
-                            : product.stock_quantity < 5
-                              ? "warning"
-                              : "success"
-                        }
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      {(user?.role === "admin" || user?.role === "sales") && (
-                        <>
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenDialog(product)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          {user?.role === "admin" && (
-                            <Tooltip title="Delete">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDelete(product.id)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {paginatedProducts.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                      <Typography color="text.secondary">
-                        No products found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={filteredProducts.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-          </TableContainer>
-        )}
+                        color="error"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {paginatedProducts.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Typography>No products found</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredProducts.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </TableContainer>
 
-        {/* Mobile FAB */}
-        {isMobile && (user?.role === "admin" || user?.role === "sales") && (
-          <Fab
-            onClick={() => handleOpenDialog()}
-            sx={{
-              position: "fixed",
-              bottom: 16,
-              right: 16,
-              background: colors.gradient,
-              color: colors.white,
-              "&:hover": { background: colors.secondary },
-              zIndex: 100,
-            }}
-          >
-            <AddIcon />
-          </Fab>
-        )}
-
-        {/* Add/Edit Product Dialog */}
+        {/* Add/Edit Dialog */}
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
-          fullScreen={isMobile}
           maxWidth="md"
           fullWidth
-          PaperProps={{ sx: { borderRadius: { xs: 0, sm: 3 } } }}
+          fullScreen={isMobile}
         >
-          <DialogTitle
-            sx={{
-              background: colors.gradient,
-              color: colors.white,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+          <DialogTitle sx={{ background: colors.gradient, color: "white" }}>
             {editingProduct ? "Edit Product" : "Add Product"}
-            {isMobile && (
-              <IconButton onClick={handleCloseDialog} sx={{ color: "white" }}>
-                <CloseIcon />
-              </IconButton>
-            )}
           </DialogTitle>
           <form onSubmit={handleSubmit}>
-            <DialogContent
-              sx={{
-                pt: 3,
-                pb: isMobile ? 10 : 3,
-                maxHeight: "70vh",
-                overflowY: "auto",
-              }}
-            >
+            <DialogContent sx={{ pt: 3, maxHeight: "70vh", overflowY: "auto" }}>
               <Grid container spacing={2}>
-                {/* Basic Info */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -835,16 +643,14 @@ const Products = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
                 <Grid item xs={6}>
-                  <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                  <FormControl fullWidth>
                     <InputLabel>Category *</InputLabel>
                     <Select
                       name="category"
                       value={formData.category}
-                      label="Category *"
                       onChange={handleInputChange}
                       required
                     >
@@ -856,12 +662,11 @@ const Products = () => {
                   </FormControl>
                 </Grid>
                 <Grid item xs={6}>
-                  <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                  <FormControl fullWidth>
                     <InputLabel>Condition *</InputLabel>
                     <Select
                       name="type"
                       value={formData.type}
-                      label="Condition *"
                       onChange={handleInputChange}
                       required
                     >
@@ -877,8 +682,6 @@ const Products = () => {
                     label="Brand"
                     value={formData.brand}
                     onChange={handleInputChange}
-                    placeholder="e.g., Samsung"
-                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -888,8 +691,6 @@ const Products = () => {
                     label="Model"
                     value={formData.model}
                     onChange={handleInputChange}
-                    placeholder="e.g., Galaxy S22"
-                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -901,7 +702,6 @@ const Products = () => {
                     value={formData.price}
                     onChange={handleInputChange}
                     required
-                    size={isMobile ? "small" : "medium"}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">ETB</InputAdornment>
@@ -918,8 +718,6 @@ const Products = () => {
                     value={formData.stock_quantity}
                     onChange={handleInputChange}
                     required
-                    size={isMobile ? "small" : "medium"}
-                    InputProps={{ inputProps: { min: 0 } }}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -930,95 +728,131 @@ const Products = () => {
                     type="number"
                     value={formData.warranty_months}
                     onChange={handleInputChange}
-                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
 
-                {/* Main Image */}
+                {/* IMAGES SECTION */}
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Main Image
+                  <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                    Product Images ({imageList.length})
                   </Typography>
-                  <TextField
-                    fullWidth
-                    name="image_url"
-                    label="Main Image URL"
-                    value={formData.image_url}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/main-image.jpg"
-                    size={isMobile ? "small" : "medium"}
-                  />
-                </Grid>
-
-                {/* Additional Images */}
-                <Grid item xs={12}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 1,
-                    }}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mb: 2, display: "block" }}
                   >
-                    <Typography variant="subtitle2">
-                      Additional Images
-                    </Typography>
-                    <Box>
-                      <Button
-                        size="small"
-                        startIcon={<AddPhotoIcon />}
-                        onClick={handleAddImageUrl}
-                        sx={{ mr: 1 }}
-                      >
-                        Add URL
-                      </Button>
-                      <Button
-                        size="small"
-                        component="label"
-                        startIcon={<UploadIcon />}
-                      >
-                        Upload Files
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          hidden
-                          onChange={handleFileUpload}
-                        />
-                      </Button>
-                    </Box>
-                  </Box>
+                    Upload images one by one or add URLs. First image is the
+                    main product image.
+                  </Typography>
 
-                  {uploading && <CircularProgress size={20} sx={{ mb: 1 }} />}
+                  <Button
+                    variant="contained"
+                    component="label"
+                    startIcon={<UploadIcon />}
+                    disabled={uploading}
+                    sx={{ mr: 2, mb: 2, background: colors.gradient }}
+                  >
+                    {uploading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      "Upload Image"
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={handleFileUpload}
+                    />
+                  </Button>
 
-                  {imagePreview.length > 0 && (
-                    <Paper variant="outlined" sx={{ p: 1, mt: 1 }}>
-                      <Grid container spacing={1}>
-                        {imagePreview.map((img, idx) => (
+                  <Button
+                    variant="outlined"
+                    startIcon={<LinkIcon />}
+                    onClick={handleAddImageUrl}
+                    sx={{ mb: 2 }}
+                  >
+                    Add Image URL
+                  </Button>
+
+                  {imageList.length > 0 && (
+                    <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                      <Grid container spacing={2}>
+                        {imageList.map((url, idx) => (
                           <Grid item xs={4} sm={3} md={2} key={idx}>
                             <Box sx={{ position: "relative" }}>
-                              <Avatar
-                                src={img}
-                                variant="rounded"
-                                sx={{
+                              <img
+                                src={url}
+                                alt={`img-${idx}`}
+                                style={{
                                   width: "100%",
-                                  height: 80,
+                                  height: 100,
                                   objectFit: "cover",
+                                  borderRadius: 8,
+                                  border:
+                                    idx === 0
+                                      ? `3px solid ${colors.primary}`
+                                      : "1px solid #ddd",
+                                }}
+                                onError={(e) => {
+                                  e.target.src = DEFAULT_PRODUCT_IMAGE;
                                 }}
                               />
-                              <IconButton
-                                size="small"
+                              {idx === 0 && (
+                                <Typography
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 4,
+                                    left: 4,
+                                    bgcolor: colors.primary,
+                                    color: "white",
+                                    px: 0.5,
+                                    borderRadius: 0.5,
+                                    fontSize: 10,
+                                  }}
+                                >
+                                  MAIN
+                                </Typography>
+                              )}
+                              <Box
                                 sx={{
                                   position: "absolute",
                                   top: 0,
                                   right: 0,
+                                  left: 0,
+                                  bottom: 0,
                                   bgcolor: "rgba(0,0,0,0.5)",
-                                  color: "white",
+                                  opacity: 0,
+                                  "&:hover": { opacity: 1 },
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 1,
+                                  borderRadius: 1,
                                 }}
-                                onClick={() => handleRemoveImage(idx)}
                               >
-                                <DeleteOutlineIcon fontSize="small" />
-                              </IconButton>
+                                {idx !== 0 && (
+                                  <IconButton
+                                    size="small"
+                                    sx={{
+                                      bgcolor: "rgba(0,0,0,0.6)",
+                                      color: "white",
+                                    }}
+                                    onClick={() => handleSetMainImage(idx)}
+                                  >
+                                    <ImageIcon fontSize="small" />
+                                  </IconButton>
+                                )}
+                                <IconButton
+                                  size="small"
+                                  sx={{
+                                    bgcolor: "rgba(0,0,0,0.6)",
+                                    color: "white",
+                                  }}
+                                  onClick={() => handleRemoveImage(idx)}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
                             </Box>
                           </Grid>
                         ))}
@@ -1027,71 +861,39 @@ const Products = () => {
                   )}
                 </Grid>
 
-                {/* Description */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
                     name="description"
                     label="Product Description"
                     multiline
-                    rows={8}
+                    rows={4}
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Write a detailed description. You can include specifications, features, and anything else about the product..."
-                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
               </Grid>
             </DialogContent>
-            <DialogActions
-              sx={{
-                p: 2,
-                flexDirection: isMobile ? "column" : "row",
-                gap: 1,
-                borderTop: `1px solid ${colors.lightGray}`,
-              }}
-            >
-              {!isMobile && (
-                <Button onClick={handleCloseDialog} variant="outlined">
-                  Cancel
-                </Button>
-              )}
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Cancel</Button>
               <Button
                 type="submit"
                 variant="contained"
-                fullWidth={isMobile}
                 disabled={uploading}
-                sx={{
-                  background: colors.gradient,
-                  "&:hover": { background: colors.secondary },
-                  py: isMobile ? 1.2 : 1,
-                }}
+                sx={{ background: colors.gradient }}
               >
-                {uploading ? (
-                  <CircularProgress size={24} />
-                ) : editingProduct ? (
-                  "Update"
-                ) : (
-                  "Create"
-                )}
+                {editingProduct ? "Update" : "Create"}
               </Button>
             </DialogActions>
           </form>
         </Dialog>
 
-        {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
-          autoHideDuration={6000}
+          autoHideDuration={4000}
           onClose={handleCloseSnackbar}
-          anchorOrigin={{
-            vertical: isMobile ? "top" : "bottom",
-            horizontal: "center",
-          }}
         >
-          <Alert severity={snackbar.severity} sx={{ borderRadius: 2 }}>
-            {snackbar.message}
-          </Alert>
+          <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
         </Snackbar>
       </Box>
     </Box>
