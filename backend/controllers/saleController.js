@@ -4,16 +4,16 @@ const db = require("../config/database");
 const getAllSales = async (req, res) => {
   try {
     const [rows] = await db.query(`
-            SELECT s.*, 
-                   p.name as product_name, 
-                   p.category as product_category,
-                   c.name as customer_name,
-                   c.phone as customer_phone
-            FROM sales s
-            LEFT JOIN products p ON s.product_id = p.id
-            LEFT JOIN customers c ON s.customer_id = c.id
-            ORDER BY s.created_at DESC
-        `);
+      SELECT s.*, 
+             p.name as product_name, 
+             p.category as product_category,
+             c.name as customer_name,
+             c.phone as customer_phone
+      FROM sales s
+      LEFT JOIN products p ON s.product_id = p.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      ORDER BY s.created_at DESC
+    `);
 
     res.json({
       success: true,
@@ -33,18 +33,18 @@ const getSaleById = async (req, res) => {
   try {
     const [rows] = await db.query(
       `
-            SELECT s.*, 
-                   p.name as product_name,
-                   p.brand as product_brand,
-                   p.category as product_category,
-                   c.name as customer_name,
-                   c.phone as customer_phone,
-                   c.email as customer_email
-            FROM sales s
-            LEFT JOIN products p ON s.product_id = p.id
-            LEFT JOIN customers c ON s.customer_id = c.id
-            WHERE s.id = ?
-        `,
+      SELECT s.*, 
+             p.name as product_name,
+             p.brand as product_brand,
+             p.category as product_category,
+             c.name as customer_name,
+             c.phone as customer_phone,
+             c.email as customer_email
+      FROM sales s
+      LEFT JOIN products p ON s.product_id = p.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      WHERE s.id = ?
+      `,
       [req.params.id],
     );
 
@@ -115,8 +115,8 @@ const createSale = async (req, res) => {
       // Create sale
       const [saleResult] = await connection.query(
         `INSERT INTO sales 
-                (product_id, customer_id, quantity, unit_price, total_amount, payment_method) 
-                VALUES (?, ?, ?, ?, ?, ?)`,
+        (product_id, customer_id, quantity, unit_price, total_amount, payment_method) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
         [
           product_id,
           customer_id || null,
@@ -135,14 +135,18 @@ const createSale = async (req, res) => {
 
       await connection.commit();
 
-      // Get the created sale
+      // Get the created sale with customer info
       const [newSale] = await db.query(
         `
-                SELECT s.*, p.name as product_name 
-                FROM sales s
-                JOIN products p ON s.product_id = p.id
-                WHERE s.id = ?
-            `,
+        SELECT s.*, 
+               p.name as product_name,
+               c.name as customer_name,
+               c.phone as customer_phone
+        FROM sales s
+        LEFT JOIN products p ON s.product_id = p.id
+        LEFT JOIN customers c ON s.customer_id = c.id
+        WHERE s.id = ?
+        `,
         [saleResult.insertId],
       );
 
@@ -173,56 +177,25 @@ const createSale = async (req, res) => {
     });
   }
 };
-// Update sale customer information
-// Update sale customer information - FIXED VERSION
+
+// Update sale - Only update customer_id
 const updateSale = async (req, res) => {
   const { id } = req.params;
-  const { customer_name, customer_phone, customer_id } = req.body;
-  
+  const { customer_id } = req.body;
+
   try {
-    let finalCustomerId = customer_id;
-    
-    // If we have customer_name and customer_phone, we need to update or create the customer record
-    if (customer_name && customer_phone) {
-      // Check if there's an existing customer with this phone
-      const [existingCustomer] = await db.query(
-        'SELECT id FROM customers WHERE phone = ? AND id != ?',
-        [customer_phone, customer_id || 0]
-      );
-      
-      if (existingCustomer.length > 0) {
-        // Use existing customer
-        finalCustomerId = existingCustomer[0].id;
-      } else if (customer_id) {
-        // Update existing customer
-        await db.query(
-          'UPDATE customers SET name = ?, phone = ? WHERE id = ?',
-          [customer_name, customer_phone, customer_id]
-        );
-        finalCustomerId = customer_id;
-      } else {
-        // Create new customer
-        const [result] = await db.query(
-          'INSERT INTO customers (name, phone) VALUES (?, ?)',
-          [customer_name, customer_phone]
-        );
-        finalCustomerId = result.insertId;
-      }
-      
-      // Update the sale with the new customer_id
-      const [result] = await db.query(
-        'UPDATE sales SET customer_id = ? WHERE id = ?',
-        [finalCustomerId, id]
-      );
-      
-      if (result.affectedRows === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Sale not found"
-        });
-      }
+    const [result] = await db.query(
+      "UPDATE sales SET customer_id = ? WHERE id = ?",
+      [customer_id, id],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Sale not found",
+      });
     }
-    
+
     // Get the updated sale with customer info
     const [updated] = await db.query(
       `SELECT s.*, 
@@ -233,24 +206,24 @@ const updateSale = async (req, res) => {
        LEFT JOIN products p ON s.product_id = p.id
        LEFT JOIN customers c ON s.customer_id = c.id
        WHERE s.id = ?`,
-      [id]
+      [id],
     );
-    
+
     res.json({
       success: true,
-      message: "Customer information updated successfully",
-      data: updated[0]
+      message: "Sale updated successfully",
+      data: updated[0],
     });
-    
   } catch (error) {
     console.error("Update sale error:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
-// ✅ DELETE sale - ADD THIS FUNCTION
+
+// Delete sale
 const deleteSale = async (req, res) => {
   const { id } = req.params;
 
@@ -327,15 +300,16 @@ const getSalesByDateRange = async (req, res) => {
   try {
     const [rows] = await db.query(
       `
-            SELECT s.*, 
-                   p.name as product_name,
-                   c.name as customer_name
-            FROM sales s
-            LEFT JOIN products p ON s.product_id = p.id
-            LEFT JOIN customers c ON s.customer_id = c.id
-            WHERE DATE(s.created_at) BETWEEN ? AND ?
-            ORDER BY s.created_at DESC
-        `,
+      SELECT s.*, 
+             p.name as product_name,
+             c.name as customer_name,
+             c.phone as customer_phone
+      FROM sales s
+      LEFT JOIN products p ON s.product_id = p.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      WHERE DATE(s.created_at) BETWEEN ? AND ?
+      ORDER BY s.created_at DESC
+      `,
       [start_date, end_date],
     );
 
@@ -368,17 +342,20 @@ const getSalesByDateRange = async (req, res) => {
   }
 };
 
-// Get today's sales
+// Get today's sales - UPDATED with customer info
 const getTodaysSales = async (req, res) => {
   try {
     const [rows] = await db.query(`
-            SELECT s.*, 
-                   p.name as product_name
-            FROM sales s
-            JOIN products p ON s.product_id = p.id
-            WHERE DATE(s.created_at) = CURDATE()
-            ORDER BY s.created_at DESC
-        `);
+      SELECT s.*, 
+             p.name as product_name,
+             c.name as customer_name,
+             c.phone as customer_phone
+      FROM sales s
+      LEFT JOIN products p ON s.product_id = p.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      WHERE DATE(s.created_at) = CURDATE()
+      ORDER BY s.created_at DESC
+    `);
 
     const total = rows.reduce(
       (sum, sale) => sum + parseFloat(sale.total_amount),
@@ -406,13 +383,13 @@ const getTodaysSales = async (req, res) => {
 const getSalesByPaymentMethod = async (req, res) => {
   try {
     const [rows] = await db.query(`
-            SELECT 
-                payment_method,
-                COUNT(*) as transaction_count,
-                SUM(total_amount) as total_amount
-            FROM sales
-            GROUP BY payment_method
-        `);
+      SELECT 
+          payment_method,
+          COUNT(*) as transaction_count,
+          SUM(total_amount) as total_amount
+      FROM sales
+      GROUP BY payment_method
+    `);
 
     res.json({
       success: true,
@@ -478,8 +455,8 @@ module.exports = {
   getAllSales,
   getSaleById,
   createSale,
-  deleteSale, // ✅ ADDED
-  updateSale, // ✅ ADDED
+  deleteSale,
+  updateSale,
   getSalesByDateRange,
   getTodaysSales,
   getSalesByPaymentMethod,
