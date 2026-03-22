@@ -2,6 +2,15 @@
 
 A full-stack MERN application for mobile phone and electronics e-commerce with integrated repair ticket management system.
 
+## 🌐 Live Demo
+
+**Live URL:** [https://chalamobile.abdurehman.com/](https://chalamobile.abdurehman.com/)
+
+**Demo Credentials:**
+- **Admin:** admin@chalamobile.com / admin123
+- **Technician:** tech@chalamobile.com / tech123
+- **Sales:** sales@chalamobile.com / sales123
+
 ## 🚀 Features
 
 ### 🛍️ E-commerce Features
@@ -63,10 +72,6 @@ A full-stack MERN application for mobile phone and electronics e-commerce with i
 - npm or yarn
 
 ### Step 1: Clone the Repository
-```bash
-git clone https://github.com/yourusername/chala-mobile.git
-cd chala-mobile
-```
 
 ### Step 2: Install Dependencies
 
@@ -178,17 +183,17 @@ chala-mobile/
 │   │   │   ├── Admin/
 │   │   │   └── Public/
 │   │   ├── pages/
-│   │   │   ├── 
+│   │   │   ├── Admin/
 │   │   │   │   ├── Dashboard.jsx
 │   │   │   │   ├── Products.jsx
 │   │   │   │   ├── Customers.jsx
 │   │   │   │   ├── Repairs.jsx
 │   │   │   │   └── Sales.jsx
-│   │   │   ├
+│   │   │   ├── Public/
 │   │   │   │   ├── Home.jsx
 │   │   │   │   ├── Products.jsx
 │   │   │   │   └── ProductDetail.jsx
-│   │   │   └── 
+│   │   │   └── Auth/
 │   │   │       └── Login.jsx
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx
@@ -265,6 +270,9 @@ chala-mobile/
 
 ## 🚀 Deployment
 
+### Live Demo
+Visit: [https://chalamobile.abdurehman.com/](https://chalamobile.abdurehman.com/)
+
 ### Deploy to Vercel (Frontend)
 ```bash
 cd frontend
@@ -277,19 +285,6 @@ vercel --prod
 2. Connect repository to Render
 3. Add environment variables
 4. Deploy
-
-## 🧪 Testing
-
-Run tests:
-```bash
-# Backend tests
-cd backend
-npm test
-
-# Frontend tests
-cd frontend
-npm test
-```
 
 ## 📝 API Documentation
 
@@ -306,6 +301,24 @@ npm test
 - `POST /api/sales` - Create sale (Admin/Sales)
 - `GET /api/repairs` - Get repairs (Admin/Technician)
 - `PUT /api/repairs/:id/status` - Update repair status (Admin/Technician)
+
+## 📸 Screenshots
+- Dashboard View
+<img width="1866" height="962" alt="{A53D8995-7238-4C96-BEA0-3A56B0E5758E}" src="https://github.com/user-attachments/assets/cb5eb07b-3675-45d6-93e1-66b0d9fe7971" />
+- Product Management
+<img width="1913" height="974" alt="{0F80BE8E-A5EE-4D26-8909-304A7140F41A}" src="https://github.com/user-attachments/assets/024347c7-b348-42f6-8226-5fe763fdca95" />
+- Sales Interface
+<img width="1920" height="978" alt="{F508A1D1-FAA6-4882-A17C-3B04DE2735FA}" src="https://github.com/user-attachments/assets/39094d28-9928-42fa-a5a7-899db646338e" />
+- Repair Tickets
+- <img width="1821" height="973" alt="{5E11BD89-1E97-4728-8CA1-7AC099700A64}" src="https://github.com/user-attachments/assets/037c1b10-cf38-4b14-8aa0-c8a8bd7b3011" />
+- Customer Management
+<img width="1920" height="976" alt="{FE77BCC2-F61B-47F5-B8F5-D037B1E95B09}" src="https://github.com/user-attachments/assets/6369aecd-6d42-4277-8cb9-cf8594de1c2d" />
+<img width="1920" height="975" alt="{13A45829-4B45-46E1-8218-27E5470335BC}" src="https://github.com/user-attachments/assets/ea454236-5e60-4290-bca5-239b3b84e96c" />
+<img width="1920" height="980" alt="{46457828-8787-4B56-910C-67487738DC57}" src="https://github.com/user-attachments/assets/6045df53-f0ea-459c-b7de-1cbdf7ca14e1" />
+
+- Receipt Generation
+<img width="1920" height="967" alt="{04101D20-B9F7-4D63-A0BD-D3D63EB34195}" src="https://github.com/user-attachments/assets/12aaca9a-2020-447b-989d-7b8c7c02c012" />
+
 
 ## 🤝 Contributing
 
@@ -330,7 +343,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Developer**: Abdurehman Kero
 - **Email**: keroabdurehman@gmail.com
 - **Phone**: +251 98 231 0974
-- **Website**: [chalamobile.com](https://chalamobile.com)
+- **Website**: [https://chalamobile.abdurehman.com/](https://chalamobile.abdurehman.com/)
+- **GitHub**: [@keroabdurehman](https://github.com/keroabdurehman)
 
 ## 🐛 Known Issues
 
@@ -351,5 +365,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by Abdurehman Kero**
 
-
-You can customize it further by adding your actual GitHub repository URL, live demo links, and any specific details about your deployment.
+**Live Demo:** [https://chalamobile.abdurehman.com/](https://chalamobile.abdurehman.com/)
