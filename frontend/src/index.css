@@ -35,3 +35,30 @@ code {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+/* Ensure sticky header works properly */
+html, body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  height: auto;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Force sticky header */
+.sticky-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1100 !important;
+}
+
+/* Prevent any parent from breaking sticky */
+[style*="overflow: hidden"]:not(body):not(html) {
+  overflow: visible !important;
+}
