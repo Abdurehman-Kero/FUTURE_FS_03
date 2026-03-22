@@ -6,6 +6,9 @@ const saleController = require("../controllers/saleController");
 router.get("/today", saleController.getTodaysSales);
 router.get("/by-date", saleController.getSalesByDateRange);
 router.get("/by-payment", saleController.getSalesByPaymentMethod);
+router.put("/:id", saleController.updateSale);
+// DELETE route - FIXED
+router.delete("/:id", saleController.deleteSale);
 
 // Generic routes
 router.get("/", saleController.getAllSales);
