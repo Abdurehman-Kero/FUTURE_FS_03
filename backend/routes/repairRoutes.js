@@ -2,10 +2,13 @@ const express = require("express");
 const router = express.Router();
 const repairController = require("../controllers/repairController");
 
-// Status-based route (should come before /:id)
+// Specific routes first
 router.get("/status/:status", repairController.getRepairsByStatus);
 
-// Repair routes
+// ✅ DELETE route - Add this
+router.delete("/:id", repairController.deleteRepair);
+
+// Generic routes
 router.get("/", repairController.getAllRepairs);
 router.get("/:id", repairController.getRepairById);
 router.post("/", repairController.createRepair);
