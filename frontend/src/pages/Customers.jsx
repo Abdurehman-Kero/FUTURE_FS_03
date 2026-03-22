@@ -61,6 +61,8 @@ import {
   Close as CloseIcon,
   TrendingUp as TrendingUpIcon,
   Star as StarIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
 import {
   getCustomers,
@@ -84,6 +86,7 @@ const colors = {
   warning: "#F59E0B",
   info: "#3B82F6",
   purple: "#8B5CF6",
+  error: "#EF4444",
 };
 
 const TabPanel = ({ children, value, index, ...other }) => (
@@ -107,6 +110,10 @@ const Customers = () => {
   const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
   const [openDialog, setOpenDialog] = useState(false);
   const [openDetailsDrawer, setOpenDetailsDrawer] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [tabValue, setTabValue] = useState(0);
@@ -135,7 +142,7 @@ const Customers = () => {
       setLoading(true);
       const response = await getCustomers();
       setCustomers(response.data.data);
-    } catch {
+    } catch (error) {
       showSnackbar("Failed to load customers", "error");
     } finally {
       setLoading(false);
@@ -209,24 +216,82 @@ const Customers = () => {
       loadCustomers();
       setSearchTerm("");
       setIsSearching(false);
-    } catch {
-      showSnackbar("Operation failed", "error");
+    } catch (error) {
+      showSnackbar(
+        error.response?.data?.message || "Operation failed",
+        "error",
+      );
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this customer?")) return;
+  const handleDeleteClick = (customer, e) => {
+    e.stopPropagation();
+    setDeleteError(null);
+    setCustomerToDelete(customer);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
     try {
-      await deleteCustomer(id);
-      showSnackbar("Customer deleted", "success");
-      if (selectedCustomer?.id === id) {
+      await deleteCustomer(customerToDelete.id);
+      showSnackbar("Customer deleted successfully", "success");
+
+      // Remove from selected if it was the one being viewed
+      if (selectedCustomer?.id === customerToDelete.id) {
         setSelectedCustomer(null);
         setOpenDetailsDrawer(false);
       }
-      loadCustomers();
-    } catch {
-      showSnackbar("Delete failed", "error");
+
+      await loadCustomers();
+      setOpenDeleteDialog(false);
+      setCustomerToDelete(null);
+    } catch (error) {
+      console.error("Delete error:", error);
+
+      // Extract detailed error message
+      let errorMessage = "Failed to delete customer";
+
+      if (error.response?.status === 400 || error.response?.status === 500) {
+        errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Cannot delete this customer because they have existing repairs or purchases. Please delete or reassign their records first.";
+
+        // Check for foreign key constraint errors
+        if (
+          errorMessage.toLowerCase().includes("foreign key") ||
+          errorMessage.toLowerCase().includes("constraint") ||
+          errorMessage.toLowerCase().includes("repairs") ||
+          errorMessage.toLowerCase().includes("sales")
+        ) {
+          errorMessage =
+            "❌ Cannot delete this customer because they have existing repairs or purchases : \n" +
+            (customerToDelete.repairs?.length > 0
+              ? `   • ${customerToDelete.repairs.length} repair(s)\n`
+              : "") +
+            (customerToDelete.purchases?.length > 0
+              ? `   • ${customerToDelete.purchases.length} purchase(s)\n`
+              : "") +
+            "Please delete or reassign these records first.";
+        }
+      }
+
+      setDeleteError(errorMessage);
+      showSnackbar(errorMessage, "error");
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setOpenDeleteDialog(false);
+    setCustomerToDelete(null);
+    setDeleteError(null);
   };
 
   const handleViewCustomer = (customer) => {
@@ -240,9 +305,15 @@ const Customers = () => {
     setOpenDetailsDrawer(false);
   };
 
-  const handleWhatsApp = (phone) =>
+  const handleWhatsApp = (phone, e) => {
+    e.stopPropagation();
     window.open(`https://wa.me/${phone.replace(/\D/g, "")}`, "_blank");
-  const handleCall = (phone) => (window.location.href = `tel:${phone}`);
+  };
+
+  const handleCall = (phone, e) => {
+    e.stopPropagation();
+    window.location.href = `tel:${phone}`;
+  };
 
   const displayedCustomers = isSearching ? searchResults : customers;
   const paginatedCustomers = displayedCustomers.slice(
@@ -332,7 +403,7 @@ const Customers = () => {
       </Paper>
 
       <Box sx={{ px: { xs: 1.5, sm: 2, md: 4 } }}>
-        {/* Enhanced Stats Cards */}
+        {/* Stats Cards */}
         <Grid container spacing={2} sx={{ mb: { xs: 3, sm: 4 } }}>
           <Grid item xs={4}>
             <Zoom in timeout={500}>
@@ -343,7 +414,9 @@ const Customers = () => {
                   border: `1px solid ${alpha(colors.primary, 0.2)}`,
                 }}
               >
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
+                >
                   <Avatar
                     sx={{
                       bgcolor: alpha(colors.primary, 0.1),
@@ -392,7 +465,9 @@ const Customers = () => {
                   border: `1px solid ${alpha(colors.purple, 0.2)}`,
                 }}
               >
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
+                >
                   <Avatar
                     sx={{
                       bgcolor: alpha(colors.purple, 0.1),
@@ -441,7 +516,9 @@ const Customers = () => {
                   border: `1px solid ${alpha(colors.success, 0.2)}`,
                 }}
               >
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <CardContent
+                  sx={{ p: { xs: 1.5, sm: 2 }, textAlign: "center" }}
+                >
                   <Avatar
                     sx={{
                       bgcolor: alpha(colors.success, 0.1),
@@ -567,7 +644,7 @@ const Customers = () => {
 
         {/* Customers Display */}
         {isMobile ? (
-          /* MOBILE VIEW - Modern Cards */
+          /* MOBILE VIEW */
           <Grid container spacing={2}>
             {paginatedCustomers.map((c, idx) => (
               <Grow in timeout={idx * 100} key={c.id}>
@@ -680,7 +757,6 @@ const Customers = () => {
                               fontWeight: 600,
                               height: 24,
                               fontSize: "0.65rem",
-                              "& .MuiChip-icon": { fontSize: 12 },
                             }}
                           />
                         )}
@@ -695,7 +771,6 @@ const Customers = () => {
                               fontWeight: 600,
                               height: 24,
                               fontSize: "0.65rem",
-                              "& .MuiChip-icon": { fontSize: 12 },
                             }}
                           />
                         )}
@@ -714,10 +789,7 @@ const Customers = () => {
                         <Tooltip title="WhatsApp">
                           <IconButton
                             size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWhatsApp(c.phone);
-                            }}
+                            onClick={(e) => handleWhatsApp(c.phone, e)}
                             sx={{
                               bgcolor: alpha("#25D366", 0.1),
                               color: "#25D366",
@@ -732,10 +804,7 @@ const Customers = () => {
                         <Tooltip title="Call">
                           <IconButton
                             size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCall(c.phone);
-                            }}
+                            onClick={(e) => handleCall(c.phone, e)}
                             sx={{
                               bgcolor: alpha(colors.primary, 0.1),
                               color: colors.primary,
@@ -777,15 +846,12 @@ const Customers = () => {
                               <Tooltip title="Delete">
                                 <IconButton
                                   size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(c.id);
-                                  }}
+                                  onClick={(e) => handleDeleteClick(c, e)}
                                   sx={{
-                                    bgcolor: alpha(colors.warning, 0.1),
-                                    color: colors.warning,
+                                    bgcolor: alpha(colors.error, 0.1),
+                                    color: colors.error,
                                     "&:hover": {
-                                      bgcolor: colors.warning,
+                                      bgcolor: colors.error,
                                       color: "white",
                                     },
                                     width: 32,
@@ -806,7 +872,7 @@ const Customers = () => {
             ))}
           </Grid>
         ) : (
-          /* DESKTOP VIEW - Enhanced Table */
+          /* DESKTOP VIEW */
           <TableContainer
             component={Paper}
             sx={{
@@ -818,39 +884,14 @@ const Customers = () => {
             <Table>
               <TableHead sx={{ bgcolor: alpha(colors.dark, 0.03) }}>
                 <TableRow>
-                  <TableCell
-                    sx={{
-                      fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
-                    }}
-                  >
-                    Customer
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
-                    }}
-                  >
-                    Contact
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
-                    }}
-                  >
-                    Activity
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontSize: { xs: "0.8rem", sm: "0.85rem", md: "0.9rem" },
-                    }}
-                  >
-                    Actions
-                  </TableCell>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>Contact</TableCell>
+                  <TableCell>Activity</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedCustomers.map((c, idx) => (
+                {paginatedCustomers.map((c) => (
                   <TableRow
                     key={c.id}
                     hover
@@ -879,18 +920,10 @@ const Customers = () => {
                           {c.name?.charAt(0).toUpperCase()}
                         </Avatar>
                         <Box>
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight="700"
-                            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
-                          >
+                          <Typography variant="subtitle1" fontWeight="700">
                             {c.name}
                           </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
-                          >
+                          <Typography variant="caption" color="text.secondary">
                             Member since{" "}
                             {new Date(c.created_at).toLocaleDateString()}
                           </Typography>
@@ -905,7 +938,6 @@ const Customers = () => {
                             display: "flex",
                             alignItems: "center",
                             gap: 0.5,
-                            fontSize: { xs: "0.8rem", sm: "0.85rem" },
                           }}
                         >
                           <PhoneIcon
@@ -914,11 +946,7 @@ const Customers = () => {
                           {c.phone}
                         </Typography>
                         {c.email && (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
-                          >
+                          <Typography variant="caption" color="text.secondary">
                             {c.email}
                           </Typography>
                         )}
@@ -934,8 +962,6 @@ const Customers = () => {
                             sx={{
                               bgcolor: alpha(colors.warning, 0.1),
                               color: colors.warning,
-                              fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                              height: 28,
                             }}
                           />
                         )}
@@ -947,8 +973,6 @@ const Customers = () => {
                             sx={{
                               bgcolor: alpha(colors.success, 0.1),
                               color: colors.success,
-                              fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                              height: 28,
                             }}
                           />
                         )}
@@ -960,8 +984,6 @@ const Customers = () => {
                               sx={{
                                 bgcolor: alpha(colors.info, 0.1),
                                 color: colors.info,
-                                fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                                height: 28,
                               }}
                             />
                           )}
@@ -980,13 +1002,11 @@ const Customers = () => {
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleWhatsApp(c.phone);
+                              handleWhatsApp(c.phone, e);
                             }}
                             sx={{ color: "#25D366" }}
                           >
-                            <WhatsAppIcon
-                              sx={{ fontSize: { xs: "1.1rem", sm: "1.2rem" } }}
-                            />
+                            <WhatsAppIcon />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Call">
@@ -994,13 +1014,11 @@ const Customers = () => {
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCall(c.phone);
+                              handleCall(c.phone, e);
                             }}
                             sx={{ color: colors.primary }}
                           >
-                            <CallIcon
-                              sx={{ fontSize: { xs: "1.1rem", sm: "1.2rem" } }}
-                            />
+                            <CallIcon />
                           </IconButton>
                         </Tooltip>
                         {(user?.role === "admin" || user?.role === "sales") && (
@@ -1014,11 +1032,7 @@ const Customers = () => {
                                 }}
                                 sx={{ color: colors.info }}
                               >
-                                <EditIcon
-                                  sx={{
-                                    fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                                  }}
-                                />
+                                <EditIcon />
                               </IconButton>
                             </Tooltip>
                             {user?.role === "admin" && (
@@ -1027,15 +1041,11 @@ const Customers = () => {
                                   size="small"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDelete(c.id);
+                                    handleDeleteClick(c, e);
                                   }}
-                                  color="error"
+                                  sx={{ color: colors.error }}
                                 >
-                                  <DeleteIcon
-                                    sx={{
-                                      fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                                    }}
-                                  />
+                                  <DeleteIcon />
                                 </IconButton>
                               </Tooltip>
                             )}
@@ -1064,10 +1074,6 @@ const Customers = () => {
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows, & .MuiTablePagination-select":
-                  { fontSize: { xs: "0.75rem", sm: "0.85rem" } },
-              }}
             />
           </TableContainer>
         )}
@@ -1107,9 +1113,6 @@ const Customers = () => {
                       variant="h5"
                       fontWeight="800"
                       color={colors.dark}
-                      sx={{
-                        fontSize: { xs: "1.2rem", sm: "1.5rem", md: "1.8rem" },
-                      }}
                     >
                       Customer Profile
                     </Typography>
@@ -1150,7 +1153,6 @@ const Customers = () => {
               background: colors.gradient,
               color: "white",
               fontWeight: "bold",
-              fontSize: { xs: "1.1rem", sm: "1.25rem" },
               p: { xs: 2, sm: 3 },
             }}
           >
@@ -1167,24 +1169,13 @@ const Customers = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    variant="outlined"
                     size={isMobile ? "small" : "medium"}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <PersonIcon
-                            sx={{
-                              color: colors.primary,
-                              fontSize: { xs: "1rem", sm: "1.2rem" },
-                            }}
-                          />
+                          <PersonIcon sx={{ color: colors.primary }} />
                         </InputAdornment>
                       ),
-                    }}
-                    sx={{
-                      "& .MuiInputBase-input": {
-                        fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
-                      },
                     }}
                   />
                 </Grid>
@@ -1200,19 +1191,9 @@ const Customers = () => {
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <PhoneIcon
-                            sx={{
-                              color: colors.primary,
-                              fontSize: { xs: "1rem", sm: "1.2rem" },
-                            }}
-                          />
+                          <PhoneIcon sx={{ color: colors.primary }} />
                         </InputAdornment>
                       ),
-                    }}
-                    sx={{
-                      "& .MuiInputBase-input": {
-                        fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
-                      },
                     }}
                   />
                 </Grid>
@@ -1228,19 +1209,9 @@ const Customers = () => {
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <EmailIcon
-                            sx={{
-                              color: colors.primary,
-                              fontSize: { xs: "1rem", sm: "1.2rem" },
-                            }}
-                          />
+                          <EmailIcon sx={{ color: colors.primary }} />
                         </InputAdornment>
                       ),
-                    }}
-                    sx={{
-                      "& .MuiInputBase-input": {
-                        fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
-                      },
                     }}
                   />
                 </Grid>
@@ -1257,36 +1228,21 @@ const Customers = () => {
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <LocationIcon
-                            sx={{
-                              color: colors.primary,
-                              fontSize: { xs: "1rem", sm: "1.2rem" },
-                            }}
-                          />
+                          <LocationIcon sx={{ color: colors.primary }} />
                         </InputAdornment>
                       ),
-                    }}
-                    sx={{
-                      "& .MuiInputBase-input": {
-                        fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
-                      },
                     }}
                   />
                 </Grid>
               </Grid>
             </DialogContent>
             <DialogActions
-              sx={{
-                p: { xs: 2, sm: 3 },
-                gap: 1,
-                flexDirection: isMobile ? "column" : "row",
-              }}
+              sx={{ p: 2, gap: 1, flexDirection: isMobile ? "column" : "row" }}
             >
               <Button
                 onClick={handleCloseDialog}
                 fullWidth={isMobile}
                 variant="outlined"
-                sx={{ fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
               >
                 Cancel
               </Button>
@@ -1294,17 +1250,97 @@ const Customers = () => {
                 type="submit"
                 variant="contained"
                 fullWidth={isMobile}
-                sx={{
-                  background: colors.gradient,
-                  "&:hover": { background: colors.secondary },
-                  fontSize: { xs: "0.8rem", sm: "0.9rem" },
-                  py: { xs: 1, sm: 1.2 },
-                }}
+                sx={{ background: colors.gradient }}
               >
                 {editingCustomer ? "Update Customer" : "Create Customer"}
               </Button>
             </DialogActions>
           </form>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={openDeleteDialog}
+          onClose={handleCancelDelete}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: "20px", p: 1 } }}
+        >
+          <DialogTitle sx={{ textAlign: "center", pb: 1 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <WarningIcon sx={{ fontSize: 48, color: colors.error, mb: 1 }} />
+              <Typography variant="h6" component="div" fontWeight="bold">
+                Delete Customer
+              </Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Typography align="center" color="text.secondary" sx={{ mb: 2 }}>
+              Are you sure you want to delete{" "}
+              <strong>{customerToDelete?.name}</strong>?
+              <br />
+              This action cannot be undone.
+            </Typography>
+
+            {/* Show warning if customer has existing records */}
+            {((customerToDelete?.repairs?.length || 0) > 0 ||
+              (customerToDelete?.purchases?.length || 0) > 0) && (
+              <Alert severity="warning" sx={{ mt: 1, borderRadius: "12px" }}>
+                <Typography variant="body2" fontWeight="bold">
+                  ⚠️ Warning:
+                </Typography>
+                <Typography variant="caption" display="block">
+                  This customer has:
+                </Typography>
+                {customerToDelete?.repairs?.length > 0 && (
+                  <Typography variant="caption" display="block">
+                    • {customerToDelete.repairs.length} repair record(s)
+                  </Typography>
+                )}
+                {customerToDelete?.purchases?.length > 0 && (
+                  <Typography variant="caption" display="block">
+                    • {customerToDelete.purchases.length} purchase record(s)
+                  </Typography>
+                )}
+                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                  You may need to delete these records first or contact an
+                  administrator.
+                </Typography>
+              </Alert>
+            )}
+
+            {deleteError && (
+              <Alert severity="error" sx={{ mt: 2, borderRadius: "12px" }}>
+                <Typography variant="body2">{deleteError}</Typography>
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 3 }}>
+            <Button
+              onClick={handleCancelDelete}
+              variant="outlined"
+              sx={{ borderRadius: "10px", px: 3 }}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              variant="contained"
+              color="error"
+              sx={{ borderRadius: "10px", px: 3 }}
+              disabled={deleting}
+              startIcon={deleting ? <CircularProgress size={16} /> : null}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogActions>
         </Dialog>
 
         <Snackbar
@@ -1384,8 +1420,6 @@ const CustomerDetails = ({
               cursor: "pointer",
               bgcolor: alpha(colors.primary, 0.1),
               color: colors.primary,
-              fontSize: { xs: "0.7rem", sm: "0.75rem" },
-              height: { xs: 28, sm: 32 },
             }}
           />
           {customer.email && (
@@ -1395,12 +1429,7 @@ const CustomerDetails = ({
               }
               label={customer.email}
               size="small"
-              sx={{
-                bgcolor: alpha(colors.info, 0.1),
-                color: colors.info,
-                fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                height: { xs: 28, sm: 32 },
-              }}
+              sx={{ bgcolor: alpha(colors.info, 0.1), color: colors.info }}
             />
           )}
         </Box>
@@ -1420,19 +1449,13 @@ const CustomerDetails = ({
         label="Repairs"
         icon={<RepairsIcon sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }} />}
         iconPosition="start"
-        sx={{
-          "&.Mui-selected": { color: colors.primary },
-          fontSize: { xs: "0.75rem", sm: "0.85rem" },
-        }}
+        sx={{ "&.Mui-selected": { color: colors.primary } }}
       />
       <Tab
         label="Purchases"
         icon={<SalesIcon sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }} />}
         iconPosition="start"
-        sx={{
-          "&.Mui-selected": { color: colors.primary },
-          fontSize: { xs: "0.75rem", sm: "0.85rem" },
-        }}
+        sx={{ "&.Mui-selected": { color: colors.primary } }}
       />
     </Tabs>
 
@@ -1440,18 +1463,9 @@ const CustomerDetails = ({
       {customer.repairs?.length > 0 ? (
         <List sx={{ maxHeight: 400, overflow: "auto" }}>
           {customer.repairs.map((r) => (
-            <ListItem
-              key={r.id}
-              divider
-              sx={{ borderRadius: "12px", mb: 1, px: { xs: 1, sm: 2 } }}
-            >
+            <ListItem key={r.id} divider sx={{ borderRadius: "12px", mb: 1 }}>
               <ListItemIcon>
-                <RepairsIcon
-                  sx={{
-                    color: colors.warning,
-                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
-                  }}
-                />
+                <RepairsIcon sx={{ color: colors.warning }} />
               </ListItemIcon>
               <ListItemText
                 primary={
@@ -1463,13 +1477,7 @@ const CustomerDetails = ({
                       flexWrap: "wrap",
                     }}
                   >
-                    <Typography
-                      variant="body1"
-                      fontWeight="600"
-                      sx={{
-                        fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
-                      }}
-                    >
+                    <Typography variant="body1" fontWeight="600">
                       {r.device_brand} {r.device_model}
                     </Typography>
                     <Chip
@@ -1485,7 +1493,6 @@ const CustomerDetails = ({
                             ? colors.success
                             : colors.warning,
                         height: 24,
-                        fontSize: { xs: "0.65rem", sm: "0.7rem" },
                       }}
                     />
                   </Box>
@@ -1495,26 +1502,12 @@ const CustomerDetails = ({
                     <Typography
                       variant="body2"
                       color="text.secondary"
-                      sx={{
-                        mt: 0.5,
-                        fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                      }}
+                      sx={{ mt: 0.5 }}
                     >
                       {r.issue_description}
                     </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        mt: 0.5,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ fontSize: { xs: "0.65rem", sm: "0.7rem" } }}
-                      >
+                    <Box sx={{ display: "flex", gap: 2, mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">
                         📅 {new Date(r.created_at).toLocaleDateString()}
                       </Typography>
                       {r.final_cost && (
@@ -1522,7 +1515,6 @@ const CustomerDetails = ({
                           variant="caption"
                           fontWeight="600"
                           color={colors.primary}
-                          sx={{ fontSize: { xs: "0.65rem", sm: "0.7rem" } }}
                         >
                           💰 ETB {r.final_cost}
                         </Typography>
@@ -1537,19 +1529,9 @@ const CustomerDetails = ({
       ) : (
         <Box sx={{ textAlign: "center", py: 6 }}>
           <RepairsIcon
-            sx={{
-              fontSize: { xs: 40, sm: 48 },
-              color: colors.gray,
-              mb: 1,
-              opacity: 0.5,
-            }}
+            sx={{ fontSize: 48, color: colors.gray, mb: 1, opacity: 0.5 }}
           />
-          <Typography
-            color="text.secondary"
-            sx={{ fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
-          >
-            No repairs yet
-          </Typography>
+          <Typography color="text.secondary">No repairs yet</Typography>
         </Box>
       )}
     </TabPanel>
@@ -1558,18 +1540,9 @@ const CustomerDetails = ({
       {customer.purchases?.length > 0 ? (
         <List sx={{ maxHeight: 400, overflow: "auto" }}>
           {customer.purchases.map((s) => (
-            <ListItem
-              key={s.id}
-              divider
-              sx={{ borderRadius: "12px", mb: 1, px: { xs: 1, sm: 2 } }}
-            >
+            <ListItem key={s.id} divider sx={{ borderRadius: "12px", mb: 1 }}>
               <ListItemIcon>
-                <SalesIcon
-                  sx={{
-                    color: colors.success,
-                    fontSize: { xs: "1.2rem", sm: "1.4rem" },
-                  }}
-                />
+                <SalesIcon sx={{ color: colors.success }} />
               </ListItemIcon>
               <ListItemText
                 primary={
@@ -1581,13 +1554,7 @@ const CustomerDetails = ({
                       flexWrap: "wrap",
                     }}
                   >
-                    <Typography
-                      variant="body1"
-                      fontWeight="600"
-                      sx={{
-                        fontSize: { xs: "0.85rem", sm: "0.9rem", md: "1rem" },
-                      }}
-                    >
+                    <Typography variant="body1" fontWeight="600">
                       {s.product_name}
                     </Typography>
                     <Chip
@@ -1596,8 +1563,6 @@ const CustomerDetails = ({
                       sx={{
                         bgcolor: alpha(colors.success, 0.1),
                         color: colors.success,
-                        height: 24,
-                        fontSize: { xs: "0.65rem", sm: "0.7rem" },
                       }}
                     />
                   </Box>
@@ -1608,31 +1573,15 @@ const CustomerDetails = ({
                       variant="body2"
                       fontWeight="600"
                       color={colors.primary}
-                      sx={{ fontSize: { xs: "0.75rem", sm: "0.8rem" } }}
                     >
                       ETB {s.total_amount?.toLocaleString()}
                     </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        mt: 0.5,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ fontSize: { xs: "0.65rem", sm: "0.7rem" } }}
-                      >
+                    <Box sx={{ display: "flex", gap: 2, mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">
                         📅 {new Date(s.created_at).toLocaleDateString()}
                       </Typography>
                       {s.payment_method && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontSize: { xs: "0.65rem", sm: "0.7rem" } }}
-                        >
+                        <Typography variant="caption" color="text.secondary">
                           💳 {s.payment_method}
                         </Typography>
                       )}
@@ -1646,19 +1595,9 @@ const CustomerDetails = ({
       ) : (
         <Box sx={{ textAlign: "center", py: 6 }}>
           <SalesIcon
-            sx={{
-              fontSize: { xs: 40, sm: 48 },
-              color: colors.gray,
-              mb: 1,
-              opacity: 0.5,
-            }}
+            sx={{ fontSize: 48, color: colors.gray, mb: 1, opacity: 0.5 }}
           />
-          <Typography
-            color="text.secondary"
-            sx={{ fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
-          >
-            No purchases yet
-          </Typography>
+          <Typography color="text.secondary">No purchases yet</Typography>
         </Box>
       )}
     </TabPanel>
