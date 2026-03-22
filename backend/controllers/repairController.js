@@ -95,6 +95,8 @@ const getRepairById = async (req, res) => {
 const createRepair = async (req, res) => {
   const {
     customer_id,
+    customer_name,
+    customer_phone,
     device_type,
     device_brand,
     device_model,
@@ -102,31 +104,70 @@ const createRepair = async (req, res) => {
     estimated_cost,
   } = req.body;
 
-  if (!customer_id || !device_type || !issue_description) {
+  // Validation
+  if (!customer_name || !customer_phone) {
     return res.status(400).json({
       success: false,
-      message: "Customer ID, device type, and issue description are required",
+      message: "Customer name and phone are required",
     });
   }
 
+  if (!device_type || !issue_description) {
+    return res.status(400).json({
+      success: false,
+      message: "Device type and issue description are required",
+    });
+  }
+
+  let connection;
   try {
-    const [result] = await db.query(
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    let finalCustomerId = customer_id;
+
+    // If no customer_id, create a new customer
+    if (!customer_id) {
+      const [existingCustomer] = await connection.query(
+        "SELECT id FROM customers WHERE phone = ?",
+        [customer_phone],
+      );
+
+      if (existingCustomer.length > 0) {
+        finalCustomerId = existingCustomer[0].id;
+      } else {
+        const [customerResult] = await connection.query(
+          "INSERT INTO customers (name, phone) VALUES (?, ?)",
+          [customer_name, customer_phone],
+        );
+        finalCustomerId = customerResult.insertId;
+      }
+    }
+
+    // Create repair
+    const [result] = await connection.query(
       `INSERT INTO repairs 
-            (customer_id, device_type, device_brand, device_model, issue_description, estimated_cost) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
+            (customer_id, device_type, device_brand, device_model, issue_description, estimated_cost, status) 
+            VALUES (?, ?, ?, ?, ?, ?, 'received')`,
       [
-        customer_id,
+        finalCustomerId,
         device_type,
-        device_brand,
-        device_model,
+        device_brand || null,
+        device_model || null,
         issue_description,
         estimated_cost || 0,
       ],
     );
 
-    const [newRepair] = await db.query("SELECT * FROM repairs WHERE id = ?", [
-      result.insertId,
-    ]);
+    await connection.commit();
+
+    const [newRepair] = await db.query(
+      `SELECT r.*, c.name as customer_name, c.phone as customer_phone 
+       FROM repairs r
+       LEFT JOIN customers c ON r.customer_id = c.id
+       WHERE r.id = ?`,
+      [result.insertId],
+    );
 
     res.status(201).json({
       success: true,
@@ -134,10 +175,14 @@ const createRepair = async (req, res) => {
       data: newRepair[0],
     });
   } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Create repair error:", error);
     res.status(500).json({
       success: false,
       message: error.message,
     });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
@@ -191,9 +236,13 @@ const updateRepairStatus = async (req, res) => {
       values,
     );
 
-    const [updated] = await db.query("SELECT * FROM repairs WHERE id = ?", [
-      id,
-    ]);
+    const [updated] = await db.query(
+      `SELECT r.*, c.name as customer_name, c.phone as customer_phone 
+       FROM repairs r
+       LEFT JOIN customers c ON r.customer_id = c.id
+       WHERE r.id = ?`,
+      [id],
+    );
 
     res.json({
       success: true,
@@ -340,6 +389,83 @@ const getRepairsByStatus = async (req, res) => {
   }
 };
 
+// ✅ DELETE repair - ADD THIS FUNCTION
+const deleteRepair = async (req, res) => {
+  const { id } = req.params;
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    // Check if repair exists
+    const [repairs] = await connection.query(
+      "SELECT * FROM repairs WHERE id = ?",
+      [id],
+    );
+
+    if (repairs.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Repair ticket not found",
+      });
+    }
+
+    // Check if there are any parts used in this repair
+    const [parts] = await connection.query(
+      "SELECT * FROM repair_parts WHERE repair_id = ?",
+      [id],
+    );
+
+    // If there are parts, restore stock
+    for (const part of parts) {
+      await connection.query(
+        "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?",
+        [part.quantity, part.product_id],
+      );
+
+      // Delete the part record
+      await connection.query("DELETE FROM repair_parts WHERE id = ?", [
+        part.id,
+      ]);
+    }
+
+    // Delete the repair
+    const [result] = await connection.query(
+      "DELETE FROM repairs WHERE id = ?",
+      [id],
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Repair ticket not found",
+      });
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message:
+        "Repair ticket deleted successfully" +
+        (parts.length > 0 ? " and stock restored" : ""),
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error deleting repair:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete repair ticket",
+      error: error.message,
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
 module.exports = {
   getAllRepairs,
   getRepairById,
@@ -347,4 +473,5 @@ module.exports = {
   updateRepairStatus,
   addRepairPart,
   getRepairsByStatus,
+  deleteRepair, // ✅ ADDED
 };
