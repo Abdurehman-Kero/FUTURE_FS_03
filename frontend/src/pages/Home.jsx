@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useCart } from "../context/CartContext";
 import { Badge } from "@mui/material";
-
 import {
   Box,
   Button,
@@ -20,6 +19,9 @@ import {
   Fade,
   Chip,
   alpha,
+  Slide,
+  Zoom,
+  Grow,
 } from "@mui/material";
 import {
   Phone as PhoneIcon,
@@ -31,9 +33,8 @@ import {
   ArrowForward as ArrowIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
-  ShoppingCart as ShoppingCartIcon, // 👈 ADD THIS LINE
+  ShoppingCart as ShoppingCartIcon,
   ChevronRight as ChevronRightIcon,
-  ShoppingCart as CartIcon,
   Verified as VerifiedIcon,
   SupportAgent as SupportIcon,
   Star as StarIcon,
@@ -49,12 +50,17 @@ import {
   Camera as CameraIcon,
   Speaker as SpeakerIcon,
   Gamepad as GamepadIcon,
+  Security as SecurityIcon,
+  LocalShipping as ShippingIcon,
+  TrendingUp as TrendingIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Color palette with #FF8500 as primary
+// Enhanced Color palette
 const colors = {
   primary: "#FF8500",
+  primaryDark: "#E67600",
   secondary: "#FFA33C",
   accent: "#4A90E2",
   dark: "#1E1A3A",
@@ -63,69 +69,121 @@ const colors = {
   gray: "#6B7280",
   lightGray: "#E5E7EB",
   success: "#10B981",
+  error: "#EF4444",
+  warning: "#F59E0B",
+  info: "#3B82F6",
   gradient: "linear-gradient(135deg, #FF8500 0%, #FFA33C 100%)",
+  darkGradient: "linear-gradient(135deg, #1E1A3A 0%, #2D2A5A 100%)",
 };
 
-// Featured Products
+// Animation variants
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+// Enhanced Featured Products
 const featuredProducts = [
   {
     id: 1,
     name: "iPhone 14 Pro",
     category: "Smartphones",
-    price: "",
+    price: "From $899",
     image: "http://i.imgur.com/fRYR2yP.png",
     rating: 4.8,
     reviews: 128,
     slug: "iphone-14-pro",
+    badge: "Best Seller",
   },
   {
     id: 2,
     name: "MacBook Pro 14",
     category: "Laptops",
-    price: "",
+    price: "From $1,299",
     image: "https://i.imgur.com/Omysr24.jpeg",
     rating: 4.9,
     reviews: 89,
     slug: "macbook-pro-14",
+    badge: "New",
   },
   {
     id: 3,
     name: "Samsung Galaxy S23",
     category: "Smartphones",
-    price: "",
+    price: "From $799",
     image: "https://i.imgur.com/xBasVwP.png",
     rating: 4.7,
     reviews: 215,
     slug: "samsung-galaxy-s23",
+    badge: "Hot Deal",
   },
   {
     id: 4,
     name: "iPad Pro",
     category: "Tablets",
-    price: "",
+    price: "From $699",
     image: "https://i.imgur.com/G9zwfMm.png",
     rating: 4.8,
     reviews: 156,
     slug: "ipad-pro",
+    badge: "Limited",
   },
 ];
 
-// Categories
+// Categories with icons
 const categories = [
-  { id: 1, name: "Smartphones", icon: "📱", count: 45, slug: "smartphones" },
-  { id: 2, name: "Laptops", icon: "💻", count: 32, slug: "laptops" },
-  { id: 3, name: "Tablets", icon: "📟", count: 18, slug: "tablets" },
-  { id: 4, name: "Accessories", icon: "🎧", count: 67, slug: "accessories" },
+  {
+    id: 1,
+    name: "Smartphones",
+    icon: "📱",
+    count: 45,
+    slug: "smartphones",
+    color: "#FF8500",
+  },
+  {
+    id: 2,
+    name: "Laptops",
+    icon: "💻",
+    count: 32,
+    slug: "laptops",
+    color: "#4A90E2",
+  },
+  {
+    id: 3,
+    name: "Tablets",
+    icon: "📟",
+    count: 18,
+    slug: "tablets",
+    color: "#10B981",
+  },
+  {
+    id: 4,
+    name: "Accessories",
+    icon: "🎧",
+    count: 67,
+    slug: "accessories",
+    color: "#F59E0B",
+  },
 ];
 
-// What We Sell - Expanded
+// What We Sell - Expanded with animations
 const whatWeSell = [
   {
     icon: <PhoneIcon sx={{ fontSize: 40 }} />,
     title: "Smartphones",
     desc: "New & used iPhones, Samsung, Tecno, Infinix",
     brands: "Apple, Samsung, Huawei, Xiaomi",
-    price: "",
+    price: "From $100",
     slug: "smartphones",
   },
   {
@@ -133,7 +191,7 @@ const whatWeSell = [
     title: "Laptops",
     desc: "HP, Dell, Lenovo, MacBooks for work & gaming",
     brands: "HP, Dell, Lenovo, Apple, Acer",
-    price: "",
+    price: "From $300",
     slug: "laptops",
   },
   {
@@ -141,7 +199,7 @@ const whatWeSell = [
     title: "Tablets",
     desc: "iPads, Samsung tablets for entertainment & work",
     brands: "Apple, Samsung, Huawei",
-    price: "",
+    price: "From $200",
     slug: "tablets",
   },
   {
@@ -149,7 +207,7 @@ const whatWeSell = [
     title: "Audio",
     desc: "Headphones, earphones, speakers, earbuds",
     brands: "JBL, Sony, Bose, Anker",
-    price: "",
+    price: "From $20",
     slug: "audio",
   },
   {
@@ -157,7 +215,7 @@ const whatWeSell = [
     title: "Wearables",
     desc: "Smartwatches, fitness trackers, smart bands",
     brands: "Apple Watch, Samsung, Fitbit",
-    price: "",
+    price: "From $150",
     slug: "wearables",
   },
   {
@@ -165,7 +223,7 @@ const whatWeSell = [
     title: "Cameras",
     desc: "Digital cameras, webcams, security cameras",
     brands: "Canon, Nikon, Sony, Logitech",
-    price: "",
+    price: "From $200",
     slug: "cameras",
   },
   {
@@ -173,7 +231,7 @@ const whatWeSell = [
     title: "Speakers",
     desc: "Bluetooth speakers, soundbars, home audio",
     brands: "JBL, Bose, Sony, Anker",
-    price: "",
+    price: "From $30",
     slug: "speakers",
   },
   {
@@ -181,33 +239,36 @@ const whatWeSell = [
     title: "Gaming",
     desc: "Consoles, controllers, gaming accessories",
     brands: "PlayStation, Xbox, Nintendo",
-    price: "",
+    price: "From $40",
     slug: "gaming",
   },
 ];
 
-// Services
+// Services with enhanced descriptions
 const services = [
   {
     icon: <BuildIcon sx={{ fontSize: 40 }} />,
     title: "Expert Repairs",
     desc: "Screen replacement, battery service, water damage repair",
-    price: "",
+    price: "From $20",
     slug: "repairs",
+    features: ["24hr turnaround", "Genuine parts", "Warranty included"],
   },
   {
     icon: <LaptopIcon sx={{ fontSize: 40 }} />,
     title: "Maintenance",
     desc: "Computer cleaning, virus removal, performance optimization",
-    price: "",
+    price: "From $15",
     slug: "maintenance",
+    features: ["Free diagnosis", "Software updates", "Data backup"],
   },
   {
     icon: <SupportIcon sx={{ fontSize: 40 }} />,
     title: "24/7 Support",
     desc: "Technical support and consultation, remote assistance",
-    price: "",
+    price: "Free",
     slug: "support",
+    features: ["Phone support", "Remote access", "Video calls"],
   },
   {
     icon: <VerifiedIcon sx={{ fontSize: 40 }} />,
@@ -215,25 +276,26 @@ const services = [
     desc: "1-year warranty on all repairs and genuine parts",
     price: "Included",
     slug: "warranty",
+    features: ["Parts warranty", "Labor warranty", "Free checkup"],
   },
 ];
 
-// Quick links for footer
-const quickLinks = [
-  { name: "Home", path: "/", section: "home" },
-  { name: "Products", path: "/products", section: "products" },
-  { name: "Services", path: "/services", section: "services" },
-  { name: "Contact", path: "/contact", section: "contact" },
-  { name: "Repair Request", path: "/repair-request", section: "repair" },
-  { name: "About Us", path: "/about", section: "about" },
+// Stats for social proof
+const stats = [
+  { value: "5000+", label: "Happy Customers", icon: <StarIcon /> },
+  { value: "1000+", label: "Devices Repaired", icon: <BuildIcon /> },
+  { value: "98%", label: "Satisfaction Rate", icon: <VerifiedIcon /> },
+  { value: "24/7", label: "Support Available", icon: <SupportIcon /> },
 ];
 
 export default function Home() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -241,6 +303,7 @@ export default function Home() {
     email: "",
   });
   const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [hoveredProduct, setHoveredProduct] = useState(null);
 
   // Refs for sections
   const homeRef = useRef(null);
@@ -251,8 +314,28 @@ export default function Home() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      const scrollPosition = window.scrollY;
+      setScrolled(scrollPosition > 50);
+
+      // Active section detection
+      const sections = [
+        { ref: homeRef, name: "home" },
+        { ref: productsRef, name: "products" },
+        { ref: sellRef, name: "sell" },
+        { ref: servicesRef, name: "services" },
+        { ref: contactRef, name: "contact" },
+      ];
+
+      for (const section of sections) {
+        if (section.ref.current) {
+          const offset = section.ref.current.offsetTop - 150;
+          if (scrollPosition >= offset) {
+            setActiveSection(section.name);
+          }
+        }
+      }
     };
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -277,14 +360,14 @@ export default function Home() {
   const scrollToSection = (sectionRef) => {
     if (sectionRef && sectionRef.current) {
       window.scrollTo({
-        top: sectionRef.current.offsetTop - 100,
+        top: sectionRef.current.offsetTop - 80,
         behavior: "smooth",
       });
     }
     setMobileMenuOpen(false);
   };
-  const { cartCount } = useCart();
 
+  const { cartCount } = useCart();
 
   const handleNavigation = (path, section = null) => {
     if (path === "/" && section) {
@@ -314,12 +397,12 @@ export default function Home() {
   };
 
   const handleCategoryClick = (category) => {
-    navigate(`/products?category=${category.slug}`); // Public products with filter
+    navigate(`/products?category=${category.slug}`);
     setMobileMenuOpen(false);
   };
 
   const handleProductClick = (product) => {
-    navigate(`/products?product=${product.slug}`); // Public products with product highlight
+    navigate(`/products?product=${product.slug}`);
   };
 
   const handleServiceClick = (service) => {
@@ -327,7 +410,7 @@ export default function Home() {
   };
 
   const handleShopNow = () => {
-    navigate("/products"); // Public products page
+    navigate("/products");
   };
 
   const handleAdminLogin = () => {
@@ -335,25 +418,36 @@ export default function Home() {
   };
 
   const handleViewAllProducts = () => {
-    navigate("/products"); // Public products page
+    navigate("/products");
   };
 
   const handleSellItemClick = (item) => {
-    navigate(`/products?category=${item.slug}`); // Public products with category filter
+    navigate(`/products?category=${item.slug}`);
   };
 
   return (
     <Box sx={{ bgcolor: colors.light, minHeight: "100vh" }}>
-      {/* Header */}
+      {/* Sticky Header */}
       <Box
+        component={motion.div}
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
         sx={{
-          position: "sticky",
+          position: "fixed",
           top: 0,
-          zIndex: 1000,
-          bgcolor: scrolled ? "rgba(255,255,255,0.95)" : colors.white,
-          backdropFilter: "blur(10px)",
-          boxShadow: scrolled ? `0 4px 20px ${colors.primary}20` : "none",
-          borderBottom: scrolled ? `1px solid ${colors.lightGray}` : "none",
+          left: 0,
+          right: 0,
+          zIndex: 1100,
+          width: "100%",
+          bgcolor: scrolled ? alpha(colors.white, 0.98) : colors.white,
+          backdropFilter: scrolled ? "blur(12px)" : "none",
+          boxShadow: scrolled
+            ? `0 4px 20px ${alpha(colors.primary, 0.15)}`
+            : "none",
+          borderBottom: scrolled
+            ? `1px solid ${alpha(colors.primary, 0.15)}`
+            : "none",
           transition: "all 0.3s ease",
         }}
       >
@@ -362,260 +456,201 @@ export default function Home() {
             direction="row"
             justifyContent="space-between"
             alignItems="center"
-            sx={{ py: 1.5 }}
+            sx={{ py: { xs: 1.2, md: 1.8 } }}
           >
-            {/* Logo */}
-            <Stack
-              direction="row"
-              spacing={1.5}
-              alignItems="center"
-              onClick={() => scrollToSection(homeRef)}
-              sx={{ cursor: "pointer" }}
-            >
-              <Box
-                sx={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: "12px",
-                  background: colors.gradient,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: `0 4px 10px ${colors.primary}40`,
-                }}
+            {/* Logo Section */}
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                onClick={() => scrollToSection(homeRef)}
+                sx={{ cursor: "pointer" }}
               >
-                <Typography
+                <Box
                   sx={{
-                    color: colors.white,
-                    fontWeight: 700,
-                    fontSize: "1.2rem",
+                    width: { xs: 38, md: 42 },
+                    height: { xs: 38, md: 42 },
+                    borderRadius: "12px",
+                    background: colors.gradient,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: `0 4px 10px ${alpha(colors.primary, 0.4)}`,
                   }}
                 >
-                  CM
-                </Typography>
-              </Box>
-              <Box sx={{ display: { xs: "none", sm: "block" } }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 700,
-                    color: colors.dark,
-                    lineHeight: 1.2,
-                    letterSpacing: "-0.5px",
-                  }}
-                >
-                  Chala<span style={{ color: colors.primary }}>Mobile</span>
-                </Typography>
-              </Box>
-            </Stack>
+                  <Typography
+                    sx={{
+                      color: colors.white,
+                      fontWeight: 700,
+                      fontSize: { xs: "1rem", md: "1.2rem" },
+                    }}
+                  >
+                    CM
+                  </Typography>
+                </Box>
+                <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                      background: colors.gradient,
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                      color: "transparent",
+                      lineHeight: 1.2,
+                      letterSpacing: "-0.5px",
+                    }}
+                  >
+                    Chala<span style={{ color: colors.primary }}>Mobile</span>
+                  </Typography>
+                </Box>
+              </Stack>
+            </motion.div>
 
             {/* Desktop Navigation */}
             <Stack
               direction="row"
-              spacing={3}
+              spacing={2}
               alignItems="center"
               justifyContent="center"
               sx={{
                 display: { xs: "none", md: "flex" },
                 flex: 1,
-                mx: 4,
+                mx: 3,
               }}
             >
-              <Button
-                onClick={() => scrollToSection(homeRef)}
-                sx={{
-                  color: colors.gray,
-                  fontWeight: 500,
-                  position: "relative",
-                  "&:after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: 0,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "0%",
-                    height: "2px",
-                    bgcolor: colors.primary,
-                    transition: "width 0.3s ease",
-                  },
-                  "&:hover": {
-                    color: colors.primary,
+              {[
+                { name: "Home", ref: homeRef, id: "home" },
+                { name: "Shop", ref: productsRef, id: "products" },
+                { name: "Products", ref: sellRef, id: "sell" },
+                { name: "Services", ref: servicesRef, id: "services" },
+                { name: "Contact", ref: contactRef, id: "contact" },
+              ].map((item) => (
+                <Button
+                  key={item.name}
+                  onClick={() => scrollToSection(item.ref)}
+                  sx={{
+                    color:
+                      activeSection === item.id ? colors.primary : colors.gray,
+                    fontWeight: 600,
+                    position: "relative",
+                    textTransform: "none",
+                    fontSize: "0.95rem",
                     "&:after": {
-                      width: "80%",
+                      content: '""',
+                      position: "absolute",
+                      bottom: 0,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: activeSection === item.id ? "80%" : "0%",
+                      height: "2px",
+                      bgcolor: colors.primary,
+                      transition: "width 0.3s ease",
                     },
-                  },
-                }}
-              >
-                Home
-              </Button>
-              <Button
-                onClick={() => scrollToSection(productsRef)}
-                sx={{
-                  color: colors.gray,
-                  fontWeight: 500,
-                  position: "relative",
-                  "&:after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: 0,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "0%",
-                    height: "2px",
-                    bgcolor: colors.primary,
-                    transition: "width 0.3s ease",
-                  },
-                  "&:hover": {
-                    color: colors.primary,
-                    "&:after": {
-                      width: "80%",
+                    "&:hover": {
+                      color: colors.primary,
+                      "&:after": {
+                        width: "80%",
+                      },
                     },
-                  },
-                }}
-              >
-                Shop
-              </Button>
-              <Button
-                onClick={() => scrollToSection(sellRef)}
-                sx={{
-                  color: colors.gray,
-                  fontWeight: 500,
-                  position: "relative",
-                  "&:after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: 0,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "0%",
-                    height: "2px",
-                    bgcolor: colors.primary,
-                    transition: "width 0.3s ease",
-                  },
-                  "&:hover": {
-                    color: colors.primary,
-                    "&:after": {
-                      width: "80%",
-                    },
-                  },
-                }}
-              >
-                What We Sell
-              </Button>
-              <Button
-                onClick={() => scrollToSection(servicesRef)}
-                sx={{
-                  color: colors.gray,
-                  fontWeight: 500,
-                  position: "relative",
-                  "&:after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: 0,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "0%",
-                    height: "2px",
-                    bgcolor: colors.primary,
-                    transition: "width 0.3s ease",
-                  },
-                  "&:hover": {
-                    color: colors.primary,
-                    "&:after": {
-                      width: "80%",
-                    },
-                  },
-                }}
-              >
-                Services
-              </Button>
-              <Button
-                onClick={() => scrollToSection(contactRef)}
-                sx={{
-                  color: colors.gray,
-                  fontWeight: 500,
-                  position: "relative",
-                  "&:after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: 0,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "0%",
-                    height: "2px",
-                    bgcolor: colors.primary,
-                    transition: "width 0.3s ease",
-                  },
-                  "&:hover": {
-                    color: colors.primary,
-                    "&:after": {
-                      width: "80%",
-                    },
-                  },
-                }}
-              >
-                Contact
-              </Button>
+                  }}
+                >
+                  {item.name}
+                </Button>
+              ))}
             </Stack>
 
-            {/* Desktop Right Side */}
+            {/* Desktop Right Side Actions */}
             <Stack
               direction="row"
-              spacing={2}
+              spacing={1.5}
               alignItems="center"
               sx={{ display: { xs: "none", md: "flex" } }}
             >
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <IconButton
+                  onClick={() => navigate("/cart")}
+                  sx={{
+                    color: colors.gray,
+                    "&:hover": {
+                      color: colors.primary,
+                      transform: "scale(1.1)",
+                    },
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <Badge badgeContent={cartCount} color="primary">
+                    <ShoppingCartIcon />
+                  </Badge>
+                </IconButton>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <IconButton
+                  onClick={handleAdminLogin}
+                  sx={{
+                    bgcolor: alpha(colors.primary, 0.1),
+                    color: colors.primary,
+                    "&:hover": {
+                      bgcolor: colors.primary,
+                      color: colors.white,
+                      transform: "scale(1.1)",
+                    },
+                    transition: "all 0.3s ease",
+                  }}
+                  title="Admin Login"
+                >
+                  <AdminIcon />
+                </IconButton>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  variant="contained"
+                  onClick={handleShopNow}
+                  sx={{
+                    background: colors.gradient,
+                    color: colors.white,
+                    borderRadius: "50px",
+                    px: 3.5,
+                    py: 1,
+                    fontWeight: 700,
+                    textTransform: "none",
+                    boxShadow: `0 4px 15px ${alpha(colors.primary, 0.4)}`,
+                    "&:hover": {
+                      boxShadow: `0 6px 20px ${alpha(colors.primary, 0.6)}`,
+                    },
+                  }}
+                >
+                  Shop Now
+                </Button>
+              </motion.div>
+            </Stack>
+
+            {/* Mobile Header Actions */}
+            <Stack direction="row" spacing={1} alignItems="center">
               <IconButton
                 onClick={() => navigate("/cart")}
                 sx={{
+                  display: { xs: "flex", md: "none" },
                   color: colors.gray,
-                  "&:hover": { color: colors.primary },
                 }}
               >
                 <Badge badgeContent={cartCount} color="primary">
                   <ShoppingCartIcon />
                 </Badge>
               </IconButton>
-              {/* Admin Button */}
-              <IconButton
-                onClick={handleAdminLogin}
-                sx={{
-                  bgcolor: alpha(colors.primary, 0.1),
-                  color: colors.primary,
-                  "&:hover": {
-                    bgcolor: colors.primary,
-                    color: colors.white,
-                  },
-                }}
-                title="Admin Login"
-              >
-                <AdminIcon />
-              </IconButton>
 
-              <Button
-                variant="contained"
-                onClick={handleShopNow}
-                sx={{
-                  background: colors.gradient,
-                  color: colors.white,
-                  borderRadius: "50px",
-                  px: 3.5,
-                  py: 1,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  boxShadow: `0 4px 15px ${colors.primary}40`,
-                  "&:hover": {
-                    boxShadow: `0 6px 20px ${colors.primary}60`,
-                  },
-                }}
-              >
-                Shop Now
-              </Button>
-            </Stack>
-
-            {/* Mobile Menu Button */}
-            <Stack direction="row" spacing={1} alignItems="center">
-              {/* Mobile Admin Button */}
               <IconButton
                 onClick={handleAdminLogin}
                 sx={{
@@ -638,6 +673,9 @@ export default function Home() {
                   color: colors.primary,
                   border: `1px solid ${colors.lightGray}`,
                   borderRadius: "10px",
+                  "&:hover": {
+                    bgcolor: alpha(colors.primary, 0.1),
+                  },
                 }}
               >
                 {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
@@ -645,157 +683,140 @@ export default function Home() {
             </Stack>
           </Stack>
 
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <Fade in={mobileMenuOpen}>
-              <Box
-                sx={{
-                  py: 2,
-                  bgcolor: colors.white,
-                  borderRadius: "16px",
-                  mt: 1,
-                  mb: 2,
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                }}
+          {/* Mobile Menu Drawer */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <Stack spacing={1}>
-                  <Button
-                    fullWidth
-                    onClick={() => scrollToSection(homeRef)}
-                    sx={{
-                      justifyContent: "flex-start",
-                      px: 3,
-                      py: 1.5,
-                      color: colors.dark,
-                      "&:hover": {
-                        bgcolor: colors.light,
-                        color: colors.primary,
-                      },
-                    }}
-                  >
-                    Home
-                  </Button>
-                  <Button
-                    fullWidth
-                    onClick={() => scrollToSection(productsRef)}
-                    sx={{
-                      justifyContent: "flex-start",
-                      px: 3,
-                      py: 1.5,
-                      color: colors.dark,
-                      "&:hover": {
-                        bgcolor: colors.light,
-                        color: colors.primary,
-                      },
-                    }}
-                  >
-                    Shop
-                  </Button>
-                  <Button
-                    fullWidth
-                    onClick={() => scrollToSection(sellRef)}
-                    sx={{
-                      justifyContent: "flex-start",
-                      px: 3,
-                      py: 1.5,
-                      color: colors.dark,
-                      "&:hover": {
-                        bgcolor: colors.light,
-                        color: colors.primary,
-                      },
-                    }}
-                  >
-                    What We Sell
-                  </Button>
-                  <Button
-                    fullWidth
-                    onClick={() => scrollToSection(servicesRef)}
-                    sx={{
-                      justifyContent: "flex-start",
-                      px: 3,
-                      py: 1.5,
-                      color: colors.dark,
-                      "&:hover": {
-                        bgcolor: colors.light,
-                        color: colors.primary,
-                      },
-                    }}
-                  >
-                    Services
-                  </Button>
-                  <Button
-                    fullWidth
-                    onClick={() => scrollToSection(contactRef)}
-                    sx={{
-                      justifyContent: "flex-start",
-                      px: 3,
-                      py: 1.5,
-                      color: colors.dark,
-                      "&:hover": {
-                        bgcolor: colors.light,
-                        color: colors.primary,
-                      },
-                    }}
-                  >
-                    Contact
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleShopNow}
-                    sx={{
-                      background: colors.gradient,
-                      color: colors.white,
-                      mx: 2,
-                      width: "calc(100% - 32px)",
-                      borderRadius: "50px",
-                      py: 1.2,
-                      fontWeight: 600,
-                      textTransform: "none",
-                    }}
-                  >
-                    Shop Now
-                  </Button>
-                </Stack>
-              </Box>
-            </Fade>
-          )}
+                <Box
+                  sx={{
+                    py: 2,
+                    bgcolor: colors.white,
+                    borderRadius: "16px",
+                    mt: 1,
+                    mb: 2,
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <Stack spacing={1}>
+                    {[
+                      { name: "Home", ref: homeRef },
+                      { name: "Shop", ref: productsRef },
+                      { name: "Products", ref: sellRef },
+                      { name: "Services", ref: servicesRef },
+                      { name: "Contact", ref: contactRef },
+                    ].map((item, index) => (
+                      <motion.div
+                        key={item.name}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <Button
+                          fullWidth
+                          onClick={() => scrollToSection(item.ref)}
+                          sx={{
+                            justifyContent: "flex-start",
+                            px: 3,
+                            py: 1.5,
+                            color: colors.dark,
+                            fontWeight: 500,
+                            "&:hover": {
+                              bgcolor: colors.light,
+                              color: colors.primary,
+                            },
+                          }}
+                        >
+                          {item.name}
+                        </Button>
+                      </motion.div>
+                    ))}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={handleShopNow}
+                        sx={{
+                          background: colors.gradient,
+                          color: colors.white,
+                          mx: 2,
+                          width: "calc(100% - 32px)",
+                          borderRadius: "50px",
+                          py: 1.2,
+                          fontWeight: 600,
+                          textTransform: "none",
+                        }}
+                      >
+                        Shop Now
+                      </Button>
+                    </motion.div>
+                  </Stack>
+                </Box>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Container>
       </Box>
-
-      {/* Home Section */}
+      {/* Spacer for fixed header */}
+      <Box sx={{ height: { xs: 70, md: 80 } }} />
+      {/* Hero Section */}
       <div ref={homeRef}>
-        {/* Hero Section */}
         <Box
           sx={{
-            py: { xs: 6, md: 10 },
+            py: { xs: 8, md: 12 },
             background: `linear-gradient(135deg, ${colors.white} 0%, ${colors.light} 100%)`,
             position: "relative",
             overflow: "hidden",
           }}
         >
-          {/* Decorative Elements */}
-          <Box
-            sx={{
+          {/* Animated Background Elements */}
+          <motion.div
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            style={{
               position: "absolute",
               top: -100,
               right: -100,
               width: 300,
               height: 300,
               borderRadius: "50%",
-              background: `linear-gradient(135deg, ${colors.primary}10 0%, ${colors.primary}20 100%)`,
+              background: `radial-gradient(circle, ${alpha(colors.primary, 0.1)} 0%, ${alpha(colors.primary, 0.05)} 100%)`,
               zIndex: 0,
             }}
           />
-          <Box
-            sx={{
+          <motion.div
+            animate={{
+              scale: [1, 1.3, 1],
+              rotate: [0, -45, 0],
+            }}
+            transition={{
+              duration: 25,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            style={{
               position: "absolute",
               bottom: -50,
               left: -50,
-              width: 200,
-              height: 200,
+              width: 250,
+              height: 250,
               borderRadius: "50%",
-              background: `linear-gradient(135deg, ${colors.primary}20 0%, ${colors.primary}10 100%)`,
+              background: `radial-gradient(circle, ${alpha(colors.secondary, 0.1)} 0%, ${alpha(colors.secondary, 0.05)} 100%)`,
               zIndex: 0,
             }}
           />
@@ -808,439 +829,681 @@ export default function Home() {
               justifyContent="center"
             >
               <Grid
-                item
-                xs={12}
-                md={6}
-                sx={{ textAlign: { xs: "left", md: "center" } }}
-              >
-                <Chip
-                  label="Welcome to ChalaMobile"
-                  sx={{
-                    bgcolor: colors.primary,
-                    color: colors.white,
-                    mb: 3,
-                    borderRadius: "50px",
-                    fontWeight: 500,
-                    mx: { md: "auto" },
-                  }}
-                />
-
-                <Typography
-                  variant="h1"
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: "2rem", md: "3.5rem" },
-                    color: colors.dark,
-                    mb: 2,
-                    lineHeight: 1.2,
-                    letterSpacing: "-1px",
-                  }}
+                size={{
+                  xs: 12,
+                  md: 6
+                }}>
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeInUp}
                 >
-                  Your Trusted Tech Partner in{" "}
-                  <span style={{ color: colors.primary }}>Shashemene</span>
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color: colors.gray,
-                    fontSize: { xs: "1rem", md: "1.2rem" },
-                    mb: 4,
-                    lineHeight: 1.8,
-                    maxWidth: "90%",
-                    mx: { md: "auto" },
-                  }}
-                >
-                  Quality phones, laptops, and professional repair services.
-                  We're here to help with all your tech needs.
-                </Typography>
-
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={2}
-                  sx={{ width: "100%", justifyContent: { md: "center" } }}
-                >
-                  <Button
-                    variant="contained"
-                    size="large"
-                    onClick={handleShopNow}
+                  <Chip
+                    label="✨ Welcome to ChalaMobile"
                     sx={{
-                      background: colors.gradient,
-                      px: 4,
-                      py: 1.5,
-                      borderRadius: "50px",
-                      fontSize: { xs: "0.9rem", md: "1rem" },
-                      fontWeight: 600,
-                      textTransform: "none",
-                      boxShadow: `0 4px 15px ${colors.primary}40`,
-                      "&:hover": {
-                        boxShadow: `0 6px 20px ${colors.primary}60`,
-                      },
-                      width: { xs: "100%", sm: "auto" },
-                    }}
-                  >
-                    Browse Products
-                    <ChevronRightIcon sx={{ ml: 1 }} />
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    onClick={() => scrollToSection(contactRef)}
-                    sx={{
-                      borderColor: colors.primary,
+                      bgcolor: alpha(colors.primary, 0.1),
                       color: colors.primary,
-                      px: 4,
-                      py: 1.5,
+                      mb: 3,
                       borderRadius: "50px",
-                      fontSize: { xs: "0.9rem", md: "1rem" },
                       fontWeight: 600,
-                      textTransform: "none",
-                      borderWidth: 2,
-                      "&:hover": {
-                        borderColor: colors.secondary,
-                        color: colors.secondary,
-                        borderWidth: 2,
-                      },
-                      width: { xs: "100%", sm: "auto" },
+                      backdropFilter: "blur(10px)",
+                    }}
+                  />
+
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: { xs: "2.5rem", sm: "3rem", md: "4rem" },
+                      color: colors.dark,
+                      mb: 2,
+                      lineHeight: 1.2,
+                      letterSpacing: "-1px",
                     }}
                   >
-                    Contact Us
-                  </Button>
-                </Stack>
+                    Your Trusted Tech Partner in{" "}
+                    <span
+                      style={{ color: colors.primary, position: "relative" }}
+                    >
+                      Shashemene
+                      <motion.span
+                        animate={{ width: ["0%", "100%", "0%"] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        style={{
+                          position: "absolute",
+                          bottom: -5,
+                          left: 0,
+                          height: 3,
+                          background: colors.gradient,
+                        }}
+                      />
+                    </span>
+                  </Typography>
 
-                {/* Trust Indicators */}
-                <Stack
-                  direction="row"
-                  spacing={3}
-                  sx={{
-                    mt: 4,
-                    flexWrap: "wrap",
-                    gap: 2,
-                    justifyContent: { md: "center" },
-                  }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <VerifiedIcon
-                      sx={{ color: colors.success, fontSize: 20 }}
-                    />
-                    <Typography variant="body2" color={colors.gray}>
-                      100% Genuine
-                    </Typography>
+                  <Typography
+                    sx={{
+                      color: colors.gray,
+                      fontSize: { xs: "1rem", md: "1.2rem" },
+                      mb: 4,
+                      lineHeight: 1.8,
+                      maxWidth: "90%",
+                    }}
+                  >
+                    Quality phones, laptops, and professional repair services.
+                    We're here to help with all your tech needs.
+                  </Typography>
+
+                  <Stack
+                    direction={{
+                      xs: "column",
+                      sm: "row",
+                    }}
+                    sx={{
+                      justifyContent: { md: "center" },
+                    }}
+                    spacing={2}
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={handleShopNow}
+                        sx={{
+                          background: colors.gradient,
+                          px: 4,
+                          py: 1.5,
+                          borderRadius: "50px",
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          textTransform: "none",
+                          boxShadow: `0 4px 15px ${alpha(colors.primary, 0.4)}`,
+                          width: { xs: "100%", sm: "auto" },
+                        }}
+                      >
+                        Browse Products
+                        <ChevronRightIcon sx={{ ml: 1 }} />
+                      </Button>
+                    </motion.div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        variant="outlined"
+                        size="large"
+                        onClick={() => scrollToSection(contactRef)}
+                        sx={{
+                          borderColor: colors.primary,
+                          color: colors.primary,
+                          px: 4,
+                          py: 1.5,
+                          borderRadius: "50px",
+                          fontSize: "1rem",
+                          fontWeight: 600,
+                          textTransform: "none",
+                          borderWidth: 2,
+                          width: { xs: "100%", sm: "auto" },
+                        }}
+                      >
+                        Contact Us
+                      </Button>
+                    </motion.div>
                   </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <VerifiedIcon
-                      sx={{ color: colors.success, fontSize: 20 }}
-                    />
-                    <Typography variant="body2" color={colors.gray}>
-                      1 Year Warranty
-                    </Typography>
+
+                  {/* Trust Indicators */}
+                  <Stack
+                    direction="row"
+                    spacing={3}
+                    sx={{
+                      mt: 4,
+                      flexWrap: "wrap",
+                      justifyContent: { md: "center" },
+                      gap: 2,
+                    }}
+                  >
+                    {[
+                      { icon: <VerifiedIcon />, text: "100% Genuine" },
+                      { icon: <VerifiedIcon />, text: "1 Year Warranty" },
+                      { icon: <VerifiedIcon />, text: "Free Diagnosis" },
+                    ].map((item, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 + index * 0.1 }}
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Box sx={{ color: colors.success }}>{item.icon}</Box>
+                          <Typography variant="body2" color={colors.gray}>
+                            {item.text}
+                          </Typography>
+                        </Stack>
+                      </motion.div>
+                    ))}
                   </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <VerifiedIcon
-                      sx={{ color: colors.success, fontSize: 20 }}
-                    />
-                    <Typography variant="body2" color={colors.gray}>
-                      Free Diagnosis
-                    </Typography>
-                  </Stack>
-                </Stack>
+                </motion.div>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6
+                }}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: { xs: 1.5, md: 2 },
+                    }}
+                  >
+                    {featuredProducts.slice(0, 4).map((product, index) => (
+                      <motion.div
+                        key={index}
+                        whileHover={{ y: -10, scale: 1.05 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Paper
+                          elevation={0}
+                          onClick={() => handleProductClick(product)}
+                          sx={{
+                            p: { xs: 1.5, md: 2 },
+                            borderRadius: "20px",
+                            background: colors.white,
+                            border: `1px solid ${colors.lightGray}`,
+                            transition: "all 0.3s ease",
+                            cursor: "pointer",
+                            position: "relative",
+                            overflow: "hidden",
+                            "&:hover": {
+                              boxShadow: `0 10px 30px ${alpha(colors.primary, 0.2)}`,
+                              borderColor: colors.primary,
+                            },
+                          }}
+                        >
+                          {product.badge && (
+                            <Chip
+                              label={product.badge}
+                              size="small"
+                              sx={{
+                                position: "absolute",
+                                top: 8,
+                                left: 8,
+                                bgcolor: colors.primary,
+                                color: colors.white,
+                                fontSize: "0.7rem",
+                                fontWeight: 600,
+                              }}
+                            />
+                          )}
+                          <Box
+                            sx={{
+                              width: "100%",
+                              height: { xs: 100, sm: 120, md: 140 },
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              mb: 1,
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={product.image}
+                              alt={product.name}
+                              sx={{
+                                maxWidth: "90%",
+                                maxHeight: "90%",
+                                objectFit: "contain",
+                                transition: "transform 0.3s ease",
+                                "&:hover": {
+                                  transform: "scale(1.05)",
+                                },
+                              }}
+                            />
+                          </Box>
+                          <Typography variant="caption" color={colors.gray}>
+                            {product.category}
+                          </Typography>
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight={600}
+                            noWrap
+                            sx={{
+                              fontSize: { xs: "0.8rem", md: "0.9rem" },
+                              mt: 0.5,
+                            }}
+                          >
+                            {product.name}
+                          </Typography>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{ mt: 1 }}
+                          >
+                            <Typography
+                              color={colors.primary}
+                              fontWeight={700}
+                              sx={{ fontSize: { xs: "0.9rem", md: "1rem" } }}
+                            >
+                              {product.price}
+                            </Typography>
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              spacing={0.5}
+                            >
+                              <StarIcon
+                                sx={{ color: "#FFB800", fontSize: 14 }}
+                              />
+                              <Typography variant="caption">
+                                {product.rating}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                        </Paper>
+                      </motion.div>
+                    ))}
+                  </Box>
+                </motion.div>
+              </Grid>
+            </Grid>
+          </Container>
+        </Box>
+      </div>
+      {/* Stats Section */}
+      <Box sx={{ py: { xs: 4, md: 6 }, bgcolor: colors.white }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={3} justifyContent="center">
+            {stats.map((stat, index) => (
+              <Grid
+                key={index}
+                size={{
+                  xs: 6,
+                  md: 3
+                }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      textAlign: "center",
+                      background: colors.light,
+                      borderRadius: "20px",
+                      border: `1px solid ${colors.lightGray}`,
+                    }}
+                  >
+                    <Box sx={{ color: colors.primary, mb: 1 }}>{stat.icon}</Box>
+                    <Typography
+                      variant="h4"
+                      fontWeight={800}
+                      color={colors.dark}
+                    >
+                      {stat.value}
+                    </Typography>
+                    <Typography color={colors.gray}>{stat.label}</Typography>
+                  </Paper>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+      {/* Categories Section */}
+      <div ref={productsRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+          <Container maxWidth="lg">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+            >
+              <Stack spacing={2} sx={{ mb: 6 }}>
                 <Box
                   sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: { xs: 1.5, md: 2 },
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
                   }}
                 >
-                  {featuredProducts.slice(0, 4).map((product, index) => (
-                    <Paper
-                      key={index}
-                      elevation={0}
-                      onClick={() => handleProductClick(product)}
-                      sx={{
-                        p: { xs: 1.5, md: 2 },
-                        borderRadius: "20px",
-                        background: colors.white,
-                        border: `1px solid ${colors.lightGray}`,
-                        transition: "all 0.3s ease",
-                        cursor: "pointer",
-                        "&:hover": {
-                          transform: "translateY(-5px)",
-                          boxShadow: `0 10px 30px ${colors.primary}20`,
-                          borderColor: colors.primary,
-                        },
-                      }}
-                    >
-                      {/* Fixed size image container */}
-                      <Box
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: colors.primary,
+                      fontWeight: 600,
+                      letterSpacing: 2,
+                      textAlign: "center",
+                    }}
+                  >
+                    Shop by Category
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: colors.dark,
+                      fontSize: { xs: "1.8rem", md: "2.5rem" },
+                      textAlign: "center",
+                    }}
+                  >
+                    Browse Our Collections
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: colors.gray,
+                      maxWidth: 600,
+                      px: 2,
+                      textAlign: "center",
+                    }}
+                  >
+                    Find exactly what you're looking for in our wide range of
+                    categories
+                  </Typography>
+                </Box>
+              </Stack>
+            </motion.div>
+
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              <Grid container spacing={3} justifyContent="center">
+                {categories.map((category) => (
+                  <Grid
+                    key={category.id}
+                    size={{
+                      xs: 6,
+                      md: 3
+                    }}>
+                    <motion.div variants={fadeInUp}>
+                      <Paper
+                        elevation={0}
+                        onClick={() => handleCategoryClick(category)}
                         sx={{
-                          width: "100%",
-                          height: { xs: 100, sm: 120, md: 140 },
+                          p: { xs: 3, md: 4 },
+                          textAlign: "center",
+                          borderRadius: "20px",
+                          background: colors.white,
+                          cursor: "pointer",
+                          transition: "all 0.3s ease",
+                          border: `1px solid ${colors.lightGray}`,
                           display: "flex",
+                          flexDirection: "column",
                           alignItems: "center",
-                          justifyContent: "center",
-                          mb: 1,
-                          overflow: "hidden",
+                          "&:hover": {
+                            transform: "translateY(-8px)",
+                            borderColor: category.color,
+                            boxShadow: `0 15px 30px -10px ${alpha(category.color, 0.3)}`,
+                          },
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: { xs: "2.5rem", md: "3rem" },
+                            mb: 2,
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
+                          {category.icon}
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          fontWeight={600}
+                          gutterBottom
+                          sx={{
+                            fontSize: { xs: "1rem", md: "1.25rem" },
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
+                          {category.name}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color={colors.gray}
+                          sx={{ textAlign: "center", width: "100%" }}
+                        >
+                          {category.count} Items
+                        </Typography>
+                      </Paper>
+                    </motion.div>
+                  </Grid>
+                ))}
+              </Grid>
+            </motion.div>
+          </Container>
+        </Box>
+      </div>
+      {/* What We Sell Section */}
+      <div ref={sellRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
+          <Container maxWidth="lg">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+            >
+              <Stack spacing={2} sx={{ mb: 6 }}>
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: colors.primary,
+                      fontWeight: 600,
+                      letterSpacing: 2,
+                      textAlign: "center",
+                    }}
+                  >
+                    What We Sell
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: colors.dark,
+                      fontSize: { xs: "1.8rem", md: "2.5rem" },
+                      textAlign: "center",
+                    }}
+                  >
+                    Quality Products at Fair Prices
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: colors.gray,
+                      maxWidth: 600,
+                      px: 2,
+                      textAlign: "center",
+                    }}
+                  >
+                    From smartphones to accessories, we have everything you need
+                  </Typography>
+                </Box>
+              </Stack>
+            </motion.div>
+
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              <Grid container spacing={3} justifyContent="center">
+                {whatWeSell.map((item, index) => (
+                  <Grid
+                    key={index}
+                    size={{
+                      xs: 12,
+                      sm: 6,
+                      md: 3
+                    }}>
+                    <motion.div variants={fadeInUp}>
+                      <Paper
+                        elevation={0}
+                        onClick={() => handleSellItemClick(item)}
+                        sx={{
+                          p: { xs: 3, md: 3 },
+                          borderRadius: "20px",
+                          background: colors.white,
+                          height: "100%",
+                          transition: "all 0.3s ease",
+                          border: `1px solid ${colors.lightGray}`,
+                          textAlign: "center",
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          "&:hover": {
+                            transform: "translateY(-8px)",
+                            boxShadow: `0 20px 40px ${alpha(colors.primary, 0.2)}`,
+                            borderColor: colors.primary,
+                          },
                         }}
                       >
                         <Box
-                          component="img"
-                          src={product.image}
-                          alt={product.name}
-                          onError={(e) => {
-                            e.target.src =
-                              "https://via.placeholder.com/140x140/FF8500/FFFFFF?text=Product";
-                          }}
                           sx={{
-                            maxWidth: "90%",
-                            maxHeight: "90%",
-                            objectFit: "contain",
+                            color: colors.primary,
+                            mb: 2,
                             transition: "transform 0.3s ease",
+                            display: "flex",
+                            justifyContent: "center",
                             "&:hover": {
-                              transform: "scale(1.05)",
+                              transform: "scale(1.1)",
                             },
                           }}
-                        />
-                      </Box>
-                      <Typography variant="caption" color={colors.gray}>
-                        {product.category}
-                      </Typography>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight={600}
-                        noWrap
-                        sx={{ fontSize: { xs: "0.8rem", md: "0.9rem" } }}
-                      >
-                        {product.name}
-                      </Typography>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        sx={{ mt: 0.5 }}
-                      >
+                        >
+                          {item.icon}
+                        </Box>
+                        <Typography
+                          variant="h6"
+                          fontWeight={600}
+                          gutterBottom
+                          sx={{ textAlign: "center", width: "100%" }}
+                        >
+                          {item.title}
+                        </Typography>
+                        <Typography
+                          color={colors.gray}
+                          sx={{
+                            mb: 1,
+                            fontSize: "0.9rem",
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
+                          {item.desc}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: colors.gray,
+                            display: "block",
+                            mb: 1,
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
+                          {item.brands}
+                        </Typography>
                         <Typography
                           color={colors.primary}
                           fontWeight={700}
-                          sx={{ fontSize: { xs: "0.9rem", md: "1rem" } }}
+                          sx={{ textAlign: "center", width: "100%" }}
                         >
-                          {product.price || "Call"}
+                          {item.price}
                         </Typography>
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          spacing={0.5}
-                        >
-                          <StarIcon sx={{ color: "#FFB800", fontSize: 14 }} />
-                          <Typography variant="caption">
-                            {product.rating}
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                    </Paper>
-                  ))}
-                </Box>
+                      </Paper>
+                    </motion.div>
+                  </Grid>
+                ))}
               </Grid>
-            </Grid>
+            </motion.div>
           </Container>
         </Box>
       </div>
-
-      {/* Products Section */}
-      <div ref={productsRef}>
-        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
-          <Container maxWidth="lg">
-            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
-              <Typography
-                variant="overline"
-                sx={{
-                  color: colors.primary,
-                  fontWeight: 600,
-                  letterSpacing: 2,
-                }}
-              >
-                Shop by Category
-              </Typography>
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 700,
-                  color: colors.dark,
-                  fontSize: { xs: "1.8rem", md: "2.5rem" },
-                }}
-              >
-                Browse Our Collections
-              </Typography>
-              <Typography
-                sx={{
-                  color: colors.gray,
-                  maxWidth: 600,
-                  mx: "auto",
-                  px: 2,
-                }}
-              >
-                Find exactly what you're looking for in our wide range of
-                categories
-              </Typography>
-            </Stack>
-
-            <Grid container spacing={3} justifyContent="center">
-              {categories.map((category) => (
-                <Grid item xs={6} md={3} key={category.id}>
-                  <Paper
-                    elevation={0}
-                    onClick={() => handleCategoryClick(category)}
-                    sx={{
-                      p: { xs: 3, md: 4 },
-                      textAlign: "center",
-                      borderRadius: "20px",
-                      background: colors.light,
-                      cursor: "pointer",
-                      transition: "all 0.3s ease",
-                      border: `1px solid ${colors.lightGray}`,
-                      height: "100%",
-                      "&:hover": {
-                        transform: "translateY(-8px)",
-                        borderColor: colors.primary,
-                        boxShadow: `0 15px 30px -10px ${colors.primary}`,
-                        bgcolor: colors.white,
-                      },
-                    }}
-                  >
-                    <Typography
-                      sx={{ fontSize: { xs: "2.5rem", md: "3rem" }, mb: 2 }}
-                    >
-                      {category.icon}
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      fontWeight={600}
-                      gutterBottom
-                      sx={{ fontSize: { xs: "1rem", md: "1.25rem" } }}
-                    >
-                      {category.name}
-                    </Typography>
-                    <Typography variant="body2" color={colors.gray}>
-                      {category.count} Items
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-        </Box>
-      </div>
-
-      {/* What We Sell Section */}
-      <div ref={sellRef}>
-        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
-          <Container maxWidth="lg">
-            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
-              <Typography
-                variant="overline"
-                sx={{
-                  color: colors.primary,
-                  fontWeight: 600,
-                  letterSpacing: 2,
-                }}
-              >
-                What We Sell
-              </Typography>
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 700,
-                  color: colors.dark,
-                  fontSize: { xs: "1.8rem", md: "2.5rem" },
-                }}
-              >
-                Quality Products at Fair Prices
-              </Typography>
-              <Typography
-                sx={{
-                  color: colors.gray,
-                  maxWidth: 600,
-                  mx: "auto",
-                  px: 2,
-                }}
-              >
-                From smartphones to accessories, we have everything you need
-              </Typography>
-            </Stack>
-
-            <Grid container spacing={3} justifyContent="center">
-              {whatWeSell.map((item, index) => (
-                <Grid item xs={12} sm={6} md={3} key={index}>
-                  <Paper
-                    elevation={0}
-                    onClick={() => handleSellItemClick(item)}
-                    sx={{
-                      p: { xs: 3, md: 3 },
-                      borderRadius: "20px",
-                      background: colors.white,
-                      height: "100%",
-                      transition: "all 0.3s ease",
-                      border: `1px solid ${colors.lightGray}`,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      "&:hover": {
-                        transform: "translateY(-8px)",
-                        boxShadow: `0 20px 40px ${colors.primary}20`,
-                        borderColor: colors.primary,
-                      },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        color: colors.primary,
-                        mb: 2,
-                      }}
-                    >
-                      {item.icon}
-                    </Box>
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
-                      {item.title}
-                    </Typography>
-                    <Typography
-                      color={colors.gray}
-                      sx={{ mb: 1, fontSize: "0.9rem" }}
-                    >
-                      {item.desc}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{ color: colors.gray, display: "block", mb: 1 }}
-                    >
-                      {item.brands}
-                    </Typography>
-                    <Typography color={colors.primary} fontWeight={600}>
-                      {item.price || "Call"}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-        </Box>
-      </div>
-
-      {/* Featured Products */}
-      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
+      {/* Featured Products with Enhanced Cards */}
+      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
         <Container maxWidth="lg">
           <Stack
             direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems={{ xs: "flex-start", sm: "center" }}
+            alignItems={{ xs: "center", sm: "center" }}
             sx={{ mb: 4 }}
           >
-            <Box sx={{ mb: { xs: 2, sm: 0 } }}>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              style={{ width: "100%", textAlign: "center" }}
+            >
               <Typography
                 variant="overline"
                 sx={{
                   color: colors.primary,
                   fontWeight: 600,
                   letterSpacing: 2,
+                  textAlign: "center",
+                  width: "100%",
                 }}
               >
                 Featured Products
@@ -1248,752 +1511,969 @@ export default function Home() {
               <Typography
                 variant="h3"
                 sx={{
-                  fontWeight: 700,
+                  fontWeight: 800,
                   color: colors.dark,
                   fontSize: { xs: "1.8rem", md: "2.5rem" },
+                  textAlign: "center",
+                  width: "100%",
                 }}
               >
                 Popular This Week
               </Typography>
-            </Box>
-            <Button
-              endIcon={<ArrowIcon />}
-              onClick={handleViewAllProducts}
-              sx={{
-                color: colors.primary,
-                fontWeight: 600,
-                "&:hover": { color: colors.secondary },
-              }}
-            >
-              View All
-            </Button>
-          </Stack>
-
-          <Grid container spacing={3} justifyContent="center">
-            {featuredProducts.map((product) => (
-              <Grid item xs={12} sm={6} md={3} key={product.id}>
-                <Card
-                  onClick={() => handleProductClick(product)}
-                  sx={{
-                    borderRadius: "20px",
-                    background: colors.white,
-                    border: `1px solid ${colors.lightGray}`,
-                    transition: "all 0.3s ease",
-                    overflow: "hidden",
-                    cursor: "pointer",
-                    height: "100%",
-                    "&:hover": {
-                      transform: "translateY(-8px)",
-                      boxShadow: `0 20px 40px ${colors.primary}20`,
-                      borderColor: colors.primary,
-                    },
-                  }}
-                >
-                  <Box sx={{ p: { xs: 1.5, md: 2 } }}>
-                    {/* Fixed size image container */}
-                    <Box
-                      sx={{
-                        height: { xs: 150, md: 180 },
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        mb: 2,
-                        bgcolor: colors.light,
-                        borderRadius: "12px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={product.image}
-                        alt={product.name}
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/180x180/FF8500/FFFFFF?text=Product";
-                        }}
-                        sx={{
-                          maxWidth: "80%",
-                          maxHeight: "80%",
-                          objectFit: "contain",
-                          transition: "transform 0.3s ease",
-                          "&:hover": {
-                            transform: "scale(1.05)",
-                          },
-                        }}
-                      />
-                    </Box>
-
-                    <Typography variant="caption" color={colors.gray}>
-                      {product.category}
-                    </Typography>
-
-                    <Typography
-                      variant="h6"
-                      fontWeight={600}
-                      sx={{
-                        fontSize: { xs: "0.95rem", md: "1rem" },
-                        mb: 1,
-                        color: colors.dark,
-                      }}
-                    >
-                      {product.name}
-                    </Typography>
-
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      spacing={1}
-                      sx={{ mb: 2, flexWrap: "wrap" }}
-                    >
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <StarIcon sx={{ color: "#FFB800", fontSize: 16 }} />
-                        <Typography variant="body2" fontWeight={600}>
-                          {product.rating}
-                        </Typography>
-                      </Stack>
-                      <Typography variant="caption" color={colors.gray}>
-                        ({product.reviews} reviews)
-                      </Typography>
-                    </Stack>
-
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography
-                        variant="h6"
-                        color={colors.primary}
-                        fontWeight={700}
-                        sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
-                      >
-                        {product.price || "Call"}
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        sx={{
-                          bgcolor: colors.primary,
-                          color: colors.white,
-                          "&:hover": { bgcolor: colors.secondary },
-                          width: { xs: 35, md: 40 },
-                          height: { xs: 35, md: 40 },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleProductClick(product);
-                        }}
-                      >
-                        <CartIcon sx={{ fontSize: { xs: 18, md: 20 } }} />
-                      </IconButton>
-                    </Stack>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Services Section */}
-      <div ref={servicesRef}>
-        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
-          <Container maxWidth="lg">
-            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
-              <Typography
-                variant="overline"
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                endIcon={<ArrowIcon />}
+                onClick={handleViewAllProducts}
                 sx={{
                   color: colors.primary,
                   fontWeight: 600,
-                  letterSpacing: 2,
+                  "&:hover": { color: colors.secondary },
                 }}
               >
-                Our Services
-              </Typography>
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 700,
-                  color: colors.dark,
-                  fontSize: { xs: "1.8rem", md: "2.5rem" },
-                }}
-              >
-                Professional Tech Support
-              </Typography>
-            </Stack>
+                View All
+              </Button>
+            </motion.div>
+          </Stack>
 
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
             <Grid container spacing={3} justifyContent="center">
-              {services.map((service, index) => (
-                <Grid item xs={12} sm={6} md={3} key={index}>
-                  <Paper
-                    elevation={0}
-                    onClick={() => handleServiceClick(service)}
-                    sx={{
-                      p: { xs: 3, md: 4 },
-                      borderRadius: "20px",
-                      background: colors.white,
-                      height: "100%",
-                      transition: "all 0.3s ease",
-                      border: `1px solid ${colors.lightGray}`,
-                      cursor: "pointer",
-                      textAlign: "center",
-                      "&:hover": {
-                        transform: "translateY(-8px)",
-                        boxShadow: `0 20px 40px ${colors.primary}20`,
-                        borderColor: colors.primary,
-                      },
-                    }}
+              {featuredProducts.map((product) => (
+                <Grid
+                  key={product.id}
+                  size={{
+                    xs: 12,
+                    sm: 6,
+                    md: 3
+                  }}>
+                  <motion.div
+                    variants={fadeInUp}
+                    whileHover={{ y: -10 }}
+                    onHoverStart={() => setHoveredProduct(product.id)}
+                    onHoverEnd={() => setHoveredProduct(null)}
                   >
-                    <Box
+                    <Card
+                      onClick={() => handleProductClick(product)}
                       sx={{
-                        color: colors.primary,
-                        mb: 2,
+                        borderRadius: "20px",
+                        background: colors.white,
+                        border: `1px solid ${colors.lightGray}`,
+                        transition: "all 0.3s ease",
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        position: "relative",
+                        "&:hover": {
+                          boxShadow: `0 20px 40px ${alpha(colors.primary, 0.2)}`,
+                          borderColor: colors.primary,
+                        },
                       }}
                     >
-                      {service.icon}
-                    </Box>
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
-                      {service.title}
-                    </Typography>
-                    <Typography
-                      color={colors.gray}
-                      sx={{ mb: 2, fontSize: "0.9rem" }}
-                    >
-                      {service.desc}
-                    </Typography>
-                    <Typography color={colors.primary} fontWeight={600}>
-                      {service.price}
-                    </Typography>
-                  </Paper>
+                      {product.badge && (
+                        <Chip
+                          label={product.badge}
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 16,
+                            left: 16,
+                            bgcolor: colors.primary,
+                            color: colors.white,
+                            fontWeight: 600,
+                            zIndex: 1,
+                          }}
+                        />
+                      )}
+                      <Box sx={{ p: { xs: 2, md: 2.5 } }}>
+                        <Box
+                          sx={{
+                            height: { xs: 180, md: 200 },
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            mb: 2,
+                            bgcolor: colors.light,
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            position: "relative",
+                          }}
+                        >
+                          <motion.img
+                            src={product.image}
+                            alt={product.name}
+                            animate={{
+                              scale: hoveredProduct === product.id ? 1.1 : 1,
+                            }}
+                            transition={{ duration: 0.3 }}
+                            style={{
+                              maxWidth: "80%",
+                              maxHeight: "80%",
+                              objectFit: "contain",
+                            }}
+                            onError={(e) => {
+                              e.target.src =
+                                "https://via.placeholder.com/200x200/FF8500/FFFFFF?text=Product";
+                            }}
+                          />
+                        </Box>
+
+                        <Typography
+                          variant="caption"
+                          color={colors.gray}
+                          sx={{
+                            textAlign: "center",
+                            display: "block",
+                            width: "100%",
+                          }}
+                        >
+                          {product.category}
+                        </Typography>
+
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
+                          sx={{
+                            fontSize: { xs: "1rem", md: "1.1rem" },
+                            mb: 1,
+                            color: colors.dark,
+                            textAlign: "center",
+                            width: "100%",
+                          }}
+                        >
+                          {product.name}
+                        </Typography>
+
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="center"
+                          spacing={1}
+                          sx={{ mb: 2 }}
+                        >
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={0.5}
+                          >
+                            <StarIcon sx={{ color: "#FFB800", fontSize: 16 }} />
+                            <Typography variant="body2" fontWeight={600}>
+                              {product.rating}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="caption" color={colors.gray}>
+                            ({product.reviews} reviews)
+                          </Typography>
+                        </Stack>
+
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Typography
+                            variant="h6"
+                            color={colors.primary}
+                            fontWeight={800}
+                            sx={{ fontSize: { xs: "1.1rem", md: "1.2rem" } }}
+                          >
+                            {product.price}
+                          </Typography>
+                          <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <IconButton
+                              size="small"
+                              sx={{
+                                bgcolor: colors.primary,
+                                color: colors.white,
+                                "&:hover": { bgcolor: colors.secondary },
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleProductClick(product);
+                              }}
+                            >
+                              <ShoppingCartIcon sx={{ fontSize: 20 }} />
+                            </IconButton>
+                          </motion.div>
+                        </Stack>
+                      </Box>
+                    </Card>
+                  </motion.div>
                 </Grid>
               ))}
             </Grid>
-          </Container>
-        </Box>
-      </div>
-
-      {/* Contact Section */}
-      <div ref={contactRef}>
+          </motion.div>
+        </Container>
+      </Box>
+      {/* Services Section with Enhanced Cards */}
+      <div ref={servicesRef}>
         <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.white }}>
           <Container maxWidth="lg">
-            <Stack spacing={2} sx={{ mb: 6, textAlign: "center" }}>
-              <Typography
-                variant="overline"
-                sx={{
-                  color: colors.primary,
-                  fontWeight: 600,
-                  letterSpacing: 2,
-                }}
-              >
-                Get in Touch
-              </Typography>
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 700,
-                  color: colors.dark,
-                  fontSize: { xs: "1.8rem", md: "2.5rem" },
-                }}
-              >
-                Visit Our Store
-              </Typography>
-            </Stack>
-
-            <Grid container spacing={4} justifyContent="center">
-              <Grid item xs={12} md={5}>
-                <Stack spacing={2}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: { xs: 2, md: 3 },
-                      borderRadius: "16px",
-                      background: colors.light,
-                      border: `1px solid ${colors.lightGray}`,
-                      textAlign: "center",
-                    }}
-                  >
-                    <Stack
-                      direction="row"
-                      spacing={2}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Avatar
-                        sx={{
-                          bgcolor: colors.primary,
-                          width: { xs: 40, md: 48 },
-                          height: { xs: 40, md: 48 },
-                        }}
-                      >
-                        <LocationIcon />
-                      </Avatar>
-                      <Box sx={{ textAlign: "left" }}>
-                        <Typography fontWeight={600} gutterBottom>
-                          Store Location
-                        </Typography>
-                        <Typography color={colors.gray}>
-                          Abosto, Shashemene, Ethiopia
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Paper>
-
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: { xs: 2, md: 3 },
-                      borderRadius: "16px",
-                      background: colors.light,
-                      border: `1px solid ${colors.lightGray}`,
-                      textAlign: "center",
-                    }}
-                  >
-                    <Stack
-                      direction="row"
-                      spacing={2}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Avatar
-                        sx={{
-                          bgcolor: colors.primary,
-                          width: { xs: 40, md: 48 },
-                          height: { xs: 40, md: 48 },
-                        }}
-                      >
-                        <TimeIcon />
-                      </Avatar>
-                      <Box sx={{ textAlign: "left" }}>
-                        <Typography fontWeight={600} gutterBottom>
-                          Business Hours
-                        </Typography>
-                        <Typography color={colors.gray}>
-                          Mon-Sat: 9:00 AM - 8:00 PM
-                        </Typography>
-                        <Typography color={colors.gray}>
-                          Sunday: 10:00 AM - 5:00 PM
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Paper>
-
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: { xs: 2, md: 3 },
-                      borderRadius: "16px",
-                      background: colors.light,
-                      border: `1px solid ${colors.lightGray}`,
-                      textAlign: "center",
-                    }}
-                  >
-                    <Stack
-                      direction="row"
-                      spacing={2}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Avatar
-                        sx={{
-                          bgcolor: colors.primary,
-                          width: { xs: 40, md: 48 },
-                          height: { xs: 40, md: 48 },
-                        }}
-                      >
-                        <PhoneIcon />
-                      </Avatar>
-                      <Box sx={{ textAlign: "left" }}>
-                        <Typography fontWeight={600} gutterBottom>
-                          Contact Info
-                        </Typography>
-                        <Typography color={colors.gray}>
-                          +251 98 231 0974
-                        </Typography>
-                        <Typography color={colors.gray}>
-                          keroabdurehman@gmail.com
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Paper>
-                </Stack>
-              </Grid>
-
-              <Grid item xs={12} md={7}>
-                <Paper
-                  elevation={0}
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+            >
+              <Stack spacing={2} sx={{ mb: 6 }}>
+                <Box
                   sx={{
-                    p: { xs: 3, md: 5 },
-                    borderRadius: "24px",
-                    background: colors.light,
-                    border: `1px solid ${colors.lightGray}`,
-                    height: "100%",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
                   }}
                 >
                   <Typography
-                    variant="h5"
-                    fontWeight={700}
-                    gutterBottom
-                    align="center"
+                    variant="overline"
+                    sx={{
+                      color: colors.primary,
+                      fontWeight: 600,
+                      letterSpacing: 2,
+                      textAlign: "center",
+                    }}
                   >
-                    Send us a Message
+                    Our Services
                   </Typography>
-                  <Typography color={colors.gray} sx={{ mb: 4 }} align="center">
-                    We'll get back to you within 24 hours
-                  </Typography>
+                </Box>
 
-                  <form onSubmit={handleEmailSubmit}>
-                    <Stack spacing={3}>
-                      <TextField
-                        label="Your Name"
-                        fullWidth
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        required
-                        variant="outlined"
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            borderRadius: "12px",
-                            "&:hover fieldset": {
-                              borderColor: colors.primary,
-                            },
-                          },
-                        }}
-                      />
-                      <TextField
-                        label="Email Address"
-                        type="email"
-                        fullWidth
-                        value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                        required
-                        variant="outlined"
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            borderRadius: "12px",
-                            "&:hover fieldset": {
-                              borderColor: colors.primary,
-                            },
-                          },
-                        }}
-                      />
-                      <TextField
-                        label="Phone Number (Optional)"
-                        fullWidth
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                        variant="outlined"
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            borderRadius: "12px",
-                            "&:hover fieldset": {
-                              borderColor: colors.primary,
-                            },
-                          },
-                        }}
-                      />
-                      <TextField
-                        label="Message"
-                        multiline
-                        rows={4}
-                        fullWidth
-                        value={formData.message}
-                        onChange={(e) =>
-                          setFormData({ ...formData, message: e.target.value })
-                        }
-                        required
-                        variant="outlined"
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            borderRadius: "12px",
-                            "&:hover fieldset": {
-                              borderColor: colors.primary,
-                            },
-                          },
-                        }}
-                      />
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        size="large"
-                        startIcon={<EmailIcon />}
-                        sx={{
-                          background: colors.gradient,
-                          py: { xs: 1.5, md: 1.8 },
-                          borderRadius: "12px",
-                          fontSize: { xs: "0.9rem", md: "1rem" },
-                          fontWeight: 600,
-                          textTransform: "none",
-                          "&:hover": {
-                            background: colors.secondary,
-                          },
-                        }}
-                      >
-                        Send via Email
-                      </Button>
-                    </Stack>
-                  </form>
-                </Paper>
-              </Grid>
-            </Grid>
-          </Container>
-        </Box>
-      </div>
-
-      {/* Footer */}
-      <Box sx={{ bgcolor: colors.dark, color: colors.white, py: 6 }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4} justifyContent="center">
-            <Grid
-              item
-              xs={12}
-              md={4}
-              sx={{ textAlign: { xs: "center", md: "left" } }}
-            >
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                justifyContent={{ xs: "center", md: "flex-start" }}
-                sx={{ mb: 3 }}
-              >
                 <Box
                   sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "12px",
-                    background: colors.gradient,
+                    width: "100%",
                     display: "flex",
-                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: colors.dark,
+                      fontSize: { xs: "1.8rem", md: "2.5rem" },
+                      textAlign: "center",
+                    }}
+                  >
+                    Professional Tech Support
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
                     justifyContent: "center",
                   }}
                 >
                   <Typography
                     sx={{
-                      color: colors.white,
-                      fontWeight: 700,
-                      fontSize: "1.2rem",
+                      color: colors.gray,
+                      maxWidth: 600,
+                      px: 2,
+                      textAlign: "center",
                     }}
                   >
-                    CM
+                    Expert repair and maintenance services for all your devices
                   </Typography>
                 </Box>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  Chala<span style={{ color: colors.primary }}>Mobile</span>
-                </Typography>
               </Stack>
-              <Typography
-                sx={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.8, mb: 3 }}
-              >
-                Your trusted partner for quality electronics and professional
-                maintenance services in Shashemene.
-              </Typography>
-              <Stack
-                direction="row"
-                spacing={2}
-                justifyContent={{ xs: "center", md: "flex-start" }}
-              >
-                <IconButton
-                  onClick={() => window.open("https://facebook.com", "_blank")}
+            </motion.div>
+
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              <Grid container spacing={3} justifyContent="center">
+                {services.map((service, index) => (
+                  <Grid
+                    key={index}
+                    size={{
+                      xs: 12,
+                      sm: 6,
+                      md: 3
+                    }}>
+                    <motion.div variants={fadeInUp}>
+                      <Paper
+                        elevation={0}
+                        onClick={() => handleServiceClick(service)}
+                        sx={{
+                          p: { xs: 3, md: 4 },
+                          borderRadius: "20px",
+                          background: colors.light,
+                          height: "100%",
+                          transition: "all 0.3s ease",
+                          border: `1px solid ${colors.lightGray}`,
+                          cursor: "pointer",
+                          textAlign: "center",
+                          "&:hover": {
+                            transform: "translateY(-8px)",
+                            boxShadow: `0 20px 40px ${alpha(colors.primary, 0.2)}`,
+                            borderColor: colors.primary,
+                          },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            color: colors.primary,
+                            mb: 2,
+                            transition: "transform 0.3s ease",
+                            display: "flex",
+                            justifyContent: "center",
+                            "&:hover": {
+                              transform: "scale(1.1)",
+                            },
+                          }}
+                        >
+                          {service.icon}
+                        </Box>
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
+                          gutterBottom
+                          sx={{ textAlign: "center" }}
+                        >
+                          {service.title}
+                        </Typography>
+                        <Typography
+                          color={colors.gray}
+                          sx={{
+                            mb: 2,
+                            fontSize: "0.9rem",
+                            textAlign: "center",
+                          }}
+                        >
+                          {service.desc}
+                        </Typography>
+                        <Typography
+                          color={colors.primary}
+                          fontWeight={700}
+                          gutterBottom
+                          sx={{ textAlign: "center" }}
+                        >
+                          {service.price}
+                        </Typography>
+                        <Stack
+                          spacing={0.5}
+                          sx={{ mt: 2, alignItems: "center" }}
+                        >
+                          {service.features.map((feature, idx) => (
+                            <Typography
+                              key={idx}
+                              variant="caption"
+                              color={colors.gray}
+                              sx={{ textAlign: "center" }}
+                            >
+                              ✓ {feature}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Paper>
+                    </motion.div>
+                  </Grid>
+                ))}
+              </Grid>
+            </motion.div>
+          </Container>
+        </Box>
+      </div>
+      {/* Contact Section with Enhanced Form */}
+      <div ref={contactRef}>
+        <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: colors.light }}>
+          <Container maxWidth="lg">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+            >
+              <Stack spacing={2} sx={{ mb: 6 }}>
+                <Box
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.1)",
-                    color: colors.white,
-                    "&:hover": { bgcolor: colors.primary },
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
                   }}
                 >
-                  <FacebookIcon />
-                </IconButton>
-                <IconButton
-                  onClick={() => window.open("https://twitter.com", "_blank")}
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.1)",
-                    color: colors.white,
-                    "&:hover": { bgcolor: colors.primary },
-                  }}
-                >
-                  <TwitterIcon />
-                </IconButton>
-                <IconButton
-                  onClick={() => window.open("https://linkedin.com", "_blank")}
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.1)",
-                    color: colors.white,
-                    "&:hover": { bgcolor: colors.primary },
-                  }}
-                >
-                  <LinkedInIcon />
-                </IconButton>
-              </Stack>
-            </Grid>
-
-            <Grid
-              item
-              xs={6}
-              md={2}
-              sx={{ textAlign: { xs: "center", md: "left" } }}
-            >
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                Quick Links
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={() => scrollToSection(homeRef)}
-              >
-                Home
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={handleShopNow}
-              >
-                Shop
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={() => scrollToSection(sellRef)}
-              >
-                What We Sell
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={() => scrollToSection(servicesRef)}
-              >
-                Services
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={() => scrollToSection(contactRef)}
-              >
-                Contact
-              </Typography>
-            </Grid>
-
-            <Grid
-              item
-              xs={6}
-              md={2}
-              sx={{ textAlign: { xs: "center", md: "left" } }}
-            >
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                More
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={() => navigate("/repair-request")}
-              >
-                Repair Request
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={() => navigate("/about")}
-              >
-                About Us
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 1.5,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.primary },
-                }}
-                onClick={handleAdminLogin}
-              >
-                Admin Login
-              </Typography>
-            </Grid>
-
-            <Grid
-              item
-              xs={12}
-              md={4}
-              sx={{ textAlign: { xs: "center", md: "left" } }}
-            >
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                Newsletter
-              </Typography>
-              <Typography
-                sx={{
-                  color: "rgba(255,255,255,0.7)",
-                  mb: 2,
-                  fontSize: "0.9rem",
-                }}
-              >
-                Subscribe to get updates about new products and special offers
-              </Typography>
-              <form onSubmit={handleNewsletterSubmit}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  justifyContent={{ xs: "center", md: "flex-start" }}
-                >
-                  <TextField
-                    placeholder="Your email"
-                    size="small"
-                    fullWidth
-                    value={newsletterEmail}
-                    onChange={(e) => setNewsletterEmail(e.target.value)}
-                    required
-                    type="email"
+                  <Typography
+                    variant="overline"
                     sx={{
-                      bgcolor: "rgba(255,255,255,0.1)",
-                      borderRadius: "8px",
-                      maxWidth: "250px",
-                      "& .MuiInputBase-input": { color: colors.white },
-                      "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                    }}
-                  />
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    sx={{
-                      bgcolor: colors.primary,
-                      whiteSpace: "nowrap",
-                      borderRadius: "8px",
-                      "&:hover": { bgcolor: colors.secondary },
+                      color: colors.primary,
+                      fontWeight: 600,
+                      letterSpacing: 2,
+                      textAlign: "center",
                     }}
                   >
-                    Subscribe
-                  </Button>
+                    Get in Touch
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: colors.dark,
+                      fontSize: { xs: "1.8rem", md: "2.5rem" },
+                      textAlign: "center",
+                    }}
+                  >
+                    Visit Our Store
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: colors.gray,
+                      maxWidth: 600,
+                      px: 2,
+                      textAlign: "center",
+                    }}
+                  >
+                    We'd love to hear from you. Send us a message and we'll
+                    respond within 24 hours.
+                  </Typography>
+                </Box>
+              </Stack>
+            </motion.div>
+
+            <Grid container spacing={4} justifyContent="center">
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 5
+                }}>
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <Stack spacing={3}>
+                    {[
+                      {
+                        icon: <LocationIcon />,
+                        title: "Store Location",
+                        info: "Aposto, Shashemene, Ethiopia",
+                      },
+                      {
+                        icon: <TimeIcon />,
+                        title: "Business Hours",
+                        info: [
+                          "Mon-Sat: 9:00 AM - 8:00 PM",
+                          "Sunday: 10:00 AM - 5:00 PM",
+                        ],
+                      },
+                      {
+                        icon: <PhoneIcon />,
+                        title: "Contact Info",
+                        info: ["+251 98 231 0974", "keroabdurehman@gmail.com"],
+                      },
+                    ].map((item, index) => (
+                      <Paper
+                        key={index}
+                        elevation={0}
+                        sx={{
+                          p: { xs: 2, md: 3 },
+                          borderRadius: "16px",
+                          background: colors.white,
+                          border: `1px solid ${colors.lightGray}`,
+                          transition: "all 0.3s ease",
+                          "&:hover": {
+                            transform: "translateX(5px)",
+                            borderColor: colors.primary,
+                          },
+                        }}
+                      >
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar
+                            sx={{
+                              bgcolor: alpha(colors.primary, 0.1),
+                              color: colors.primary,
+                              width: { xs: 40, md: 48 },
+                              height: { xs: 40, md: 48 },
+                            }}
+                          >
+                            {item.icon}
+                          </Avatar>
+                          <Box>
+                            <Typography fontWeight={700} gutterBottom>
+                              {item.title}
+                            </Typography>
+                            {Array.isArray(item.info) ? (
+                              item.info.map((line, i) => (
+                                <Typography
+                                  key={i}
+                                  color={colors.gray}
+                                  variant="body2"
+                                >
+                                  {line}
+                                </Typography>
+                              ))
+                            ) : (
+                              <Typography color={colors.gray}>
+                                {item.info}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                </motion.div>
+              </Grid>
+
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 7
+                }}>
+                <motion.div
+                  initial={{ opacity: 0, x: 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: { xs: 3, md: 5 },
+                      borderRadius: "24px",
+                      background: colors.white,
+                      border: `1px solid ${colors.lightGray}`,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        fontWeight={800}
+                        gutterBottom
+                        sx={{ textAlign: "center" }}
+                      >
+                        Send us a Message
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography
+                        color={colors.gray}
+                        sx={{ mb: 4, textAlign: "center" }}
+                      >
+                        We'll get back to you within 24 hours
+                      </Typography>
+                    </Box>
+
+                    <form onSubmit={handleEmailSubmit}>
+                      <Stack spacing={3}>
+                        <TextField
+                          label="Your Name"
+                          fullWidth
+                          value={formData.name}
+                          onChange={(e) =>
+                            setFormData({ ...formData, name: e.target.value })
+                          }
+                          required
+                          variant="outlined"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: "12px",
+                              transition: "all 0.3s ease",
+                              "&:hover fieldset": {
+                                borderColor: colors.primary,
+                              },
+                              "&.Mui-focused fieldset": {
+                                borderColor: colors.primary,
+                              },
+                            },
+                          }}
+                        />
+                        <TextField
+                          label="Email Address"
+                          type="email"
+                          fullWidth
+                          value={formData.email}
+                          onChange={(e) =>
+                            setFormData({ ...formData, email: e.target.value })
+                          }
+                          required
+                          variant="outlined"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: "12px",
+                              "&:hover fieldset": {
+                                borderColor: colors.primary,
+                              },
+                            },
+                          }}
+                        />
+                        <TextField
+                          label="Phone Number (Optional)"
+                          fullWidth
+                          value={formData.phone}
+                          onChange={(e) =>
+                            setFormData({ ...formData, phone: e.target.value })
+                          }
+                          variant="outlined"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: "12px",
+                              "&:hover fieldset": {
+                                borderColor: colors.primary,
+                              },
+                            },
+                          }}
+                        />
+                        <TextField
+                          label="Message"
+                          multiline
+                          rows={4}
+                          fullWidth
+                          value={formData.message}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              message: e.target.value,
+                            })
+                          }
+                          required
+                          variant="outlined"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: "12px",
+                              "&:hover fieldset": {
+                                borderColor: colors.primary,
+                              },
+                            },
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            style={{ width: "100%" }}
+                          >
+                            <Button
+                              type="submit"
+                              variant="contained"
+                              size="large"
+                              startIcon={<EmailIcon />}
+                              sx={{
+                                background: colors.gradient,
+                                py: { xs: 1.5, md: 1.8 },
+                                borderRadius: "12px",
+                                fontSize: { xs: "0.9rem", md: "1rem" },
+                                fontWeight: 700,
+                                textTransform: "none",
+                                width: "100%",
+                                "&:hover": {
+                                  background: colors.secondary,
+                                },
+                              }}
+                            >
+                              Send via Email
+                            </Button>
+                          </motion.div>
+                        </Box>
+                      </Stack>
+                    </form>
+                  </Paper>
+                </motion.div>
+              </Grid>
+            </Grid>
+          </Container>
+        </Box>
+      </div>
+      {/* Footer - Full Width */}
+      <Box
+        sx={{
+          bgcolor: colors.dark,
+          color: colors.white,
+          py: 6,
+          width: "100vw",
+          position: "relative",
+          left: "50%",
+          right: "50%",
+          ml: "-50vw",
+          mr: "-50vw",
+          mt: "auto",
+        }}
+      >
+        <Box
+          sx={{
+            maxWidth: "1200px",
+            mx: "auto",
+            px: { xs: 2, sm: 3, md: 4 },
+          }}
+        >
+          <Grid container spacing={4}>
+            {/* Brand Section */}
+            <Grid
+              size={{
+                xs: 12,
+                md: 4
+              }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
+                  sx={{ mb: 3, cursor: "pointer" }}
+                  onClick={() => scrollToSection(homeRef)}
+                >
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "12px",
+                      background: colors.gradient,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color: colors.white,
+                        fontWeight: 700,
+                        fontSize: "1.2rem",
+                      }}
+                    >
+                      CM
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                    Chala<span style={{ color: colors.primary }}>Mobile</span>
+                  </Typography>
                 </Stack>
-              </form>
+                <Typography
+                  sx={{
+                    color: "rgba(255,255,255,0.7)",
+                    lineHeight: 1.8,
+                    mb: 3,
+                  }}
+                >
+                  Your trusted partner for quality electronics and professional
+                  maintenance services in Shashemene.
+                </Typography>
+                <Stack direction="row" spacing={2}>
+                  {[
+                    { icon: <FacebookIcon />, url: "https://facebook.com" },
+                    { icon: <TwitterIcon />, url: "https://twitter.com" },
+                    { icon: <LinkedInIcon />, url: "https://linkedin.com" },
+                  ].map((social, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.1, y: -3 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <IconButton
+                        onClick={() => window.open(social.url, "_blank")}
+                        sx={{
+                          bgcolor: "rgba(255,255,255,0.1)",
+                          color: colors.white,
+                          "&:hover": { bgcolor: colors.primary },
+                        }}
+                      >
+                        {social.icon}
+                      </IconButton>
+                    </motion.div>
+                  ))}
+                </Stack>
+              </motion.div>
+            </Grid>
+
+            {/* Quick Links */}
+            <Grid
+              size={{
+                xs: 6,
+                md: 2
+              }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700 }}>
+                  Quick Links
+                </Typography>
+                {[
+                  { name: "Home", action: () => scrollToSection(homeRef) },
+                  { name: "Shop", action: handleShopNow },
+                  {
+                    name: "Products",
+                    action: () => scrollToSection(sellRef),
+                  },
+                  {
+                    name: "Services",
+                    action: () => scrollToSection(servicesRef),
+                  },
+                  {
+                    name: "Contact",
+                    action: () => scrollToSection(contactRef),
+                  },
+                ].map((link, index) => (
+                  <Typography
+                    key={index}
+                    sx={{
+                      color: "rgba(255,255,255,0.7)",
+                      mb: 1.5,
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      transition: "color 0.3s ease",
+                      "&:hover": { color: colors.primary },
+                    }}
+                    onClick={link.action}
+                  >
+                    {link.name}
+                  </Typography>
+                ))}
+              </motion.div>
+            </Grid>
+
+            {/* More Links */}
+            <Grid
+              size={{
+                xs: 6,
+                md: 2
+              }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700 }}>
+                  More
+                </Typography>
+                {[
+                  { name: "Repair Request", path: "/repair-request" },
+                  { name: "About Us", path: "/about" },
+                  { name: "Admin Login", path: "/login" },
+                ].map((link, index) => (
+                  <Typography
+                    key={index}
+                    sx={{
+                      color: "rgba(255,255,255,0.7)",
+                      mb: 1.5,
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      transition: "color 0.3s ease",
+                      "&:hover": { color: colors.primary },
+                    }}
+                    onClick={() => navigate(link.path)}
+                  >
+                    {link.name}
+                  </Typography>
+                ))}
+              </motion.div>
+            </Grid>
+
+            {/* Newsletter */}
+            <Grid
+              size={{
+                xs: 12,
+                md: 4
+              }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700 }}>
+                  Newsletter
+                </Typography>
+                <Typography
+                  sx={{
+                    color: "rgba(255,255,255,0.7)",
+                    mb: 2,
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Subscribe to get updates about new products and special offers
+                </Typography>
+                <form onSubmit={handleNewsletterSubmit}>
+                  <Stack direction="row" spacing={1}>
+                    <TextField
+                      placeholder="Your email"
+                      size="small"
+                      fullWidth
+                      value={newsletterEmail}
+                      onChange={(e) => setNewsletterEmail(e.target.value)}
+                      required
+                      type="email"
+                      sx={{
+                        bgcolor: "rgba(255,255,255,0.1)",
+                        borderRadius: "8px",
+                        "& .MuiInputBase-input": { color: colors.white },
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          border: "none",
+                        },
+                      }}
+                    />
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        sx={{
+                          bgcolor: colors.primary,
+                          whiteSpace: "nowrap",
+                          borderRadius: "8px",
+                          fontWeight: 600,
+                          "&:hover": { bgcolor: colors.secondary },
+                        }}
+                      >
+                        Subscribe
+                      </Button>
+                    </motion.div>
+                  </Stack>
+                </form>
+              </motion.div>
             </Grid>
           </Grid>
 
@@ -2008,7 +2488,7 @@ export default function Home() {
             <Typography
               sx={{
                 color: "rgba(255,255,255,0.5)",
-                fontSize: "0.9rem",
+                fontSize: "0.85rem",
                 textAlign: "center",
               }}
             >
@@ -2019,7 +2499,7 @@ export default function Home() {
                 onClick={() => navigate("/privacy")}
                 sx={{
                   color: "rgba(255,255,255,0.5)",
-                  fontSize: "0.9rem",
+                  fontSize: "0.85rem",
                   cursor: "pointer",
                   "&:hover": { color: colors.primary },
                 }}
@@ -2030,7 +2510,7 @@ export default function Home() {
                 onClick={() => navigate("/terms")}
                 sx={{
                   color: "rgba(255,255,255,0.5)",
-                  fontSize: "0.9rem",
+                  fontSize: "0.85rem",
                   cursor: "pointer",
                   "&:hover": { color: colors.primary },
                 }}
@@ -2039,32 +2519,37 @@ export default function Home() {
               </Typography>
             </Stack>
           </Stack>
-        </Container>
+        </Box>
       </Box>
-
-      {/* Floating WhatsApp */}
-      <IconButton
-        href="https://wa.me/251982310974"
-        target="_blank"
-        sx={{
-          position: "fixed",
-          bottom: { xs: 16, md: 24 },
-          right: { xs: 16, md: 24 },
-          bgcolor: "#25D366",
-          color: colors.white,
-          width: { xs: 50, md: 60 },
-          height: { xs: 50, md: 60 },
-          "&:hover": {
-            bgcolor: "#128C7E",
-            transform: "scale(1.1)",
-          },
-          boxShadow: "0 4px 20px rgba(37,211,102,0.3)",
-          zIndex: 1000,
-          transition: "all 0.3s ease",
-        }}
+      {/* Floating WhatsApp with Animation */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 1, type: "spring", stiffness: 200 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
       >
-        <WhatsAppIcon sx={{ fontSize: { xs: 24, md: 28 } }} />
-      </IconButton>
+        <IconButton
+          href="https://wa.me/251982310974"
+          target="_blank"
+          sx={{
+            position: "fixed",
+            bottom: { xs: 16, md: 24 },
+            right: { xs: 16, md: 24 },
+            bgcolor: "#25D366",
+            color: colors.white,
+            width: { xs: 50, md: 60 },
+            height: { xs: 50, md: 60 },
+            "&:hover": {
+              bgcolor: "#128C7E",
+            },
+            boxShadow: "0 4px 20px rgba(37,211,102,0.4)",
+            zIndex: 1000,
+          }}
+        >
+          <WhatsAppIcon sx={{ fontSize: { xs: 24, md: 28 } }} />
+        </IconButton>
+      </motion.div>
     </Box>
   );
 }
