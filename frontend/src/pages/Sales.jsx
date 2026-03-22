@@ -73,7 +73,12 @@ import {
   updateSale,
 } from "../services/api";
 import { getProducts } from "../services/api";
-import { getCustomers, searchCustomers, updateCustomer } from "../services/api";
+import {
+  getCustomers,
+  searchCustomers,
+  updateCustomer,
+  createCustomer,
+} from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import jsPDF from "jspdf";
 
@@ -129,23 +134,23 @@ const Sales = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openReceiptDialog, setOpenReceiptDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [saleToDelete, setSaleToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [updatingCustomer, setUpdatingCustomer] = useState(false);
+  const [editingCustomerOnReceipt, setEditingCustomerOnReceipt] =
+    useState(false);
+  const [editCustomerData, setEditCustomerData] = useState({
+    name: "",
+    phone: "",
+  });
   const [products, setProducts] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
   const [warrantyPeriod, setWarrantyPeriod] = useState("12");
   const [showFilters, setShowFilters] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    customer_name: "",
-    customer_phone: "",
-    customer_id: null,
-  });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -171,19 +176,41 @@ const Sales = () => {
     loadSales();
   }, [dateFilter]);
 
+  useEffect(() => {
+    if (selectedSale && !editingCustomerOnReceipt) {
+      setEditCustomerData({
+        name: selectedSale.customer_name || "",
+        phone: selectedSale.customer_phone || "",
+      });
+    }
+  }, [selectedSale, editingCustomerOnReceipt]);
+
   const loadSales = async () => {
     try {
       setLoading(true);
       const res =
         dateFilter === "today" ? await getTodaysSales() : await getSales();
-      setSales(res.data.data || []);
+      const salesData = (res.data.data || []).map((sale) => ({
+        ...sale,
+        // FIX: Use the customer_name from the join, don't add fallback text
+        customer_name: sale.customer_name || "Walk-in Customer",
+        customer_phone: sale.customer_phone || "",
+      }));
+      setSales(salesData);
+
+      // If there's a selected sale open, update it with fresh data
+      if (selectedSale) {
+        const updatedSelected = salesData.find((s) => s.id === selectedSale.id);
+        if (updatedSelected) {
+          setSelectedSale(updatedSelected);
+        }
+      }
     } catch (error) {
       showSnackbar("Failed to load sales", "error");
     } finally {
       setLoading(false);
     }
   };
-
   const loadProducts = async () => {
     try {
       const res = await getProducts();
@@ -312,47 +339,89 @@ const Sales = () => {
     return date.toLocaleDateString();
   };
 
-  const handleEditCustomer = (sale, e) => {
-    e.stopPropagation();
-    setSelectedSale(sale);
-    setEditFormData({
-      customer_name: sale.customer_name || "",
-      customer_phone: sale.customer_phone || "",
-      customer_id: sale.customer_id || null,
-    });
-    setOpenEditDialog(true);
+  const handleEditCustomerOnReceipt = () => {
+    if (selectedSale) {
+      setEditCustomerData({
+        name: selectedSale.customer_name || "",
+        phone: selectedSale.customer_phone || "",
+      });
+      setEditingCustomerOnReceipt(true);
+    }
   };
-
-  const handleUpdateCustomer = async () => {
+  const handleSaveCustomerOnReceipt = async () => {
     if (!selectedSale) return;
 
     setUpdatingCustomer(true);
     try {
-      // First update the customer record if there's a customer_id
-      if (editFormData.customer_id) {
-        await updateCustomer(editFormData.customer_id, {
-          name: editFormData.customer_name,
-          phone: editFormData.customer_phone,
+      let customerId = selectedSale.customer_id;
+      let updatedCustomer = null;
+
+      if (customerId) {
+        // Update existing customer
+        await updateCustomer(customerId, {
+          name: editCustomerData.name,
+          phone: editCustomerData.phone,
         });
+        updatedCustomer = {
+          id: customerId,
+          name: editCustomerData.name,
+          phone: editCustomerData.phone,
+        };
       } else {
-        // If no customer_id, create a new customer
-        const newCustomer = await createCustomer({
-          name: editFormData.customer_name,
-          phone: editFormData.customer_phone,
+        // Check if customer already exists with this phone number
+        const existingCustomers = await searchCustomers(editCustomerData.phone);
+        if (
+          existingCustomers.data.data &&
+          existingCustomers.data.data.length > 0
+        ) {
+          // Use existing customer
+          customerId = existingCustomers.data.data[0].id;
+          // Update the customer info
+          await updateCustomer(customerId, {
+            name: editCustomerData.name,
+            phone: editCustomerData.phone,
+          });
+        } else {
+          // Create new customer
+          const newCustomer = await createCustomer({
+            name: editCustomerData.name,
+            phone: editCustomerData.phone,
+          });
+          customerId = newCustomer.data.data.id;
+        }
+
+        // CRITICAL: Update the sale with the new customer_id
+        await updateSale(selectedSale.id, {
+          customer_id: customerId,
         });
-        editFormData.customer_id = newCustomer.data.data.id;
       }
 
-      // Update the sale with the customer_id
-      await updateSale(selectedSale.id, {
-        customer_id: editFormData.customer_id,
-      });
+      // Refresh the entire sales list to get updated data
+      await loadSales();
+
+      // Find the updated sale in the refreshed list
+      const updatedSale = sales.find((s) => s.id === selectedSale.id);
+
+      if (updatedSale) {
+        // Update the selected sale with the new data
+        setSelectedSale({
+          ...updatedSale,
+          customer_name: editCustomerData.name,
+          customer_phone: editCustomerData.phone,
+          customer_id: customerId,
+        });
+      } else {
+        // If not found in list, manually update the selected sale
+        setSelectedSale({
+          ...selectedSale,
+          customer_name: editCustomerData.name,
+          customer_phone: editCustomerData.phone,
+          customer_id: customerId,
+        });
+      }
 
       showSnackbar("Customer information updated successfully!", "success");
-
-      // Refresh the sales list to show updated information
-      await loadSales();
-      setOpenEditDialog(false);
+      setEditingCustomerOnReceipt(false);
     } catch (error) {
       console.error("Update error:", error);
       showSnackbar(
@@ -363,6 +432,14 @@ const Sales = () => {
     } finally {
       setUpdatingCustomer(false);
     }
+  };
+
+  const handleCancelEditOnReceipt = () => {
+    setEditingCustomerOnReceipt(false);
+    setEditCustomerData({
+      name: selectedSale?.customer_name || "",
+      phone: selectedSale?.customer_phone || "",
+    });
   };
 
   const handleDeleteClick = (sale, e) => {
@@ -689,7 +766,7 @@ const Sales = () => {
               </Card>
             </Zoom>
           </Grid>
-          <Grid item xs={4}>
+          {/* <Grid item xs={4}>
             <Zoom in timeout={600}>
               <Card
                 sx={{
@@ -739,7 +816,7 @@ const Sales = () => {
                 </CardContent>
               </Card>
             </Zoom>
-          </Grid>
+          </Grid> */}
           <Grid item xs={4}>
             <Zoom in timeout={700}>
               <Card
@@ -952,6 +1029,7 @@ const Sales = () => {
                     }}
                     onClick={() => {
                       setSelectedSale(sale);
+                      setEditingCustomerOnReceipt(false);
                       setOpenReceiptDialog(true);
                     }}
                   >
@@ -1046,15 +1124,6 @@ const Sales = () => {
                           >
                             {sale.customer_name || "Walk-in"}
                           </Typography>
-                          <Tooltip title="Edit Customer Info">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleEditCustomer(sale, e)}
-                              sx={{ color: colors.info }}
-                            >
-                              <EditIcon sx={{ fontSize: "0.8rem" }} />
-                            </IconButton>
-                          </Tooltip>
                         </Box>
                         <Typography
                           variant="body2"
@@ -1337,164 +1406,7 @@ const Sales = () => {
         </form>
       </Dialog>
 
-      {/* Edit Customer Dialog */}
-      <Dialog
-        open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: "20px" } }}
-      >
-        <DialogTitle sx={{ background: colors.gradient, color: "white" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <EditIcon />
-            <Typography variant="h6" component="div">
-              Edit Customer Information
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            <strong>Product:</strong> {selectedSale?.product_name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            <strong>Sale Date:</strong>{" "}
-            {selectedSale && new Date(selectedSale.created_at).toLocaleString()}
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Customer Name"
-                value={editFormData.customer_name}
-                onChange={(e) =>
-                  setEditFormData({
-                    ...editFormData,
-                    customer_name: e.target.value,
-                  })
-                }
-                placeholder="Enter customer name"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PersonIcon sx={{ color: colors.primary }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Customer Phone"
-                value={editFormData.customer_phone}
-                onChange={(e) =>
-                  setEditFormData({
-                    ...editFormData,
-                    customer_phone: e.target.value,
-                  })
-                }
-                placeholder="Enter customer phone"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PhoneIcon sx={{ color: colors.primary }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          </Grid>
-          <Alert severity="info" sx={{ mt: 3, borderRadius: "12px" }}>
-            <Typography variant="caption" display="block">
-              💡 This will update the customer record and link it to this sale.
-              <br />
-              The receipt will show the updated information.
-            </Typography>
-          </Alert>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button onClick={() => setOpenEditDialog(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpdateCustomer}
-            variant="contained"
-            disabled={updatingCustomer}
-            startIcon={
-              updatingCustomer ? <CircularProgress size={20} /> : <SaveIcon />
-            }
-            sx={{ background: colors.gradient }}
-          >
-            {updatingCustomer ? "Updating..." : "Update Customer"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={handleCancelDelete}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: "20px", p: 1 } }}
-      >
-        <DialogTitle sx={{ textAlign: "center", pb: 1 }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <WarningIcon sx={{ fontSize: 48, color: colors.error, mb: 1 }} />
-            <Typography variant="h6" component="div" fontWeight="bold">
-              Delete Sale
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography align="center" color="text.secondary" sx={{ mb: 2 }}>
-            Are you sure you want to delete this sale?
-            <br />
-            <strong>Product: {saleToDelete?.product_name}</strong>
-            <br />
-            <strong>
-              Amount: ETB {saleToDelete?.total_amount?.toLocaleString()}
-            </strong>
-            <br />
-            This action cannot be undone.
-          </Typography>
-
-          {deleteError && (
-            <Alert severity="error" sx={{ mt: 2, borderRadius: "12px" }}>
-              <Typography variant="body2">{deleteError}</Typography>
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 3 }}>
-          <Button
-            onClick={handleCancelDelete}
-            variant="outlined"
-            sx={{ borderRadius: "10px", px: 3 }}
-            disabled={deleting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            variant="contained"
-            color="error"
-            sx={{ borderRadius: "10px", px: 3 }}
-            disabled={deleting}
-            startIcon={deleting ? <CircularProgress size={16} /> : null}
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Receipt Dialog */}
+      {/* Receipt Dialog with Editable Customer Info */}
       <Dialog
         open={openReceiptDialog}
         onClose={() => setOpenReceiptDialog(false)}
@@ -1684,7 +1596,86 @@ const Sales = () => {
                         Full Name
                       </TableCell>
                       <TableCell>
-                        {selectedSale.customer_name || "Walk-in Customer"}
+                        {!editingCustomerOnReceipt ? (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Typography component="span">
+                              {selectedSale.customer_name || "Walk-in Customer"}
+                            </Typography>
+                            <Tooltip title="Edit Customer Info">
+                              <IconButton
+                                size="small"
+                                onClick={handleEditCustomerOnReceipt}
+                                sx={{ color: colors.info }}
+                              >
+                                <EditIcon sx={{ fontSize: "0.9rem" }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        ) : (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <TextField
+                              size="small"
+                              value={editCustomerData.name}
+                              onChange={(e) =>
+                                setEditCustomerData({
+                                  ...editCustomerData,
+                                  name: e.target.value,
+                                })
+                              }
+                              placeholder="Customer name"
+                              sx={{ minWidth: 150 }}
+                              autoFocus
+                            />
+                            <TextField
+                              size="small"
+                              value={editCustomerData.phone}
+                              onChange={(e) =>
+                                setEditCustomerData({
+                                  ...editCustomerData,
+                                  phone: e.target.value,
+                                })
+                              }
+                              placeholder="Phone number"
+                              sx={{ minWidth: 120 }}
+                            />
+                            <Tooltip title="Save">
+                              <IconButton
+                                size="small"
+                                onClick={handleSaveCustomerOnReceipt}
+                                disabled={updatingCustomer}
+                                sx={{ color: colors.success }}
+                              >
+                                {updatingCustomer ? (
+                                  <CircularProgress size={16} />
+                                ) : (
+                                  <SaveIcon />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Cancel">
+                              <IconButton
+                                size="small"
+                                onClick={handleCancelEditOnReceipt}
+                                sx={{ color: colors.error }}
+                              >
+                                <CloseIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -1694,7 +1685,13 @@ const Sales = () => {
                         Phone Number
                       </TableCell>
                       <TableCell>
-                        {selectedSale.customer_phone || "Not provided"}
+                        {!editingCustomerOnReceipt ? (
+                          selectedSale.customer_phone || "Not provided"
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            {editCustomerData.phone || "Will be updated"}
+                          </Typography>
+                        )}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -1888,6 +1885,69 @@ const Sales = () => {
             onClick={() => handleDownloadPDF(selectedSale)}
           >
             Download PDF
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleCancelDelete}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "20px", p: 1 } }}
+      >
+        <DialogTitle sx={{ textAlign: "center", pb: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <WarningIcon sx={{ fontSize: 48, color: colors.error, mb: 1 }} />
+            <Typography variant="h6" component="div" fontWeight="bold">
+              Delete Sale
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography align="center" color="text.secondary" sx={{ mb: 2 }}>
+            Are you sure you want to delete this sale?
+            <br />
+            <strong>Product: {saleToDelete?.product_name}</strong>
+            <br />
+            <strong>
+              Amount: ETB {saleToDelete?.total_amount?.toLocaleString()}
+            </strong>
+            <br />
+            This action cannot be undone.
+          </Typography>
+
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2, borderRadius: "12px" }}>
+              <Typography variant="body2">{deleteError}</Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 3 }}>
+          <Button
+            onClick={handleCancelDelete}
+            variant="outlined"
+            sx={{ borderRadius: "10px", px: 3 }}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+            sx={{ borderRadius: "10px", px: 3 }}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : null}
+          >
+            {deleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>
