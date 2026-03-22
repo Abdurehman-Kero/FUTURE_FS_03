@@ -742,7 +742,7 @@ const PublicProducts = () => {
                           {/* WhatsApp Button - Icon only on mobile */}
                           {isMobile ? (
                             <IconButton
-                              fullWidth
+                              // fullWidth
                               onClick={() => handleWhatsApp(p)}
                               sx={{
                                 bgcolor: alpha("#25D366", 0.1),
