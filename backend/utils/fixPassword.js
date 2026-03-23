@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 
 const fixPassword = async () => {
   try {
-    const phone = "0912345678";
+    const phone = "0982310974";
     const password = "password123";
 
     console.log("🔍 Looking for staff with phone:", phone);
